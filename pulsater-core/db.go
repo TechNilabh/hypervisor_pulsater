@@ -61,9 +61,18 @@ func InitDB() error {
 		dbname = "postgres"
 	}
 
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbname)
-	log.Printf("Connecting to database: postgres://%s:****@%s:%s/%s", user, host, port, dbname)
+	// connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbname)
+	// log.Printf("Connecting to database: postgres://%s:****@%s:%s/%s", user, host, port, dbname)
+	// // 1. Try to read the combined string from Render's environment variables
+	connStr := os.Getenv("DATABASE_URL")
 
+	// 2. If it's empty, fall back to your local manual construction format
+	if connStr == "" {
+		connStr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbname)
+		log.Printf("Connecting to LOCAL database: postgres://%s:****@%s:%s/%s", user, host, port, dbname)
+	} else {
+		log.Println("Connecting to CLOUD database via environment connection pool...")
+	}
 	config, err := pgxpool.ParseConfig(connStr)
 	if err != nil {
 		return fmt.Errorf("unable to parse connection string: %w", err)
