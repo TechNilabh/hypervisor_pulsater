@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 // Upgraded 3D Wireframe Saturn Planet Component for Homepage Background
 function WireframeSphere() {
@@ -286,6 +287,7 @@ function WireframeSphere() {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [logs, setLogs] = useState([
     { line: 102, time: "14:22:01.004", type: "INSERT", color: "text-secondary-fixed", payload: 'payload: { "id": "uuid-808", "state": "active", "val": 420.69 }' },
     { line: 103, time: "14:22:01.012", type: "UPDATE", color: "text-surface-tint", payload: 'delta: { "prev_state": "idle", "new_state": "active" }' },
@@ -351,10 +353,20 @@ export default function Home() {
             Asynchronous Change Data Capture Middleware <br/>
             <span className="text-[#00e639]">Core Status: Ready for Deployment</span>
           </p>
-          <Link href="/error-terminal" className="px-10 py-5 bg-transparent border-2 border-[#74f5ff] text-[#74f5ff] font-headline-md rounded-full hover:bg-[#74f5ff]/10 transition-all group flex items-center gap-4 mx-auto glow-cyan w-fit">
+          <button 
+            onClick={() => {
+              const token = localStorage.getItem("session_token");
+              if (token) {
+                router.push("/deploy");
+              } else {
+                router.push("/login");
+              }
+            }}
+            className="px-10 py-5 bg-transparent border-2 border-[#74f5ff] text-[#74f5ff] font-headline-md rounded-full hover:bg-[#74f5ff]/10 cursor-pointer transition-all group flex items-center gap-4 mx-auto glow-cyan w-fit"
+          >
             INITIALIZE TERMINAL LINK
             <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
-          </Link>
+          </button>
         </div>
         {/* Floating Metric Chips */}
         <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-6 hidden lg:flex">

@@ -110,17 +110,17 @@ export default function SourceConnection() {
   };
 
   const handleDumpConfig = () => {
-    const configStr = `---
-db_type: "${dbType}"
-host: "${host}"
-port: ${port}
-database_name: "${dbName}"
-schemas: [${Object.keys(whitelist).filter(k => whitelist[k as keyof typeof whitelist]).map(k => `"${k}"`).join(", ")}]
-flush_interval_ms: ${flushInterval}
-partition_format: "${partitionFormat}"
-status: "dumped"
-`;
-    alert(configStr);
+    if ((window as any).toast) {
+      (window as any).toast.success("Database Config Dumped", {
+        db_type: dbType,
+        host: host,
+        port: port,
+        database_name: dbName,
+        schemas: Object.keys(whitelist).filter(k => whitelist[k as keyof typeof whitelist]).join(", "),
+        flush_interval: `${flushInterval}ms`,
+        partition_format: partitionFormat,
+      });
+    }
   };
 
   return (

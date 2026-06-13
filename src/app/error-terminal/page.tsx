@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { startAlarm, stopAlarm } from "../useTerminalAudio";
 
-export default function ErrorTerminal() {
+function ErrorTerminalContent() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const searchParams = useSearchParams();
+  const faultLogs = searchParams.get("log");
+  
   const [score, setScore] = useState(0);
   const [rebooting, setRebooting] = useState(false);
   const [flickerSpeed, setFlickerSpeed] = useState(0.3);
@@ -116,7 +120,6 @@ export default function ErrorTerminal() {
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // WASD or arrow keys
       if ((e.key === "w" || e.key === "W" || e.key === "ArrowUp") && dy === 0) {
         dx = 0;
         dy = -1;
@@ -135,7 +138,6 @@ export default function ErrorTerminal() {
       }
     };
 
-    // prevent default arrow keys behavior (scrolling) inside game area
     const preventArrowScroll = (e: KeyboardEvent) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault();
@@ -176,12 +178,19 @@ export default function ErrorTerminal() {
       setRebooting(false);
       setScore(0);
       startAlarm();
+      
+      // Trigger a custom toast if available
+      if ((window as any).toast) {
+        (window as any).toast.success("Ingestion daemon reboot completed", {
+          status: "STABILIZED",
+          event: "DAEMON_REBOOT",
+        });
+      }
     }, 2000);
   };
 
   return (
     <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col overflow-hidden">
-
       {/* Main Content Canvas */}
       <main className="flex-grow flex items-center justify-center p-6 z-20 relative pt-8 pb-12">
         {/* Terminal Container */}
@@ -196,12 +205,12 @@ export default function ErrorTerminal() {
             <div className="flex gap-2">
               <div className="w-3 h-3 border border-[#84967e] opacity-50"></div>
               <div className="w-3 h-3 border border-[#84967e] opacity-50"></div>
-              <div className="w-3 h-3 border border-[#3b4b37] bg-[#93000a]"></div>
+              <Link href="/" className="w-3 h-3 border border-[#3b4b37] bg-[#93000a] block" title="Force disconnect"></Link>
             </div>
           </div>
 
           {/* Terminal Content */}
-          <div className="p-8 flex flex-col items-center text-center space-y-8">
+          <div className="p-8 flex flex-col items-center text-center space-y-6">
             
             {/* Warning Chip */}
             <div 
@@ -211,6 +220,14 @@ export default function ErrorTerminal() {
               <span className="w-2 h-2 bg-error rounded-full animate-pulse"></span>
               CRITICAL_INGESTION_FAILURE // SYSTEM HALTED
             </div>
+
+            {/* Diagnostic system fault display */}
+            {faultLogs && (
+              <div className="w-full max-w-[640px] text-left bg-black border border-[#93000a]/50 p-4 font-body-mono text-[10px] text-error overflow-x-auto whitespace-pre-wrap max-h-48 custom-scrollbar relative rounded-sm">
+                <div className="absolute top-2 right-4 font-label-code text-[8px] text-error/60 uppercase tracking-widest">[ DIAGNOSTIC FAULT TRACE ]</div>
+                {faultLogs}
+              </div>
+            )}
 
             {/* Snake Game Area */}
             <div className="relative w-full max-w-[640px] border border-[#3b4b37] bg-[#1c1b1b]/30 group overflow-hidden rounded-sm">
@@ -261,18 +278,40 @@ export default function ErrorTerminal() {
                 Current go-routine pool is exhausted. Automated recovery agents are offline. 
                 Engaging manual packet scavenging to maintain core temperature.
               </p>
-              <button 
-                onClick={handleReboot}
-                className="bg-[#00ff41]/10 border border-[#00ff41] text-[#00ff41] font-label-code text-[14px] px-12 py-4 uppercase tracking-tighter hover:bg-[#00ff41]/20 active:scale-95 transition-all shadow-[0_0_20px_rgba(0,255,65,0.2)] glitch-text font-bold"
-              >
-                FORCE REBOOT REPLICATION ENGINE
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <button 
+                  onClick={handleReboot}
+                  className="bg-[#00ff41]/10 border border-[#00ff41] text-[#00ff41] font-label-code text-[14px] px-8 py-4 uppercase tracking-tighter hover:bg-[#00ff41]/20 active:scale-95 transition-all shadow-[0_0_20px_rgba(0,255,65,0.2)] font-bold cursor-pointer"
+                >
+                  FORCE REBOOT REPLICATION ENGINE
+                </button>
+                <Link 
+                  href="/" 
+                  className="border border-[#74f5ff] text-[#74f5ff] hover:bg-[#74f5ff]/10 font-label-code text-[14px] px-8 py-4 uppercase tracking-tighter transition-all"
+                >
+                  DISCONNECT SOCKET
+                </Link>
+              </div>
             </div>
 
           </div>
         </div>
       </main>
-
     </div>
+  );
+}
+
+export default function ErrorTerminal() {
+  return (
+    <Suspense fallback={
+      <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00f1fe]"></div>
+          <p className="text-xs uppercase tracking-widest text-[#00f1fe]">LOADING ERROR DIAGNOSTICS CONTROL...</p>
+        </div>
+      </div>
+    }>
+      <ErrorTerminalContent />
+    </Suspense>
   );
 }

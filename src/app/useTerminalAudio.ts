@@ -106,6 +106,33 @@ export const stopAlarm = () => {
   }
 };
 
+export const playNotificationSound = () => {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === "suspended") ctx.resume();
+
+    const playTone = (freq: number, startDelay: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + startDelay);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime + startDelay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startDelay + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + startDelay);
+      osc.stop(ctx.currentTime + startDelay + duration);
+    };
+
+    // A crisp futuristic double-beep
+    playTone(880, 0, 0.08);
+    playTone(1320, 0.06, 0.12);
+  } catch (e) {
+    // Fail silently
+  }
+};
+
 // Custom React hook version wrapper
 export function useTerminalAudio() {
   return {
@@ -113,5 +140,6 @@ export function useTerminalAudio() {
     playHover,
     startAlarm,
     stopAlarm,
+    playNotificationSound,
   };
 }

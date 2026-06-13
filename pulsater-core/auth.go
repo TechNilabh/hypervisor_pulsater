@@ -20,6 +20,7 @@ var jwtKey = []byte("pulsater-secret-key-neon-cyan")
 type Claims struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
+	Email    string `json:"email"`
 	jwt.RegisteredClaims
 }
 
@@ -184,6 +185,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	claims := &Claims{
 		UserID:   id,
 		Username: username,
+		Email:    email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -269,5 +271,112 @@ func UpdateAvatarHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, map[string]string{
 		"message":   "Avatar updated successfully",
 		"avatar_id": req.AvatarID,
+	})
+}
+
+type OAuthRequest struct {
+	Provider       string `json:"provider"`
+	ProviderUserID string `json:"provider_user_id"`
+	Username       string `json:"username"`
+	Email          string `json:"email"`
+}
+
+// OAuthHandler manages simulated third-party developer API links and logs them into database ledger
+func OAuthHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	var req OAuthRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	req.Provider = strings.TrimSpace(req.Provider)
+	req.ProviderUserID = strings.TrimSpace(req.ProviderUserID)
+	req.Username = strings.TrimSpace(req.Username)
+	req.Email = strings.TrimSpace(req.Email)
+
+	if req.Provider == "" || req.ProviderUserID == "" || req.Username == "" || req.Email == "" {
+		WriteError(w, http.StatusBadRequest, "All OAuth fields are required")
+		return
+	}
+
+	ctx := context.Background()
+
+	// 1. Check if user already exists by email or username
+	var userID, username, avatarID string
+	query := `SELECT id, username, avatar_id FROM users WHERE email = $1 OR username = $2`
+	err := DB.QueryRow(ctx, query, req.Email, req.Username).Scan(&userID, &username, &avatarID)
+
+	if err != nil {
+		// User doesn't exist, create user
+		uuid, err := generateUUID()
+		if err != nil {
+			log.Printf("OAuth UUID generation error: %v", err)
+			WriteError(w, http.StatusInternalServerError, "Failed to generate user ID")
+			return
+		}
+		userID = uuid
+		username = req.Username
+		avatarID = "Node_02" // default to Node_02 instead of operator-default to make it clean
+
+		insertUserQuery := `INSERT INTO users (id, username, email, password_hash, avatar_id) VALUES ($1, $2, $3, $4, $5)`
+		_, err = DB.Exec(ctx, insertUserQuery, userID, username, req.Email, "OAUTH_EXTERNAL_IDENTITY", avatarID)
+		if err != nil {
+			log.Printf("OAuth SQL insert user error: %v", err)
+			WriteError(w, http.StatusInternalServerError, "Database error creating user via OAuth")
+			return
+		}
+	}
+
+	// 2. Link oauth_identity
+	oauthUUID, err := generateUUID()
+	if err != nil {
+		log.Printf("OAuth identity UUID generation error: %v", err)
+		WriteError(w, http.StatusInternalServerError, "Failed to generate OAuth ID")
+		return
+	}
+
+	insertOAuthQuery := `
+	INSERT INTO oauth_identities (id, user_id, provider, provider_user_id)
+	VALUES ($1, $2, $3, $4)
+	ON CONFLICT (provider, provider_user_id) DO NOTHING
+	`
+	_, err = DB.Exec(ctx, insertOAuthQuery, oauthUUID, userID, req.Provider, req.ProviderUserID)
+	if err != nil {
+		log.Printf("OAuth SQL insert link error: %v", err)
+		WriteError(w, http.StatusInternalServerError, "Database error linking OAuth identity")
+		return
+	}
+
+	// 3. Generate JWT token
+	expirationTime := time.Now().Add(24 * time.Hour)
+	claims := &Claims{
+		UserID:   userID,
+		Username: username,
+		Email:    req.Email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(jwtKey)
+	if err != nil {
+		log.Printf("OAuth JWT sign error: %v", err)
+		WriteError(w, http.StatusInternalServerError, "Failed to sign session token")
+		return
+	}
+
+	log.Printf("OAuth successfully authenticated operator %s via %s", username, req.Provider)
+	WriteJSON(w, http.StatusOK, map[string]string{
+		"token":     tokenString,
+		"user_id":   userID,
+		"username":  username,
+		"avatar_id": avatarID,
 	})
 }

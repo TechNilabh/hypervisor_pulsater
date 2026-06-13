@@ -31,6 +31,7 @@ func main() {
 	mux.HandleFunc("/api/v1/auth/signup", SignupHandler)
 	mux.HandleFunc("/api/v1/auth/login", LoginHandler)
 	mux.HandleFunc("/api/v1/users/avatar", UpdateAvatarHandler)
+	mux.HandleFunc("/api/v1/auth/oauth", OAuthHandler)
 
 	// Wrap multiplexer with CORS middleware
 	handler := CORSMiddleware(mux)
@@ -57,11 +58,20 @@ func runMigrations() error {
 		avatar_id VARCHAR(255) NOT NULL DEFAULT 'operator-default',
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 	);
+
+	CREATE TABLE IF NOT EXISTS oauth_identities (
+		id UUID PRIMARY KEY,
+		user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		provider VARCHAR(50) NOT NULL,
+		provider_user_id VARCHAR(255) NOT NULL,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(provider, provider_user_id)
+	);
 	`
 	_, err := DB.Exec(context.Background(), migrationQuery)
 	if err != nil {
 		return err
 	}
-	log.Println("Database schemas verified (table 'users' is active).")
+	log.Println("Database schemas verified (tables 'users' and 'oauth_identities' are active).")
 	return nil
 }

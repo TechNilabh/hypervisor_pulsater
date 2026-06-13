@@ -241,6 +241,86 @@ export default function Login() {
     }
   };
 
+  const handleOAuthClick = async (provider: string) => {
+    setError(null);
+    setSuccessMsg(null);
+    setLoading(true);
+
+    // Simulated provider payload for database update
+    const oauthPayloads: Record<string, { provider_user_id: string; username: string; email: string }> = {
+      google: {
+        provider_user_id: "google-usr-990",
+        username: "google_agent",
+        email: "google_agent@pulsater.net",
+      },
+      facebook: {
+        provider_user_id: "facebook-usr-880",
+        username: "fb_operator",
+        email: "fb_operator@pulsater.net",
+      },
+      github: {
+        provider_user_id: "github-usr-770",
+        username: "git_ghost",
+        email: "git_ghost@pulsater.net",
+      },
+    };
+
+    const payload = oauthPayloads[provider];
+
+    try {
+      const res = await fetch("http://localhost:8080/api/v1/auth/oauth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          provider,
+          provider_user_id: payload.provider_user_id,
+          username: payload.username,
+          email: payload.email,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "OAuth handshake failed");
+      }
+
+      localStorage.setItem("session_token", data.token);
+      localStorage.setItem("user_id", data.user_id);
+      localStorage.setItem("username", data.username);
+      localStorage.setItem("selected_operator_id", `${data.avatar_id} // ${data.username}`);
+
+      // Dispatch event to refresh layout sidebar
+      window.dispatchEvent(new Event("operatorChanged"));
+
+      if ((window as any).toast) {
+        (window as any).toast.success(`OAuth Link Active: ${provider.toUpperCase()}`, {
+          db_type: "PostgreSQL",
+          provider: provider.toUpperCase(),
+          status: "CONNECTED",
+          operator: data.username,
+        });
+      }
+
+      setTimeout(() => {
+        router.push("/identity");
+      }, 1000);
+
+    } catch (err: any) {
+      setError(err.message || "OAuth authentication failed");
+      if ((window as any).toast) {
+        (window as any).toast.error("OAuth Handshake Aborted", {
+          provider: provider.toUpperCase(),
+          status: "FAILED",
+          error: err.message,
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="font-body-mono bg-[#050505] text-[#e5e2e1] min-h-screen flex items-center justify-center p-4">
       {/* Global Grid Texture Layer */}
@@ -458,14 +538,28 @@ export default function Login() {
               <div className="h-[1px] bg-[#3b4b37] flex-1"></div>
             </div>
             <div className="flex gap-4">
-              <button className="w-12 h-12 flex items-center justify-center border border-[#3b4b37] text-[#b9ccb2] hover:text-[#00f1fe] hover:border-[#00f1fe] hover:bg-[#00f1fe]/5 transition-all">
+              <button 
+                onClick={() => handleOAuthClick("google")}
+                className="w-12 h-12 flex items-center justify-center border border-[#3b4b37] text-[#b9ccb2] hover:text-[#00f1fe] hover:border-[#00f1fe] hover:bg-[#00f1fe]/5 cursor-pointer transition-all hover:shadow-[0_0_15px_rgba(0,241,254,0.4)]"
+                title="Google Developer API Link"
+              >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.908 3.152-1.896 4.136-1.248 1.248-3.224 2.536-6.424 2.536-5.176 0-9.272-4.2-9.272-9.36s4.096-9.36 9.272-9.36c2.8 0 4.912 1.112 6.392 2.512l2.312-2.312c-2.088-1.992-4.856-3.488-8.704-3.488-6.616 0-12.04 5.424-12.04 12.04s5.424 12.04 12.04 12.04c3.56 0 6.256-1.176 8.368-3.368 2.16-2.16 2.84-5.216 2.84-7.664 0-.712-.064-1.408-.192-2.04h-11.016z"></path></svg>
               </button>
-              <button className="w-12 h-12 flex items-center justify-center border border-[#3b4b37] text-[#b9ccb2] hover:text-[#00f1fe] hover:border-[#00f1fe] hover:bg-[#00f1fe]/5 transition-all">
+              <button 
+                onClick={() => handleOAuthClick("facebook")}
+                className="w-12 h-12 flex items-center justify-center border border-[#3b4b37] text-[#b9ccb2] hover:text-[#00f1fe] hover:border-[#00f1fe] hover:bg-[#00f1fe]/5 cursor-pointer transition-all hover:shadow-[0_0_15px_rgba(0,241,254,0.4)]"
+                title="Facebook Graph API Link"
+              >
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"></path></svg>
               </button>
-              <button className="w-12 h-12 flex items-center justify-center border border-[#3b4b37] text-[#b9ccb2] hover:text-[#00f1fe] hover:border-[#00f1fe] hover:bg-[#00f1fe]/5 transition-all">
-                <span className="material-symbols-outlined">fingerprint</span>
+              <button 
+                onClick={() => handleOAuthClick("github")}
+                className="w-12 h-12 flex items-center justify-center border border-[#3b4b37] text-[#b9ccb2] hover:text-[#00f1fe] hover:border-[#00f1fe] hover:bg-[#00f1fe]/5 cursor-pointer transition-all hover:shadow-[0_0_15px_rgba(0,241,254,0.4)]"
+                title="GitHub Developer OAuth"
+              >
+                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.197 22 16.44 22 12.017 22 6.484 17.522 2 12 2z" />
+                </svg>
               </button>
             </div>
             <Link className="mt-12 font-label-code text-[10px] text-[#b9ccb2] hover:text-[#00f1fe] flex items-center gap-2 transition-colors group" href="/">
