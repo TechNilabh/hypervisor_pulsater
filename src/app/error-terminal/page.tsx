@@ -170,45 +170,11 @@ export default function ErrorTerminal() {
 
   return (
     <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col overflow-hidden">
-      
-      {/* TopNavBar */}
-      <header className="fixed top-0 w-full z-50 bg-[#131313]/80 backdrop-blur-md border-b border-[#3b4b37] shadow-[0_0_8px_rgba(0,230,57,0.15)] flex justify-between items-center px-6 h-14">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="font-display-tech text-[20px] tracking-tighter text-[#00e639]">
-            HYPERVISOR_PULSATER_v2.0.4
-          </Link>
-        </div>
-        <div className="hidden md:flex items-center gap-6">
-          <nav className="flex gap-4 text-xs">
-            <Link className="text-[#b9ccb2] font-medium font-body-mono hover:text-[#00e639] transition-colors" href="/live-cdc">
-              DIAGNOSTICS
-            </Link>
-            <Link className="text-[#b9ccb2] font-medium font-body-mono hover:text-[#00e639] transition-colors" href="/routing">
-              NODE_MAP
-            </Link>
-            <span className="text-[#00e639] font-bold border-b-2 border-[#00e639] cursor-default font-body-mono">
-              EXCEPTION_GATE
-            </span>
-          </nav>
-          <div className="flex items-center gap-4 border-l border-[#3b4b37] pl-6">
-            <div className="flex items-center gap-2 px-3 py-1 bg-[#2a2a2a] border border-[#3b4b37]">
-              <span className="material-symbols-outlined text-sm text-[#00e639]">person</span>
-              <span className="font-label-code text-[10px] text-[#b9ccb2]">OPERATOR_01</span>
-            </div>
-            <div className="flex items-center gap-4 text-[#00e639] text-xs">
-              <Link href="/error-terminal" className="material-symbols-outlined hover:bg-[#353534]/50 p-1 cursor-pointer active:scale-95 duration-100">terminal</Link>
-              <Link href="/settings" className="material-symbols-outlined hover:bg-[#353534]/50 p-1 cursor-pointer active:scale-95 duration-100">settings_input_component</Link>
-              <span className="material-symbols-outlined hover:bg-[#353534]/50 p-1 cursor-pointer active:scale-95 duration-100"><span className="material-symbols-outlined">notifications_active</span></span>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Background Scanlines */}
       <div className="fixed inset-0 scanline z-10 opacity-30"></div>
 
       {/* Main Content Canvas */}
-      <main className="flex-grow flex items-center justify-center p-6 z-20 relative pt-20 pb-12">
+      <main className="flex-grow flex items-center justify-center p-6 z-20 relative pt-8 pb-12">
         {/* Terminal Container */}
         <div className="w-full max-w-4xl bg-[#0e0e0e]/95 backdrop-blur-xl border border-[#3b4b37] relative overflow-hidden flex flex-col rounded-sm">
           

@@ -103,47 +103,8 @@ export default function PipelineAlerts() {
   return (
     <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono min-h-screen overflow-hidden flex flex-col select-none">
       
-      {/* TopNavBar */}
-      <header className="fixed top-0 w-full z-50 bg-[#131313]/80 backdrop-blur-md border-b border-[#3b4b37] shadow-[0_0_8px_rgba(0,230,57,0.15)] flex justify-between items-center px-6 h-14">
-        <div className="flex items-center gap-4">
-          <span className="font-display-tech text-[20px] tracking-tighter text-[#00e639]">HYPERVISOR_PULSATER_v2.0.4</span>
-          <div className="h-4 w-[1px] bg-[#3b4b37]"></div>
-          <span className="font-label-code text-[10px] text-[#00e639] opacity-70">[STATUS: ACTIVE_THREAD_MONITOR]</span>
-        </div>
-        
-        <div className="flex items-center gap-6">
-          <div className="hidden md:flex items-center bg-[#1c1b1b] border border-[#3b4b37] px-3 py-1 rounded-sm">
-            <span className="material-symbols-outlined text-sm text-[#00e639]">search</span>
-            <input 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none focus:ring-0 text-[12px] w-48 placeholder:text-[#3b4b37] text-[#00e639] focus:outline-none" 
-              placeholder="QUERY_LOG_DB..." 
-              type="text"
-            />
-          </div>
-          <div className="flex items-center gap-4 text-[#00e639] text-xs">
-            <div className="flex items-center gap-3 mr-2 pr-4 border-r border-[#3b4b37]/40">
-              <div className="w-8 h-8 bg-[#00ff41]/10 border border-[#00e639]/30 flex items-center justify-center rounded-sm">
-                <span className="material-symbols-outlined text-sm text-[#00e639]">account_tree</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-label-code text-[10px] text-white leading-none">OPERATOR_01</span>
-                <span className="font-label-code text-[8px] text-[#b9ccb2]/50 leading-none mt-0.5">ROOT_OPERATOR</span>
-              </div>
-            </div>
-            <Link href="/error-terminal" className="material-symbols-outlined hover:text-white transition-colors cursor-pointer">terminal</Link>
-            <Link href="/settings" className="material-symbols-outlined hover:text-white transition-colors cursor-pointer">settings_input_component</Link>
-            <div className="relative">
-              <span className="material-symbols-outlined hover:text-white cursor-pointer transition-colors">notifications_active</span>
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-error rounded-full animate-pulse"></span>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* SideNavBar */}
-      <aside className="fixed left-0 top-14 h-[calc(100vh-56px)] w-64 z-40 bg-[#0e0e0e]/95 backdrop-blur-xl border-r border-[#3b4b37] flex flex-col py-4 space-y-1">
+      <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 z-40 bg-[#0e0e0e]/95 backdrop-blur-xl border-r border-[#3b4b37] flex flex-col py-4 space-y-1">
         <div className="px-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-[#00ff41]/10 border border-[#00e639]/30 flex items-center justify-center rounded-sm">
@@ -201,7 +162,7 @@ export default function PipelineAlerts() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="ml-64 mt-14 p-6 h-[calc(100vh-56px)] overflow-hidden flex gap-6">
+      <main className="ml-64 p-6 h-[calc(100vh-64px)] overflow-hidden flex gap-6">
         
         {/* Left Section: Diagnostic Matrix & Filters */}
         <section className="flex-1 flex flex-col space-y-6 overflow-hidden">

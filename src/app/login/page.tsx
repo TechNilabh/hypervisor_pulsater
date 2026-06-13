@@ -173,26 +173,6 @@ export default function Login() {
 
   return (
     <div className="font-body-mono bg-[#050505] text-[#e5e2e1] min-h-screen flex items-center justify-center p-4">
-      {/* TopNavBar */}
-      <nav className="fixed top-0 left-0 w-full z-50 border-b border-[#3b4b37] bg-[#131313]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="font-display-tech text-[20px] text-[#74f5ff] tracking-tighter">
-            HYPERVISOR_PULSATER_v2.0.4
-          </span>
-          <div className="h-4 w-[1px] bg-[#3b4b37]"></div>
-          <span className="font-label-code text-[10px] text-[#b9ccb2] uppercase tracking-widest">
-            System Gateway
-          </span>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 px-3 py-1.5 border border-[#74f5ff]/30 rounded-none bg-[#74f5ff]/5">
-            <div className="w-2 h-2 rounded-full bg-[#74f5ff] animate-pulse"></div>
-            <span className="font-label-code text-[10px] text-[#74f5ff]">OPERATOR_01</span>
-            <span className="material-symbols-outlined text-[18px] text-[#74f5ff]">account_circle</span>
-          </div>
-        </div>
-      </nav>
-
       {/* Global Grid Texture Layer */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: "radial-gradient(#00f1fe 1px, transparent 1px)", backgroundSize: "32px 32px" }}></div>
 

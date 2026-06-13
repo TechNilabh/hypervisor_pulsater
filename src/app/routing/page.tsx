@@ -81,35 +81,10 @@ export default function GlobalRouting() {
   }, []);
 
   return (
-    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-primary-container selection:text-on-primary-container overflow-hidden h-screen flex flex-col">
-      {/* TopNavBar */}
-      <header className="bg-[#131313]/80 backdrop-blur-xl text-[#00e639] flex justify-between items-center px-6 py-2 w-full max-w-full docked border-b border-[#3b4b37] shadow-[0_0_8px_rgba(0,242,255,0.1)] z-50">
-        <div className="flex items-center gap-4">
-          <span className="material-symbols-outlined text-[#00e639]">hub</span>
-          <h1 className="font-display-tech text-[20px] tracking-tighter text-[#00e639]">
-            HYPERVISOR PULSATER // SYSTEMS ENGINE v1.0.4
-          </h1>
-        </div>
-        <nav className="hidden md:flex gap-8 items-center">
-          <Link className="text-[#b9ccb2] font-label-code hover:text-[#00f1fe] transition-colors text-[10px] tracking-widest" href="/live-cdc">
-            LIVE_CDC
-          </Link>
-          <Link className="text-[#b9ccb2] font-label-code hover:text-[#00f1fe] transition-colors text-[10px] tracking-widest" href="/cluster">
-            CLUSTER_HEALTH
-          </Link>
-          <span className="text-[#00e639] border-b-2 border-[#00e639] pb-1 font-label-code text-[10px] tracking-widest cursor-default flicker">
-            GLOBAL_ROUTING
-          </span>
-        </nav>
-        <div className="flex gap-4">
-          <span className="material-symbols-outlined hover:text-[#00f1fe] transition-colors cursor-pointer">settings_input_antenna</span>
-          <span className="material-symbols-outlined hover:text-[#00f1fe] transition-colors cursor-pointer">lan</span>
-        </div>
-      </header>
-
+    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-primary-container selection:text-on-primary-container overflow-hidden h-[calc(100vh-64px)] flex flex-col">
       <div className="flex flex-1 overflow-hidden relative">
         {/* SideNavBar */}
-        <aside className="fixed left-0 top-0 h-full z-35 flex flex-col pt-16 bg-[#0e0e0e]/95 backdrop-blur-md text-[#00dbe7] w-64 border-r border-[#3b4b37]">
+        <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] z-35 flex flex-col pt-4 bg-[#0e0e0e]/95 backdrop-blur-md text-[#00dbe7] w-64 border-r border-[#3b4b37]">
           <div className="p-4 border-b border-[#3b4b37]">
             <div className="font-label-code text-[#ebffe2] text-[10px] mb-1">NODE_ACTIVE</div>
             <div className="font-body-mono-sm opacity-60 text-xs">US-EAST-01 // ROOT_AUTH</div>
@@ -141,7 +116,7 @@ export default function GlobalRouting() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="ml-64 flex-grow relative overflow-hidden bg-[#0A0A0A] flex z-10">
+        <main className="ml-64 flex-grow relative overflow-hidden bg-[#0A0A0A] flex z-10 h-[calc(100vh-64px)]">
           {/* Scanline Overlay */}
           <div className="absolute inset-0 scanline z-10"></div>
           

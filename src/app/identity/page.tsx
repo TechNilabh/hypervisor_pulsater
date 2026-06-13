@@ -86,33 +86,10 @@ export default function IdentityAuth() {
   };
 
   return (
-    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] min-h-screen flex flex-col overflow-x-hidden">
-      {/* TopNavBar */}
-      <header className="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-2 bg-[#131313]/80 backdrop-blur-xl border-b border-[#3b4b37] shadow-[0_0_8px_rgba(0,242,255,0.1)]">
-        <Link href="/" className="font-display-tech text-[20px] tracking-tighter text-[#00e639] hover:opacity-80 transition-opacity uppercase">
-          HYPERVISOR PULSATER // SYSTEMS ENGINE v1.0.4
-        </Link>
-        <nav className="hidden md:flex gap-6 items-center">
-          <Link className="text-[#b9ccb2] font-label-code hover:text-[#00f1fe] transition-colors uppercase text-[10px] tracking-widest" href="/routing">
-            Network_Map
-          </Link>
-          <Link className="text-[#00ff41] border-b-2 border-[#00ff41] pb-1 font-label-code text-[10px] tracking-widest uppercase" href="/identity">
-            Identity_Auth
-          </Link>
-          <Link className="text-[#b9ccb2] font-label-code hover:text-[#00f1fe] transition-colors uppercase text-[10px] tracking-widest" href="/alerts">
-            Core_Logs
-          </Link>
-          <div className="flex gap-4 ml-6 border-l border-[#3b4b37] pl-6">
-            <span className="material-symbols-outlined text-[#ebffe2] text-[20px]">hub</span>
-            <span className="material-symbols-outlined text-[#ebffe2] text-[20px]">settings_input_antenna</span>
-            <span className="material-symbols-outlined text-[#ebffe2] text-[20px]">lan</span>
-          </div>
-        </nav>
-      </header>
-
-      {/* Left Sidebar Layout */}
-      <aside className="fixed left-0 top-0 h-full z-40 flex flex-col pt-16 bg-[#0e0e0e]/90 backdrop-blur-md border-r border-[#3b4b37] w-64 hidden md:flex">
-        <div className="px-4 py-6 border-b border-[#3b4b37]">
+    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      {/* SideNavBar */}
+      <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 z-40 flex flex-col pt-4 bg-[#0e0e0e]/90 backdrop-blur-md border-r border-[#3b4b37] hidden md:flex">
+        <div className="px-6 py-4 border-b border-[#3b4b37]/30">
           <div className="font-label-code text-[#ebffe2] uppercase text-xs">NODE_ACTIVE</div>
           <div className="font-body-mono text-[#00dbe7] text-lg font-semibold">US-EAST-01</div>
         </div>
@@ -139,18 +116,18 @@ export default function IdentityAuth() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-grow pt-24 md:pl-64 pb-12 overflow-auto scanline-overlay min-h-screen">
-        <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <main className="flex-grow md:pl-64 p-6 overflow-y-auto scanline-overlay h-[calc(100vh-64px)]">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
           
           {/* Left Pane: Identity Grid Scanner */}
-          <section className="flex flex-col relative">
+          <section className="flex flex-col relative min-h-[400px]">
             <div className="flex items-center justify-between bg-[#353534] px-3 py-1 border border-[#3b4b37]">
               <span className="text-[10px] font-label-code text-[#72ff70] uppercase tracking-widest">
                 Identity Grid Scanner // {activeSlot.id}
               </span>
               <span className="material-symbols-outlined text-sm text-[#84967e] cursor-pointer hover:text-white">close</span>
             </div>
-            <div className="relative flex-grow bg-[#0e0e0e] border border-[#3b4b37] overflow-hidden p-6 aspect-[4/5] min-h-[420px] flex flex-col">
+            <div className="relative flex-grow bg-[#0e0e0e] border border-[#3b4b37] overflow-hidden p-6 flex flex-col aspect-[4/5] lg:aspect-auto">
               {/* Tactical Brackets */}
               <div className="absolute bracket-tl"></div>
               <div className="absolute bracket-tr"></div>
@@ -201,9 +178,9 @@ export default function IdentityAuth() {
           </section>
 
           {/* Right Pane: Node Avatar Selector */}
-          <section className="flex flex-col gap-6">
+          <section className="flex flex-col justify-between gap-6 min-h-[400px]">
             <div className="flex flex-col">
-              <div className="flex items-center justify-between bg-[#353534] px-3 py-1 border border-[#3b4b37] mb-2">
+              <div className="flex items-center justify-between bg-[#353534] px-3 py-1 border border-[#3b4b37] mb-4">
                 <span className="text-[10px] font-label-code text-[#00dbe7] uppercase tracking-widest">
                   Node Avatar Selector // CLUSTER_POOL
                 </span>

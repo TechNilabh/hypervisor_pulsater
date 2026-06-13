@@ -53,48 +53,8 @@ export default function Home() {
 
   return (
     <div className="font-body-mono selection:bg-secondary-fixed selection:text-on-secondary-fixed min-h-screen bg-[#0A0A0A] text-[#e5e2e1] overflow-x-hidden flex flex-col">
-      {/* TopNavBar */}
-      <nav className="fixed top-0 w-full z-50 bg-[#131313]/80 backdrop-blur-xl border-b border-[#3b4b37] shadow-[0_0_15px_rgba(0,241,254,0.1)] flex justify-between items-center px-6 h-16">
-        <Link href="/" className="font-display-tech text-[24px] text-[#00e639] tracking-tighter hover:opacity-85 transition-opacity">
-          HYPERVISOR_PULSATER
-        </Link>
-        <div className="hidden md:flex items-center gap-6">
-          <Link className="font-body-mono text-[14px] text-[#74f5ff] border-b-2 border-[#74f5ff] pb-1" href="/live-cdc">
-            TRANSACTIONS
-          </Link>
-          <Link className="font-body-mono text-[14px] text-[#b9ccb2] hover:text-[#74f5ff] transition-colors" href="/cluster">
-            REPLICATION
-          </Link>
-          <Link className="font-body-mono text-[14px] text-[#b9ccb2] hover:text-[#74f5ff] transition-colors" href="/settings">
-            TOOLKIT
-          </Link>
-          <Link className="font-body-mono text-[14px] text-[#b9ccb2] hover:text-[#74f5ff] transition-colors" href="/routing">
-            METRICS
-          </Link>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-2 mr-2">
-            <Link href="/settings" className="material-symbols-outlined p-2 text-[#b9ccb2] hover:bg-[#353534] hover:text-white transition-all duration-200 rounded">
-              settings_input_component
-            </Link>
-            <Link href="/error-terminal" className="material-symbols-outlined p-2 text-[#b9ccb2] hover:bg-[#353534] hover:text-white transition-all duration-200 rounded">
-              terminal
-            </Link>
-          </div>
-          {/* Auth State Container */}
-          <div className="flex items-center gap-4 border-l border-[#3b4b37] pl-4">
-            <Link href="/login" className="px-4 py-1.5 border border-[#74f5ff] text-[#74f5ff] font-label-code text-[10px] rounded hover:bg-[#74f5ff]/10 transition-all glow-cyan-border whitespace-nowrap">
-              LOGIN / SIGNUP
-            </Link>
-            <Link href="/connections" className="hidden lg:block px-4 py-2 bg-[#00f1fe] text-[#002022] font-label-code text-[10px] rounded active:skew-x-2 transition-transform hover:bg-[#74f5ff]">
-              DEPLOY_NODE
-            </Link>
-          </div>
-        </div>
-      </nav>
-
       {/* Hero Section */}
-      <section className="relative h-screen flex flex-col items-center justify-center pt-16 overflow-hidden">
+      <section className="relative h-[calc(100vh-64px)] flex flex-col items-center justify-center pt-0 overflow-hidden">
         {/* Starry Coordinates Background */}
         <div className="absolute inset-0 z-0 opacity-40 pointer-events-none" style={{ backgroundImage: "radial-gradient(rgba(0, 241, 254, 0.15) 1px, transparent 1px)", backgroundSize: "48px 48px" }}></div>
         <div className="relative z-10 text-center px-6">

@@ -130,33 +130,8 @@ export default function ClusterHealth() {
     <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col">
       <div className="fixed inset-0 scanline-overlay z-50 pointer-events-none opacity-20"></div>
 
-      {/* TopNavBar */}
-      <nav className="fixed top-0 left-0 w-full z-40 flex justify-between items-center px-6 py-2 bg-[#131313]/80 backdrop-blur-xl border-b border-[#3b4b37] shadow-[0_0_8px_rgba(0,242,255,0.1)]">
-        <Link href="/" className="font-display-tech text-[20px] tracking-tighter text-[#00e639]">
-          HYPERVISOR PULSATER // SYSTEMS ENGINE v1.0.4
-        </Link>
-        <div className="flex items-center gap-6">
-          <div className="flex gap-4">
-            <Link className="font-label-code text-[10px] text-[#b9ccb2] hover:text-[#00f1fe] transition-colors" href="/live-cdc">
-              NODE_X01
-            </Link>
-            <span className="text-[#00e639] border-b-2 border-[#00e639] pb-1 font-label-code text-[10px] transition-colors cursor-default">
-              CLUSTER_HEALTH
-            </span>
-            <Link className="font-label-code text-[10px] text-[#b9ccb2] hover:text-[#00f1fe] transition-colors" href="/routing">
-              TRAFFIC_ROUTING
-            </Link>
-          </div>
-          <div className="flex gap-4 text-[#ebffe2]">
-            <Link href="/routing" className="material-symbols-outlined cursor-pointer hover:text-[#00f1fe] transition-colors">hub</Link>
-            <span className="material-symbols-outlined cursor-pointer hover:text-[#00f1fe] transition-colors">settings_input_antenna</span>
-            <span className="material-symbols-outlined cursor-pointer hover:text-[#00f1fe] transition-colors">lan</span>
-          </div>
-        </div>
-      </nav>
-
       {/* SideNavBar */}
-      <aside className="fixed left-0 top-0 h-full z-35 flex flex-col pt-16 bg-[#0e0e0e]/90 backdrop-blur-md border-r border-[#3b4b37] w-64 hidden md:flex">
+      <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] z-35 flex flex-col pt-4 bg-[#0e0e0e]/90 backdrop-blur-md border-r border-[#3b4b37] w-64 hidden md:flex">
         <div className="p-4 border-b border-[#3b4b37]">
           <div className="font-label-code text-[#ebffe2] text-xs">NODE_ACTIVE</div>
           <div className="text-body-mono opacity-60 text-sm">US-EAST-01</div>
@@ -193,7 +168,7 @@ export default function ClusterHealth() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="md:ml-64 pt-20 pb-12 px-6 min-h-screen bg-[#0A0A0A]">
+      <main className="md:ml-64 p-6 min-h-[calc(100vh-64px)] bg-[#0A0A0A]">
         <div className="flex justify-between items-end mb-8">
           <div>
             <h1 className="font-display-tech text-[32px] font-bold uppercase tracking-tighter">Cluster Resource Health</h1>

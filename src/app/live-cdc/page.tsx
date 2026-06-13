@@ -58,34 +58,9 @@ export default function LiveCdc() {
   }, []);
 
   return (
-    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] overflow-hidden h-screen flex flex-col">
-      {/* TopNavBar */}
-      <header className="fixed top-0 z-50 w-full max-w-full flex justify-between items-center px-6 py-2 bg-[#131313]/80 backdrop-blur-xl border-b border-[#3b4b37] shadow-[0_0_8px_rgba(0,242,255,0.1)]">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="font-display-tech text-[20px] tracking-tighter text-[#00e639]">
-            HYPERVISOR PULSATER // SYSTEMS ENGINE v1.0.4
-          </Link>
-          <div className="hidden md:flex gap-4 ml-8">
-            <span className="text-[#00e639] border-b-2 border-[#00e639] pb-1 font-label-code text-[10px] tracking-wider uppercase cursor-default flicker">
-              LIVE_CDC
-            </span>
-            <Link className="text-[#b9ccb2] font-label-code hover:text-[#00f1fe] transition-colors text-[10px] tracking-wider uppercase" href="/cluster">
-              CLUSTER_HEALTH
-            </Link>
-            <Link className="text-[#b9ccb2] font-label-code hover:text-[#00f1fe] transition-colors text-[10px] tracking-wider uppercase" href="/routing">
-              GLOBAL_ROUTING
-            </Link>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 text-[#ebffe2]">
-          <Link href="/routing" className="material-symbols-outlined hover:text-[#00f1fe] transition-colors cursor-pointer">hub</Link>
-          <span className="material-symbols-outlined hover:text-[#00f1fe] transition-colors cursor-pointer">settings_input_antenna</span>
-          <span className="material-symbols-outlined hover:text-[#00f1fe] transition-colors cursor-pointer">lan</span>
-        </div>
-      </header>
-
+    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] overflow-hidden h-[calc(100vh-64px)] flex flex-col">
       {/* SideNavBar */}
-      <nav className="fixed left-0 top-0 h-full z-40 flex flex-col pt-16 bg-[#0e0e0e]/90 backdrop-blur-md border-r border-[#3b4b37] w-64 hidden lg:flex">
+      <nav className="fixed left-0 top-16 h-[calc(100vh-64px)] z-40 flex flex-col bg-[#0e0e0e]/90 backdrop-blur-md border-r border-[#3b4b37] w-64 hidden lg:flex">
         <div className="px-6 py-4 border-b border-[#3b4b37]/30">
           <div className="font-label-code text-[#ebffe2] text-xs">NODE_ACTIVE</div>
           <div className="font-body-mono text-[#00dbe7] opacity-70 text-sm">US-EAST-01</div>
@@ -107,7 +82,7 @@ export default function LiveCdc() {
       </nav>
 
       {/* Main Content Area */}
-      <main className="pt-16 pb-8 lg:pl-64 h-screen overflow-hidden flex flex-col bg-[#0A0A0A]">
+      <main className="lg:pl-64 h-[calc(100vh-64px)] overflow-hidden flex flex-col bg-[#0A0A0A]">
         
         {/* Top Telemetry Strip */}
         <div className="px-6 py-2 bg-[#1c1b1b] border-b border-[#3b4b37]/30 flex items-center justify-between">

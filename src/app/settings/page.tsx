@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
 export default function SystemConfiguration() {
@@ -11,59 +11,134 @@ export default function SystemConfiguration() {
 
   // Persistence states
   const [flushInterval, setFlushInterval] = useState(500);
-  const [writeStrategy, setWriteStrategy] = useState<"write_through" | "async_append" | "journaled_sync">("async_append");
+  const [writeStrategy, setWriteStrategy] = useState<"WRITE_THROUGH" | "ASYNC_APPEND" | "JOURNALED_SYNC">("ASYNC_APPEND");
 
   // Network states
   const [regions, setRegions] = useState({
     "US-EAST-1": true,
     "EU-WEST-3": false,
     "AP-SOUTH-1": true,
-    "SA-EAST-1": false
+    "SA-EAST-1": false,
   });
   const [replicationFactor, setReplicationFactor] = useState("x3");
   const [verbosity, setVerbosity] = useState({
     err: 100,
     info: 70,
-    debug: 30
+    debug: 30,
   });
 
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   const handleRegionToggle = (r: keyof typeof regions) => {
-    setRegions(prev => ({ ...prev, [r]: !prev[r] }));
+    setRegions((prev) => ({ ...prev, [r]: !prev[r] }));
   };
 
-  return (
-    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] overflow-hidden h-screen flex flex-col scanline">
-      {/* TopNavBar */}
-      <header className="fixed top-0 w-full z-50 bg-[#0e0e0e]/80 backdrop-blur-md border-b border-[#3b4b37] shadow-[0_0_8px_rgba(0,230,57,0.15)] flex justify-between items-center px-6 h-14">
-        <div className="flex items-center gap-4">
-          <span className="material-symbols-outlined text-[#00e639] animate-pulse-matrix">terminal</span>
-          <h1 className="font-display-tech text-headline-md tracking-tighter text-[#00e639] text-[20px] font-bold">HYPERVISOR_PULSATER_v2.0.4</h1>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="hidden md:flex gap-4 text-xs font-bold">
-            <span className="font-body-mono text-[#b9ccb2]/60 cursor-not-allowed uppercase">CORE_METRICS</span>
-            <span className="font-body-mono text-[#00e639] border-b-2 border-[#00e639] pb-1 uppercase cursor-default">SYS_CONFIG</span>
-            <span className="font-body-mono text-[#b9ccb2]/60 cursor-not-allowed uppercase">NODE_VIEW</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 mr-4 border-r border-[#3b4b37]/30 pr-4">
-              <div className="w-6 h-6 rounded-sm bg-[#00ff41]/10 flex items-center justify-center overflow-hidden border border-[#00e639]/30">
-                <span className="material-symbols-outlined text-sm text-[#00e639]">person</span>
-              </div>
-              <div className="hidden lg:block">
-                <p className="font-label-code text-[10px] leading-none text-[#00e639] font-bold">OPERATOR_01</p>
-                <p className="font-label-code text-[8px] leading-none opacity-50 text-[#00dbe7] mt-0.5">US-EAST-1</p>
-              </div>
-            </div>
-            <Link href="/error-terminal" className="text-[#b9ccb2] hover:text-[#00e639] transition-colors active:scale-95"><span className="material-symbols-outlined">terminal</span></Link>
-            <Link href="/connections" className="text-[#b9ccb2] hover:text-[#00e639] transition-colors active:scale-95"><span className="material-symbols-outlined">settings_input_component</span></Link>
-            <span className="text-[#b9ccb2] hover:text-[#00e639] transition-colors active:scale-95 cursor-pointer"><span className="material-symbols-outlined">notifications_active</span></span>
-          </div>
-        </div>
-      </header>
+  // 3D Cluster Map Animation (Canvas)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
+    let animId: number;
+    let angle = 0;
+
+    const nodes = [
+      { x: 0, y: 0, z: 0, label: "SYS_ROOT", color: "#00e639" },
+      { x: -80, y: -50, z: -50, label: "US-EAST-1", color: "#00f1fe" },
+      { x: 80, y: 50, z: 50, label: "AP-SOUTH-1", color: "#00f1fe" },
+      { x: -50, y: 70, z: 60, label: "EU-WEST-3", color: "#ffb4ab" },
+      { x: 70, y: -60, z: -80, label: "SA-EAST-1", color: "#ffb4ab" },
+    ];
+
+    const rotateX = (point: { x: number; y: number; z: number }, rad: number) => {
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      return {
+        x: point.x,
+        y: point.y * cos - point.z * sin,
+        z: point.y * sin + point.z * cos,
+      };
+    };
+
+    const rotateY = (point: { x: number; y: number; z: number }, rad: number) => {
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      return {
+        x: point.x * cos + point.z * sin,
+        y: point.y,
+        z: -point.x * sin + point.z * cos,
+      };
+    };
+
+    const draw = () => {
+      ctx.fillStyle = "#0e0e0e";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      // Project and rotate nodes
+      const projected = nodes.map((node) => {
+        let p = rotateY(node, angle);
+        p = rotateX(p, angle * 0.5);
+
+        // Perspective projection
+        const scale = 250 / (250 + p.z);
+        return {
+          x: cx + p.x * scale,
+          y: cy + p.y * scale,
+          z: p.z,
+          label: node.label,
+          color: node.color,
+          scale,
+        };
+      });
+
+      // Draw lines between SYS_ROOT and child nodes
+      ctx.lineWidth = 1;
+      projected.forEach((node, i) => {
+        if (i === 0) return; // Skip SYS_ROOT
+        ctx.strokeStyle = "rgba(59, 75, 55, 0.4)";
+        ctx.beginPath();
+        ctx.moveTo(projected[0].x, projected[0].y);
+        ctx.lineTo(node.x, node.y);
+        ctx.stroke();
+      });
+
+      // Draw nodes
+      projected.forEach((node) => {
+        ctx.fillStyle = node.color;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = node.color;
+        
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 4 * node.scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+
+        // Draw labels
+        ctx.fillStyle = "rgba(185, 204, 178, 0.6)";
+        ctx.font = "8px 'JetBrains Mono', monospace";
+        ctx.fillText(node.label, node.x + 6, node.y + 3);
+      });
+
+      angle += 0.01;
+      animId = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      cancelAnimationFrame(animId);
+    };
+  }, []);
+
+  return (
+    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] overflow-hidden h-[calc(100vh-64px)] flex flex-col">
       {/* SideNavBar */}
-      <aside className="fixed left-0 top-14 h-[calc(100vh-56px)] w-64 z-40 bg-[#0e0e0e]/95 backdrop-blur-xl border-r border-[#3b4b37] flex flex-col py-4 space-y-1">
+      <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 z-40 bg-[#0e0e0e]/95 backdrop-blur-xl border-r border-[#3b4b37] flex flex-col py-4 space-y-1">
         <div className="px-6 py-2 mb-4 border-b border-[#3b4b37]/30">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-8 h-8 rounded-sm bg-[#00ff41]/10 flex items-center justify-center overflow-hidden border border-[#00e639]/30">
@@ -104,7 +179,7 @@ export default function SystemConfiguration() {
       </aside>
 
       {/* Main Canvas Area */}
-      <main className="ml-64 mt-14 p-6 h-[calc(100vh-56px)] overflow-y-auto bg-[#0A0A0A]">
+      <main className="ml-64 p-6 h-[calc(100vh-64px)] overflow-y-auto bg-[#0A0A0A]">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-container-max mx-auto">
           
           {/* Card 1: Worker Pool Orchestrator */}
@@ -136,7 +211,7 @@ export default function SystemConfiguration() {
                   </span>
                 </div>
               </div>
-
+              
               {/* Channel Depths */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 border border-[#3b4b37]/30 bg-[#0e0e0e] relative">
@@ -196,7 +271,7 @@ export default function SystemConfiguration() {
               <div>
                 <p className="font-label-code text-[10px] text-[#b9ccb2] mb-2 opacity-60">FLUSH_INTERVAL_MS</p>
                 <div className="flex gap-2">
-                  {[250, 500, 1000].map(val => (
+                  {[250, 500, 1000].map((val) => (
                     <button 
                       key={val}
                       onClick={() => setFlushInterval(val)}
@@ -230,16 +305,16 @@ export default function SystemConfiguration() {
                 <p className="font-label-code text-[10px] text-[#b9ccb2] mb-2 opacity-60">WRITE_STRATEGY</p>
                 <div className="flex flex-col gap-1.5">
                   {[
-                    { id: "write_through", label: "WRITE_THROUGH" },
-                    { id: "async_append", label: "ASYNC_APPEND" },
-                    { id: "journaled_sync", label: "JOURNALED_SYNC" }
-                  ].map(strategy => (
+                    { id: "WRITE_THROUGH", label: "WRITE_THROUGH" },
+                    { id: "ASYNC_APPEND", label: "ASYNC_APPEND" },
+                    { id: "JOURNALED_SYNC", label: "JOURNALED_SYNC" }
+                  ].map((strategy) => (
                     <div 
                       key={strategy.id}
                       onClick={() => setWriteStrategy(strategy.id as any)}
                       className={`flex items-center justify-between p-2.5 transition-colors cursor-pointer border rounded-sm ${
                         writeStrategy === strategy.id 
-                          ? "bg-[#00ff41]/5 border-[#00e639]/60 text-[#00e639]" 
+                          ? "bg-[#00ff41]/5 border-[#00e639]/60 text-[#00e639] border-l-2 border-l-[#00e639]" 
                           : "bg-[#0e0e0e] border-[#3b4b37] text-[#b9ccb2] hover:bg-[#201f1f]"
                       }`}
                     >
@@ -254,7 +329,7 @@ export default function SystemConfiguration() {
             </div>
           </section>
 
-          {/* Card 3: Network Interface */}
+          {/* Card 3: Network Controls */}
           <section className="bg-[#1c1b1b]/80 backdrop-blur-md border border-[#3b4b37] p-4 relative chamfer-br flex flex-col gap-6 min-h-[460px] rounded-sm">
             <div className="flex justify-between items-center border-b border-[#3b4b37] pb-2">
               <h2 className="font-label-code text-[10px] text-[#ffb4ab] flex items-center gap-2 font-bold uppercase">
@@ -269,7 +344,7 @@ export default function SystemConfiguration() {
               <div>
                 <p className="font-label-code text-[10px] text-[#b9ccb2] mb-2 opacity-60">ACTIVE_REPLICATION_REGIONS</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {(Object.keys(regions) as (keyof typeof regions)[]).map(reg => (
+                  {(Object.keys(regions) as (keyof typeof regions)[]).map((reg) => (
                     <div 
                       key={reg}
                       onClick={() => handleRegionToggle(reg)}
@@ -292,7 +367,7 @@ export default function SystemConfiguration() {
               <div>
                 <p className="font-label-code text-[10px] text-[#b9ccb2] mb-2 opacity-60">REPLICATION_FACTOR</p>
                 <div className="flex items-center justify-between h-8 bg-[#0e0e0e] rounded-sm p-1 border border-[#3b4b37]/30">
-                  {["x1", "x3", "x5", "GLOBAL"].map(factor => (
+                  {["x1", "x3", "x5", "GLOBAL"].map((factor) => (
                     <button 
                       key={factor}
                       onClick={() => setReplicationFactor(factor)}
@@ -339,6 +414,21 @@ export default function SystemConfiguration() {
                       onChange={(e) => setVerbosity(v => ({ ...v, debug: Number(e.target.value) }))}
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Live Visualization Map */}
+              <div className="mt-2 border border-[#3b4b37] bg-[#0e0e0e] relative overflow-hidden h-32 flex flex-col justify-end">
+                <canvas 
+                  ref={canvasRef} 
+                  width="300" 
+                  height="128" 
+                  className="w-full h-full block absolute inset-0 z-0" 
+                />
+                <div className="relative z-10 p-2 bg-[#0e0e0e]/80 text-center border-t border-[#3b4b37]/30">
+                  <span className="font-label-code text-[8px] text-[#00e639] tracking-widest font-bold">
+                    3D_CLUSTER_MAP_STREAMING
+                  </span>
                 </div>
               </div>
             </div>

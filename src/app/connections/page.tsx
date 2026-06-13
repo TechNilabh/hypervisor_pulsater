@@ -68,7 +68,7 @@ export default function SourceConnection() {
         { time: timeStr, msg: randomPhrase }
       ].slice(-25)); // keep last 25 logs
 
-      // Randomly fluctuate saturation slightly
+      // Fluctuate saturation slightly
       setSaturation(sat => {
         const diff = Math.random() > 0.5 ? 1 : -1;
         const next = sat + diff;
@@ -124,50 +124,12 @@ status: "dumped"
   };
 
   return (
-    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] min-h-screen flex flex-col overflow-x-hidden scanline">
-      {/* TopNavBar */}
-      <header className="fixed top-0 w-full z-50 bg-[#0e0e0e]/80 backdrop-blur-md border-b border-[#3b4b37] shadow-[0_0_8px_rgba(0,230,57,0.15)] flex justify-between items-center px-6 h-14">
-        <div className="flex items-center gap-4">
-          <span className="font-display-tech text-[20px] tracking-tighter text-[#00e639] font-bold">
-            HYPERVISOR_PULSATER_v2.0.4
-          </span>
-          <span className="text-[#b9ccb2] font-body-mono opacity-50 border-l border-[#3b4b37] pl-4 text-xs">
-            NODE::[US-EAST-1]
-          </span>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="hidden md:flex items-center bg-[#1c1b1b] px-3 py-1 border border-[#3b4b37]">
-            <span className="material-symbols-outlined text-[#00e639] text-sm mr-2">search</span>
-            <input 
-              className="bg-transparent border-none focus:ring-0 text-[10px] w-48 text-[#72ff70] placeholder:text-[#3b4b37] outline-none" 
-              placeholder="QUERY_SYS_LOGS..." 
-              type="text"
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/error-terminal" className="material-symbols-outlined text-[#00e639] cursor-pointer hover:text-white transition-colors">terminal</Link>
-            <Link href="/settings" className="material-symbols-outlined text-[#00e639] cursor-pointer hover:text-white transition-colors">settings_input_component</Link>
-            <span className="material-symbols-outlined text-[#00e639] cursor-pointer hover:text-white transition-colors">notifications_active</span>
-            <div className="flex items-center gap-2 border-l border-[#3b4b37] pl-4">
-              <div className="flex items-center gap-3 pl-4 border-l border-[#3b4b37]">
-                <div className="w-8 h-8 rounded-full bg-[#00e639] flex items-center justify-center text-[#003907] font-bold shadow-[0_0_8px_rgba(0,230,57,0.3)] text-xs">
-                  01
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-label-code text-[10px] text-[#00e639] leading-none">OPERATOR_01</span>
-                  <span className="font-label-code text-[8px] text-[#b9ccb2]/60 leading-none">LEVEL_4_AUTH</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] h-[calc(100vh-64px)] flex flex-col overflow-hidden">
       {/* SideNavBar */}
-      <aside className="fixed left-0 top-14 h-[calc(100vh-56px)] w-64 z-40 bg-black/90 backdrop-blur-xl border-r border-[#3b4b37] flex flex-col py-4 space-y-1">
-        <div className="px-4 mb-6">
-          <h3 className="font-headline-md text-[#00e639] font-bold text-md">OPERATOR_01</h3>
-          <p className="font-label-code text-[#00dbe7] opacity-70 text-[10px]">[NODE: US-EAST-1]</p>
+      <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 z-40 bg-black/90 backdrop-blur-xl border-r border-[#3b4b37] flex flex-col py-4 space-y-1">
+        <div className="px-6 py-4 border-b border-[#3b4b37]/30">
+          <h3 className="font-headline-md text-[#00e639] font-bold text-md leading-none">OPERATOR_01</h3>
+          <p className="font-label-code text-[#00dbe7] opacity-70 text-[10px] mt-1.5">[NODE: US-EAST-1]</p>
         </div>
         <nav className="flex-1">
           <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/live-cdc">
@@ -182,10 +144,10 @@ status: "dumped"
             <span className="material-symbols-outlined">hub</span>
             <span className="font-label-code text-[10px]">GLOBAL_ROUTING</span>
           </Link>
-          <Link className="bg-[#ebffe2]/20 text-[#00e639] border-l-4 border-[#00e639] flex items-center gap-3 px-4 py-3 transition-all" href="/connections">
+          <div className="bg-[#ebffe2]/20 text-[#00e639] border-l-4 border-[#00e639] flex items-center gap-3 px-4 py-3 font-bold cursor-default">
             <span className="material-symbols-outlined">settings_ethernet</span>
             <span className="font-label-code text-[10px]">CONNECTIONS</span>
-          </Link>
+          </div>
           <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/alerts">
             <span className="material-symbols-outlined">warning</span>
             <span className="font-label-code text-[10px]">ALERTS</span>
@@ -198,7 +160,7 @@ status: "dumped"
       </aside>
 
       {/* Main Content Area */}
-      <main className="ml-64 mt-14 mb-8 min-h-[calc(100vh-56px)] p-6 grid grid-cols-1 lg:grid-cols-10 gap-6">
+      <main className="ml-64 p-6 h-[calc(100vh-64px)] overflow-y-auto bg-[#0A0A0A] grid grid-cols-1 lg:grid-cols-10 gap-6">
         
         {/* Left Pane: CONFIGURATION (60%) */}
         <section className="col-span-1 lg:col-span-6 space-y-6">
@@ -275,7 +237,7 @@ status: "dumped"
                 </div>
               </div>
 
-              {/* Schema Multi-select with Brackets */}
+              {/* Schema Whitelist */}
               <div className="space-y-2">
                 <label className="font-label-code text-[10px] text-[#b9ccb2] flex items-center gap-1">
                   <span className="text-[#00e639] text-[8px]">▶</span> SCHEMA_SCOPE_WHITELIST
@@ -412,9 +374,9 @@ status: "dumped"
 
         {/* Right Pane: DIAGNOSTIC LOG (40%) */}
         <section className="col-span-1 lg:col-span-4 flex flex-col gap-6">
-          {/* Console Card */}
-          <div className="flex-1 glass-module flex flex-col border border-[#3b4b37] relative bg-[#0e0e0e]/80 backdrop-blur-md rounded overflow-hidden min-h-[350px]">
-            <div className="bg-[#2a2a2a] px-3 py-2 flex items-center justify-between border-b border-[#3b4b37]">
+          {/* Console Card - STABLE FIXED HEIGHT CONTAINER */}
+          <div className="glass-module flex flex-col border border-[#3b4b37] relative bg-[#0e0e0e]/80 backdrop-blur-md rounded overflow-hidden h-[360px] flex-none">
+            <div className="bg-[#2a2a2a] px-3 py-2 flex items-center justify-between border-b border-[#3b4b37] flex-none">
               <div className="flex items-center gap-2">
                 <span className={`w-2.5 h-2.5 rounded-full ${connectionState === "connected" ? "bg-[#00e639]" : "bg-error animate-pulse"}`}></span>
                 <span className="font-label-code text-white text-[10px] tracking-wider">CONNECTION DIAGNOSTIC LOG</span>
@@ -428,7 +390,7 @@ status: "dumped"
             {/* Terminal log panel */}
             <div 
               ref={logContainerRef}
-              className="flex-1 p-4 font-body-mono text-[11px] overflow-y-auto custom-scrollbar bg-black/40 space-y-1.5 max-h-[320px]"
+              className="flex-grow p-4 font-body-mono text-[11px] overflow-y-auto custom-scrollbar bg-black/40 space-y-1.5"
             >
               {logs.map((log, index) => (
                 <p key={index} className="text-[#b9ccb2] opacity-50 hover:opacity-100 transition-opacity">
@@ -438,7 +400,7 @@ status: "dumped"
             </div>
             
             {/* Saturation progress bar */}
-            <div className="p-4 border-t border-[#3b4b37] bg-[#0e0e0e]/60">
+            <div className="p-4 border-t border-[#3b4b37] bg-[#0e0e0e]/60 flex-none">
               <div className="flex items-center justify-between mb-4">
                 <span className="font-label-code text-[#b9ccb2] text-[10px]">WORKER_POOL_SATURATION</span>
                 <span className="font-label-code text-[#00e639] text-[10px]">{(saturation * 10)}% ACTIVE</span>
@@ -455,7 +417,7 @@ status: "dumped"
           </div>
 
           {/* Action Bar */}
-          <div className="glass-module p-4 space-y-3 bg-[#0e0e0e]/80 border border-[#3b4b37] rounded-sm">
+          <div className="glass-module p-4 space-y-3 bg-[#0e0e0e]/80 border border-[#3b4b37] rounded-sm flex-none">
             <button 
               onClick={handleEstablishConnection}
               disabled={connectionState !== "idle"}
@@ -467,7 +429,7 @@ status: "dumped"
                   : "bg-[#00e639] text-[#003907] hover:shadow-[0_0_15px_rgba(0,230,57,0.4)] hover:brightness-110 active:opacity-90"
               }`}
             >
-              <span className="material-symbols-outlined">
+              <span className="material-symbols-outlined text-sm">
                 {connectionState === "connected" ? "check_circle" : "bolt"}
               </span>
               {connectionState === "connected" 
@@ -519,9 +481,9 @@ status: "dumped"
           <span className="hidden md:inline">[UPTIME: 99.998%]</span>
         </div>
         <div className="flex gap-6">
-          <a className="font-body-mono-sm text-[10px] text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline decoration-[#00e639]/30" href="#">DOCS</a>
-          <a className="font-body-mono-sm text-[10px] text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline decoration-[#00e639]/30" href="#">API_REF</a>
-          <a className="font-body-mono-sm text-[10px] text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline decoration-[#00e639]/30" href="#">SYS_LOGS</a>
+          <a className="font-body-mono-sm text-[10px] text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline" href="#">DOCS</a>
+          <a className="font-body-mono-sm text-[10px] text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline" href="#">API_REF</a>
+          <a className="font-body-mono-sm text-[10px] text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline" href="#">SYS_LOGS</a>
         </div>
       </footer>
     </div>
