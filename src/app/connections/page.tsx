@@ -124,43 +124,9 @@ status: "dumped"
   };
 
   return (
-    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] h-[calc(100vh-64px)] flex flex-col overflow-hidden">
-      {/* SideNavBar */}
-      <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 z-40 bg-black/90 backdrop-blur-xl border-r border-[#3b4b37] flex flex-col py-4 space-y-1">
-        <div className="px-6 py-4 border-b border-[#3b4b37]/30">
-          <h3 className="font-headline-md text-[#00e639] font-bold text-md leading-none">OPERATOR_01</h3>
-          <p className="font-label-code text-[#00dbe7] opacity-70 text-[10px] mt-1.5">[NODE: US-EAST-1]</p>
-        </div>
-        <nav className="flex-1">
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/live-cdc">
-            <span className="material-symbols-outlined">sensors</span>
-            <span className="font-label-code text-[10px]">LIVE_CDC</span>
-          </Link>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/cluster">
-            <span className="material-symbols-outlined">dns</span>
-            <span className="font-label-code text-[10px]">CLUSTER_HEALTH</span>
-          </Link>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/routing">
-            <span className="material-symbols-outlined">hub</span>
-            <span className="font-label-code text-[10px]">GLOBAL_ROUTING</span>
-          </Link>
-          <div className="bg-[#ebffe2]/20 text-[#00e639] border-l-4 border-[#00e639] flex items-center gap-3 px-4 py-3 font-bold cursor-default">
-            <span className="material-symbols-outlined">settings_ethernet</span>
-            <span className="font-label-code text-[10px]">CONNECTIONS</span>
-          </div>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/alerts">
-            <span className="material-symbols-outlined">warning</span>
-            <span className="font-label-code text-[10px]">ALERTS</span>
-          </Link>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/settings">
-            <span className="material-symbols-outlined">terminal</span>
-            <span className="font-label-code text-[10px]">SETTINGS</span>
-          </Link>
-        </nav>
-      </aside>
-
+    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] min-h-screen flex flex-col">
       {/* Main Content Area */}
-      <main className="ml-64 p-6 h-[calc(100vh-64px)] overflow-y-auto bg-[#0A0A0A] grid grid-cols-1 lg:grid-cols-10 gap-6">
+      <div className="p-6 min-h-screen overflow-y-auto bg-[#0A0A0A] grid grid-cols-1 lg:grid-cols-10 gap-6">
         
         {/* Left Pane: CONFIGURATION (60%) */}
         <section className="col-span-1 lg:col-span-6 space-y-6">
@@ -471,21 +437,7 @@ status: "dumped"
           </div>
         </section>
 
-      </main>
-
-      {/* Footer */}
-      <footer className="fixed bottom-0 w-full h-8 z-50 bg-[#2a2a2a] border-t border-[#00e639]/30 shadow-[0_-4px_12px_rgba(0,0,0,0.5)] flex justify-between items-center px-6">
-        <div className="font-label-code text-[#00e639] flex gap-4 text-[10px]">
-          <span>[SYSTEM_STATUS: NOMINAL]</span>
-          <span className="hidden md:inline">[THREAD_COUNT: 1024]</span>
-          <span className="hidden md:inline">[UPTIME: 99.998%]</span>
-        </div>
-        <div className="flex gap-6">
-          <a className="font-body-mono-sm text-[10px] text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline" href="#">DOCS</a>
-          <a className="font-body-mono-sm text-[10px] text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline" href="#">API_REF</a>
-          <a className="font-body-mono-sm text-[10px] text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline" href="#">SYS_LOGS</a>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }

@@ -58,31 +58,9 @@ export default function LiveCdc() {
   }, []);
 
   return (
-    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] overflow-hidden h-[calc(100vh-64px)] flex flex-col">
-      {/* SideNavBar */}
-      <nav className="fixed left-0 top-16 h-[calc(100vh-64px)] z-40 flex flex-col bg-[#0e0e0e]/90 backdrop-blur-md border-r border-[#3b4b37] w-64 hidden lg:flex">
-        <div className="px-6 py-4 border-b border-[#3b4b37]/30">
-          <div className="font-label-code text-[#ebffe2] text-xs">NODE_ACTIVE</div>
-          <div className="font-body-mono text-[#00dbe7] opacity-70 text-sm">US-EAST-01</div>
-        </div>
-        <div className="flex-1 py-4 flex flex-col">
-          <div className="bg-[#00f1fe]/20 text-[#00f1fe] border-l-4 border-[#00f1fe] px-4 py-3 font-bold flex items-center gap-3 transition-transform duration-75 scale-95">
-            <span className="material-symbols-outlined">settings_ethernet</span>
-            <span className="font-body-mono text-sm">LIVE_CDC</span>
-          </div>
-          <Link href="/cluster" className="text-[#b9ccb2] px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:text-white flex items-center gap-3 cursor-pointer">
-            <span className="material-symbols-outlined">monitor_heart</span>
-            <span className="font-body-mono text-sm">CLUSTER_HEALTH</span>
-          </Link>
-          <Link href="/routing" className="text-[#b9ccb2] px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:text-white flex items-center gap-3 cursor-pointer">
-            <span className="material-symbols-outlined">language</span>
-            <span className="font-body-mono text-sm">GLOBAL_ROUTING</span>
-          </Link>
-        </div>
-      </nav>
-
+    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] min-h-screen flex flex-col">
       {/* Main Content Area */}
-      <main className="lg:pl-64 h-[calc(100vh-64px)] overflow-hidden flex flex-col bg-[#0A0A0A]">
+      <div className="min-h-screen overflow-hidden flex flex-col bg-[#0A0A0A]">
         
         {/* Top Telemetry Strip */}
         <div className="px-6 py-2 bg-[#1c1b1b] border-b border-[#3b4b37]/30 flex items-center justify-between">
@@ -232,17 +210,7 @@ export default function LiveCdc() {
             </div>
           </div>
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="fixed bottom-0 w-full z-50 h-8 flex items-center px-6 justify-between bg-[#1c1b1b] border-t border-error/30 text-error font-label-code text-[10px]">
-        <div>[SYSTEM_READY] // INTERRUPT_LISTENER_ACTIVE</div>
-        <div className="flex gap-6">
-          <a className="text-[#ffdad6] hover:bg-error-container hover:text-on-error-container px-2 transition-colors" href="#">V1.0.4_STABLE</a>
-          <a className="text-[#ffdad6] hover:bg-error-container hover:text-on-error-container px-2 transition-colors" href="#">RECOVERY_MODE</a>
-          <a className="text-[#ffdad6] hover:bg-error-container hover:text-on-error-container px-2 transition-colors" href="#">DEBUG_CONSOLE</a>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }

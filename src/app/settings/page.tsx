@@ -136,50 +136,9 @@ export default function SystemConfiguration() {
   }, []);
 
   return (
-    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] overflow-hidden h-[calc(100vh-64px)] flex flex-col">
-      {/* SideNavBar */}
-      <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 z-40 bg-[#0e0e0e]/95 backdrop-blur-xl border-r border-[#3b4b37] flex flex-col py-4 space-y-1">
-        <div className="px-6 py-2 mb-4 border-b border-[#3b4b37]/30">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-8 h-8 rounded-sm bg-[#00ff41]/10 flex items-center justify-center overflow-hidden border border-[#00e639]/30">
-              <span className="material-symbols-outlined text-xs text-[#00e639]">person</span>
-            </div>
-            <div>
-              <p className="font-label-code text-[10px] text-white font-bold leading-none">OPERATOR_01</p>
-              <p className="font-label-code text-[8px] opacity-50 text-[#00dbe7] leading-none mt-1">[NODE: US-EAST-1]</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1">
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/live-cdc">
-            <span className="material-symbols-outlined">sensors</span>
-            <span className="font-label-code text-[10px]">LIVE_CDC</span>
-          </Link>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/cluster">
-            <span className="material-symbols-outlined">dns</span>
-            <span className="font-label-code text-[10px]">CLUSTER_HEALTH</span>
-          </Link>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/routing">
-            <span className="material-symbols-outlined">hub</span>
-            <span className="font-label-code text-[10px]">GLOBAL_ROUTING</span>
-          </Link>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/connections">
-            <span className="material-symbols-outlined">settings_ethernet</span>
-            <span className="font-label-code text-[10px]">CONNECTIONS</span>
-          </Link>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/alerts">
-            <span className="material-symbols-outlined">warning</span>
-            <span className="font-label-code text-[10px]">ALERTS</span>
-          </Link>
-          <div className="bg-[#00ff41]/20 text-[#00e639] border-l-4 border-[#00e639] flex items-center gap-3 px-4 py-3 font-bold cursor-default">
-            <span className="material-symbols-outlined">terminal</span>
-            <span className="font-label-code text-[10px]">SETTINGS</span>
-          </div>
-        </nav>
-      </aside>
-
-      {/* Main Canvas Area */}
-      <main className="ml-64 p-6 h-[calc(100vh-64px)] overflow-y-auto bg-[#0A0A0A]">
+    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] min-h-screen flex flex-col">
+      {/* Main Content Area */}
+      <div className="p-6 min-h-screen overflow-y-auto bg-[#0A0A0A]">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-container-max mx-auto">
           
           {/* Card 1: Worker Pool Orchestrator */}
@@ -435,25 +394,7 @@ export default function SystemConfiguration() {
           </section>
 
         </div>
-      </main>
-
-      {/* Footer Status Bar */}
-      <footer className="fixed bottom-0 w-full h-8 z-50 bg-[#2a2a2a] border-t border-[#00e639]/30 flex justify-between items-center px-6">
-        <div className="flex items-center gap-6">
-          <p className="font-label-code text-[#00e639] text-[10px] animate-pulse">● SYSTEM_STATUS: NOMINAL</p>
-          <p className="font-body-mono-sm text-[#b9ccb2]/60 text-[10px] hidden md:block">[THREAD_COUNT: 1024] [UPTIME: 99.998%]</p>
-        </div>
-        <div className="flex items-center gap-4 text-[10px]">
-          <a className="text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors" href="#">DOCS</a>
-          <a className="text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline" href="#">API_REF</a>
-          <a className="text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors" href="#">SYS_LOGS</a>
-          <div className="flex gap-0.5 ml-2">
-            <div className="w-1 h-3 bg-[#00e639]"></div>
-            <div className="w-1 h-3 bg-[#00e639]/40"></div>
-            <div className="w-1 h-3 bg-[#00e639]"></div>
-          </div>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }

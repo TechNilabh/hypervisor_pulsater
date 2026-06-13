@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { startAlarm, stopAlarm } from "../useTerminalAudio";
 
 export default function ErrorTerminal() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -160,18 +161,26 @@ export default function ErrorTerminal() {
     return () => clearInterval(interval);
   }, []);
 
+  // Warning alarm control
+  useEffect(() => {
+    startAlarm();
+    return () => {
+      stopAlarm();
+    };
+  }, []);
+
   const handleReboot = () => {
     setRebooting(true);
+    stopAlarm();
     setTimeout(() => {
       setRebooting(false);
       setScore(0);
+      startAlarm();
     }, 2000);
   };
 
   return (
     <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col overflow-hidden">
-      {/* Background Scanlines */}
-      <div className="fixed inset-0 scanline z-10 opacity-30"></div>
 
       {/* Main Content Canvas */}
       <main className="flex-grow flex items-center justify-center p-6 z-20 relative pt-8 pb-12">
@@ -264,19 +273,6 @@ export default function ErrorTerminal() {
         </div>
       </main>
 
-      {/* Footer Status Bar */}
-      <footer className="fixed bottom-0 w-full h-8 z-50 bg-[#2a2a2a] border-t border-[#00e639]/30 flex justify-between items-center px-6 text-[10px]">
-        <div className="font-label-code text-[#00e639] flex items-center gap-4">
-          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-error rounded-full"></span> [SYSTEM_STATUS: ERROR]</span>
-          <span className="opacity-60">[THREAD_COUNT: 0000]</span>
-          <span className="opacity-60">[UPTIME: 00.000%]</span>
-        </div>
-        <div className="flex gap-4">
-          <a className="font-body-mono-sm text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors" href="#">DOCS</a>
-          <a className="font-body-mono-sm text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors" href="#">API_REF</a>
-          <a className="font-body-mono-sm text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors" href="#">SYS_LOGS</a>
-        </div>
-      </footer>
     </div>
   );
 }

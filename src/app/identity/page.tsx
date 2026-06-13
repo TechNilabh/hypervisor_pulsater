@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface AvatarSlot {
   id: string;
@@ -15,6 +16,7 @@ interface AvatarSlot {
 }
 
 export default function IdentityAuth() {
+  const router = useRouter();
   const [slots, setSlots] = useState<AvatarSlot[]>([
     {
       id: "Node_01",
@@ -80,44 +82,30 @@ export default function IdentityAuth() {
   const handleOverride = () => {
     if (overrideState !== "idle") return;
     setOverrideState("running");
+    
+    // Animate transition and then save operator info
     setTimeout(() => {
       setOverrideState("success");
-    }, 3000);
+      
+      // Save identity to localStorage
+      localStorage.setItem("selected_operator_id", `${activeSlot.id} // ${activeSlot.name}`);
+      
+      // Dispatch event to refresh layout sidebar
+      window.dispatchEvent(new Event("operatorChanged"));
+      
+      // Navigate to live dashboard
+      setTimeout(() => {
+        router.push("/live-cdc");
+      }, 800);
+    }, 2000);
   };
 
   return (
     <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] h-[calc(100vh-64px)] flex flex-col overflow-hidden">
-      {/* SideNavBar */}
-      <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 z-40 flex flex-col pt-4 bg-[#0e0e0e]/90 backdrop-blur-md border-r border-[#3b4b37] hidden md:flex">
-        <div className="px-6 py-4 border-b border-[#3b4b37]/30">
-          <div className="font-label-code text-[#ebffe2] uppercase text-xs">NODE_ACTIVE</div>
-          <div className="font-body-mono text-[#00dbe7] text-lg font-semibold">US-EAST-01</div>
-        </div>
-        <div className="flex flex-col mt-4">
-          <Link href="/live-cdc" className="text-[#b9ccb2] px-4 py-3 opacity-70 flex items-center gap-3 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all">
-            <span className="material-symbols-outlined text-xl">settings_ethernet</span>
-            <span className="font-label-code uppercase text-[10px] tracking-wider">LIVE_CDC</span>
-          </Link>
-          <Link href="/cluster" className="text-[#b9ccb2] px-4 py-3 opacity-70 flex items-center gap-3 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all">
-            <span className="material-symbols-outlined text-xl">monitor_heart</span>
-            <span className="font-label-code uppercase text-[10px] tracking-wider">CLUSTER_HEALTH</span>
-          </Link>
-          <Link href="/routing" className="text-[#b9ccb2] px-4 py-3 opacity-70 flex items-center gap-3 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all">
-            <span className="material-symbols-outlined text-xl">language</span>
-            <span className="font-label-code uppercase text-[10px] tracking-wider">GLOBAL_ROUTING</span>
-          </Link>
-        </div>
-        <div className="mt-auto p-4 bg-[#1c1b1b]/50 border-t border-[#3b4b37]">
-          <div className="text-[10px] font-label-code text-[#84967e] uppercase mb-2">System Diagnostics</div>
-          <div className="h-1 bg-[#353534] w-full relative overflow-hidden">
-            <div className="absolute inset-0 bg-[#00e639] w-3/4 animate-pulse"></div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content Area */}
-      <main className="flex-grow md:pl-64 p-6 overflow-y-auto scanline-overlay h-[calc(100vh-64px)]">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+      
+      {/* Main Content Area (Layout sidebar handles pl-64 / pl-16 offset) */}
+      <main className="flex-grow p-6 overflow-y-auto scanline-overlay h-[calc(100vh-64px)]">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
           
           {/* Left Pane: Identity Grid Scanner */}
           <section className="flex flex-col relative min-h-[400px]">
@@ -306,19 +294,6 @@ export default function IdentityAuth() {
 
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="fixed bottom-0 w-full z-50 h-8 flex items-center px-6 justify-between bg-[#1c1b1b] border-t border-error/30">
-        <div className="flex items-center gap-4">
-          <span className="material-symbols-outlined text-error text-[14px] animate-pulse">radio_button_checked</span>
-          <div className="font-label-code text-[10px] text-error uppercase">[SYSTEM_READY] // INTERRUPT_LISTENER_ACTIVE</div>
-        </div>
-        <div className="flex gap-6">
-          <a className="text-[#ffdad6] font-label-code text-[10px] hover:text-error transition-all uppercase" href="#">V1.0.4_STABLE</a>
-          <a className="text-[#ffdad6] font-label-code text-[10px] hover:text-error transition-all uppercase" href="#">RECOVERY_MODE</a>
-          <a className="text-[#ffdad6] font-label-code text-[10px] hover:text-error transition-all uppercase" href="#">DEBUG_CONSOLE</a>
-        </div>
-      </footer>
     </div>
   );
 }

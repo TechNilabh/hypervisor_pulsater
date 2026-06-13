@@ -3,6 +3,182 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 
+// Interactive 3D Wireframe Sphere Component for Homepage Background
+function WireframeSphere() {
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let width = canvas.width = canvas.offsetWidth;
+    let height = canvas.height = canvas.offsetHeight;
+
+    const handleResize = () => {
+      if (!canvas) return;
+      width = canvas.width = canvas.offsetWidth;
+      height = canvas.height = canvas.offsetHeight;
+    };
+    window.addEventListener("resize", handleResize);
+
+    const points: { x: number; y: number; z: number }[] = [];
+    const numLat = 8;
+    const numLon = 14;
+    const radius = 140;
+
+    for (let i = 1; i < numLat; i++) {
+      const lat = (Math.PI * i) / numLat - Math.PI / 2;
+      for (let j = 0; j < numLon; j++) {
+        const lon = (2 * Math.PI * j) / numLon;
+        points.push({
+          x: radius * Math.cos(lat) * Math.sin(lon),
+          y: radius * Math.sin(lat),
+          z: radius * Math.cos(lat) * Math.cos(lon),
+        });
+      }
+    }
+
+    const lines: [number, number][] = [];
+    for (let i = 1; i < numLat; i++) {
+      const startIdx = (i - 1) * numLon;
+      for (let j = 0; j < numLon; j++) {
+        const current = startIdx + j;
+        const next = startIdx + ((j + 1) % numLon);
+        lines.push([current, next]);
+
+        if (i < numLat - 1) {
+          const below = current + numLon;
+          lines.push([current, below]);
+        }
+      }
+    }
+
+    let angleX = 0.2;
+    let angleY = 0.3;
+    let targetAngleX = 0.2;
+    let targetAngleY = 0.3;
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left - width / 2;
+        const my = e.clientY - rect.top - height / 2;
+        targetAngleY += mx * 0.00001;
+        targetAngleX += my * 0.00001;
+        return;
+      }
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+      targetAngleY += dx * 0.004;
+      targetAngleX += dy * 0.004;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    };
+
+    const handleMouseUp = () => {
+      isDragging = false;
+    };
+
+    canvas.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    let animationFrameId: number;
+
+    const render = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      angleX += (targetAngleX - angleX) * 0.1;
+      angleY += (targetAngleY - angleY) * 0.1;
+
+      if (!isDragging) {
+        targetAngleY += 0.0015;
+        targetAngleX += 0.0003;
+      }
+
+      const projected: { px: number; py: number; zVal: number }[] = [];
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const fov = 300;
+
+      for (const p of points) {
+        const cosY = Math.cos(angleY);
+        const sinY = Math.sin(angleY);
+        let x1 = p.x * cosY - p.z * sinY;
+        let z1 = p.x * sinY + p.z * cosY;
+
+        const cosX = Math.cos(angleX);
+        const sinX = Math.sin(angleX);
+        let y2 = p.y * cosX - z1 * sinX;
+        let z2 = p.y * sinX + z1 * cosX;
+
+        const scale = fov / (fov + z2 + radius);
+        projected.push({
+          px: centerX + x1 * scale,
+          py: centerY + y2 * scale,
+          zVal: z2,
+        });
+      }
+
+      // Draw wireframe lines
+      for (const [start, end] of lines) {
+        const p1 = projected[start];
+        const p2 = projected[end];
+        const avgZ = (p1.zVal + p2.zVal) / 2;
+        const opacity = Math.max(0.02, Math.min(0.5, (radius - avgZ) / (2 * radius)));
+
+        ctx.beginPath();
+        ctx.moveTo(p1.px, p1.py);
+        ctx.lineTo(p2.px, p2.py);
+        ctx.strokeStyle = `rgba(0, 241, 254, ${opacity * 0.5})`;
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+      }
+
+      // Draw point nodes
+      for (const p of projected) {
+        const opacity = Math.max(0.05, Math.min(0.7, (radius - p.zVal) / (2 * radius)));
+        ctx.beginPath();
+        ctx.arc(p.px, p.py, 1.5, 0, 2 * Math.PI);
+        ctx.fillStyle = `rgba(0, 255, 65, ${opacity * 0.8})`;
+        ctx.fill();
+      }
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (canvas) {
+        canvas.removeEventListener("mousedown", handleMouseDown);
+      }
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return (
+    <canvas 
+      ref={canvasRef}
+      className="w-full h-full cursor-grab active:cursor-grabbing"
+    />
+  );
+}
+
 export default function Home() {
   const [logs, setLogs] = useState([
     { line: 102, time: "14:22:01.004", type: "INSERT", color: "text-secondary-fixed", payload: 'payload: { "id": "uuid-808", "state": "active", "val": 420.69 }' },
@@ -85,18 +261,9 @@ export default function Home() {
             <div className="font-display-tech text-[24px] text-[#74f5ff]">840K</div>
           </div>
         </div>
-        {/* Cinematic Planet Bottom */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[140%] h-[50vh] z-0 pointer-events-none">
-          <img 
-            className="w-full h-full object-cover object-top opacity-60" 
-            alt="Cinematic Earth glowing with a vibrant cyber-cyan atmospheric ring and holographic digital grid lines."
-            src="https://lh3.googleusercontent.com/aida-grid-ring-earth-globe-cyan" 
-            onError={(e) => {
-              // fallback if URL fails
-              e.currentTarget.src = "https://lh3.googleusercontent.com/aida-public/AB6AXuBG7HjZlxxjJdemOaEpwVwOL2VIAQfh1stiBSwG_XuZnhoX-ZxfmH00rsr5199g3zEmdks58h3OUG4otKq8DmzbYhKzz4JO9Au-mbEHgb846L-jN5aCfdh47LYnoSp2pslCT5GRbMwxlIN-kN3HLEYLACIfI3pfTR2WpSXbATON1xIxaxz0LwOOpwt6bPDenbmarxJY_-HKVd5ml2U9zY7R512WT_IUMzCN2sj0mzM-iLqXt-lG6Pd3zEsz4FElI3LMd0Z6X8QziV0";
-            }}
-            style={{ maskImage: "linear-gradient(to top, black 40%, transparent 100%)", WebkitMaskImage: "linear-gradient(to top, black 40%, transparent 100%)" }}
-          />
+        {/* Interactive 3D Wireframe Sphere Background */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] max-w-[800px] h-[350px] z-0 pointer-events-auto opacity-70">
+          <WireframeSphere />
         </div>
       </section>
 

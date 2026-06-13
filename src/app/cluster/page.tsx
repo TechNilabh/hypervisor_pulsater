@@ -130,45 +130,8 @@ export default function ClusterHealth() {
     <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col">
       <div className="fixed inset-0 scanline-overlay z-50 pointer-events-none opacity-20"></div>
 
-      {/* SideNavBar */}
-      <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] z-35 flex flex-col pt-4 bg-[#0e0e0e]/90 backdrop-blur-md border-r border-[#3b4b37] w-64 hidden md:flex">
-        <div className="p-4 border-b border-[#3b4b37]">
-          <div className="font-label-code text-[#ebffe2] text-xs">NODE_ACTIVE</div>
-          <div className="text-body-mono opacity-60 text-sm">US-EAST-01</div>
-        </div>
-        <div className="flex flex-col mt-4">
-          <Link href="/live-cdc" className="text-[#b9ccb2] px-4 py-3 opacity-70 flex items-center gap-3 cursor-pointer hover:bg-[#353534]/30 hover:text-white transition-all">
-            <span className="material-symbols-outlined">settings_ethernet</span>
-            <span className="font-label-code text-[10px]">LIVE_CDC</span>
-          </Link>
-          <div className="bg-[#00f1fe]/20 text-[#00f1fe] border-l-4 border-[#00f1fe] px-4 py-3 font-bold flex items-center gap-3 cursor-default">
-            <span className="material-symbols-outlined">monitor_heart</span>
-            <span className="font-label-code text-[10px]">CLUSTER_HEALTH</span>
-          </div>
-          <Link href="/routing" className="text-[#b9ccb2] px-4 py-3 opacity-70 flex items-center gap-3 cursor-pointer hover:bg-[#353534]/30 hover:text-white transition-all">
-            <span className="material-symbols-outlined">language</span>
-            <span className="font-label-code text-[10px]">GLOBAL_ROUTING</span>
-          </Link>
-        </div>
-        <div className="mt-auto p-4">
-          <div className="bg-[#201f1f] p-3 border border-[#3b4b37] rounded-sm">
-            <div className="text-label-code mb-2 opacity-50 uppercase tracking-widest text-[9px]">System Load</div>
-            <div className="flex gap-1">
-              <div className="progress-segment active"></div>
-              <div className="progress-segment active"></div>
-              <div className="progress-segment active"></div>
-              <div className="progress-segment active"></div>
-              <div className="progress-segment active"></div>
-              <div className="progress-segment"></div>
-              <div className="progress-segment"></div>
-              <div className="progress-segment"></div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
       {/* Main Content Area */}
-      <main className="md:ml-64 p-6 min-h-[calc(100vh-64px)] bg-[#0A0A0A]">
+      <div className="p-6 min-h-screen bg-[#0A0A0A]">
         <div className="flex justify-between items-end mb-8">
           <div>
             <h1 className="font-display-tech text-[32px] font-bold uppercase tracking-tighter">Cluster Resource Health</h1>
@@ -209,45 +172,47 @@ export default function ClusterHealth() {
               </div>
 
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* CPU radial loading */}
-                  <div className="flex flex-col items-center justify-center border border-[#3b4b37] py-4 relative corner-bracket bracket-tl bracket-br bg-black/20">
-                    <svg className="w-16 h-16 transform -rotate-90">
-                      <circle className="text-[#353534]" cx="32" cy="32" fill="transparent" r="24" stroke="currentColor" strokeWidth="4"></circle>
-                      <circle 
-                        className={`${node.status === "THROTTLED" ? "text-error" : "text-[#00e639]"} transition-all duration-500`} 
-                        cx="32" 
-                        cy="32" 
-                        fill="transparent" 
-                        r="24" 
-                        stroke="currentColor" 
-                        strokeDasharray="150.8" 
-                        strokeDashoffset={150.8 - (150.8 * node.cpu) / 100} 
-                        strokeWidth="4"
-                      ></circle>
-                    </svg>
-                    <span className="absolute text-[10px] font-label-code text-white mt-[-10px]">{node.cpu}%</span>
-                    <span className="text-[9px] font-label-code mt-2 opacity-50">CPU LOAD</span>
+                <div className="space-y-4">
+                  {/* CPU LED progress bar */}
+                  <div className="border border-[#3b4b37] p-3 relative bg-black/20 rounded-sm">
+                    <div className="flex justify-between items-center text-[10px] font-label-code mb-1.5">
+                      <span className="opacity-50">CPU LOAD</span>
+                      <span className={`font-bold ${node.status === "THROTTLED" ? "text-error" : "text-[#00e639]"}`}>{node.cpu}%</span>
+                    </div>
+                    <div className="h-3 bg-[#353534]/50 border border-[#3b4b37]/40 w-full flex overflow-hidden p-[2px] rounded-sm">
+                      {Array.from({ length: 15 }).map((_, idx) => (
+                        <div
+                          key={idx}
+                          className={`h-full flex-grow mx-[1px] transition-colors duration-300 ${
+                            idx < Math.ceil(node.cpu / 6.67)
+                              ? node.status === "THROTTLED"
+                                ? "bg-error animate-pulse shadow-[0_0_5px_#ef4444]"
+                                : "bg-[#00e639] shadow-[0_0_5px_#00ff41]"
+                              : "bg-[#1c1b1b]"
+                          }`}
+                        />
+                      ))}
+                    </div>
                   </div>
 
-                  {/* MEM radial loading */}
-                  <div className="flex flex-col items-center justify-center border border-[#3b4b37] py-4 relative corner-bracket bracket-tr bracket-bl bg-black/20">
-                    <svg className="w-16 h-16 transform -rotate-90">
-                      <circle className="text-[#353534]" cx="32" cy="32" fill="transparent" r="24" stroke="currentColor" strokeWidth="4"></circle>
-                      <circle 
-                        className="text-[#00f1fe] transition-all duration-500" 
-                        cx="32" 
-                        cy="32" 
-                        fill="transparent" 
-                        r="24" 
-                        stroke="currentColor" 
-                        strokeDasharray="150.8" 
-                        strokeDashoffset={150.8 - (150.8 * node.mem) / 100} 
-                        strokeWidth="4"
-                      ></circle>
-                    </svg>
-                    <span className="absolute text-[10px] font-label-code text-white mt-[-10px]">{node.mem}%</span>
-                    <span className="text-[9px] font-label-code mt-2 opacity-50">MEM ALLOC</span>
+                  {/* MEM LED progress bar */}
+                  <div className="border border-[#3b4b37] p-3 relative bg-black/20 rounded-sm">
+                    <div className="flex justify-between items-center text-[10px] font-label-code mb-1.5">
+                      <span className="opacity-50">MEM ALLOC</span>
+                      <span className="font-bold text-[#00f1fe]">{node.mem}%</span>
+                    </div>
+                    <div className="h-3 bg-[#353534]/50 border border-[#3b4b37]/40 w-full flex overflow-hidden p-[2px] rounded-sm">
+                      {Array.from({ length: 15 }).map((_, idx) => (
+                        <div
+                          key={idx}
+                          className={`h-full flex-grow mx-[1px] transition-colors duration-300 ${
+                            idx < Math.ceil(node.mem / 6.67)
+                              ? "bg-[#00f1fe] shadow-[0_0_5px_#00f1fe]"
+                              : "bg-[#1c1b1b]"
+                          }`}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -325,17 +290,7 @@ export default function ClusterHealth() {
             <div className="text-center mt-2 font-label-code text-[9px] opacity-40 tracking-widest uppercase">Sector Processing Coordinate (x, y)</div>
           </div>
         </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="fixed bottom-0 w-full z-50 h-8 flex items-center px-6 justify-between bg-[#1c1b1b] border-t border-error/30 text-error font-label-code text-[10px]">
-        <div>[SYSTEM_READY] // INTERRUPT_LISTENER_ACTIVE</div>
-        <div className="flex gap-6">
-          <a className="text-[#ffdad6] hover:bg-error-container hover:text-on-error-container px-2 h-full flex items-center transition-colors" href="#">V1.0.4_STABLE</a>
-          <a className="text-[#ffdad6] hover:bg-error-container hover:text-on-error-container px-2 h-full flex items-center transition-colors" href="#">RECOVERY_MODE</a>
-          <a className="text-[#ffdad6] hover:bg-error-container hover:text-on-error-container px-2 h-full flex items-center transition-colors" href="#">DEBUG_CONSOLE</a>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }

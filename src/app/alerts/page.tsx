@@ -102,67 +102,8 @@ export default function PipelineAlerts() {
 
   return (
     <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono min-h-screen overflow-hidden flex flex-col select-none">
-      
-      {/* SideNavBar */}
-      <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 z-40 bg-[#0e0e0e]/95 backdrop-blur-xl border-r border-[#3b4b37] flex flex-col py-4 space-y-1">
-        <div className="px-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#00ff41]/10 border border-[#00e639]/30 flex items-center justify-center rounded-sm">
-              <span className="material-symbols-outlined text-[#00e639]">account_tree</span>
-            </div>
-            <div>
-              <h3 className="font-label-code text-white text-[12px] leading-tight font-bold">OPERATOR_01</h3>
-              <p className="font-label-code text-[8px] opacity-50 text-[#00dbe7]">[NODE: US-EAST-1]</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1">
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/live-cdc">
-            <span className="material-symbols-outlined">sensors</span>
-            <span className="font-label-code text-[10px]">LIVE_CDC</span>
-          </Link>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/cluster">
-            <span className="material-symbols-outlined">dns</span>
-            <span className="font-label-code text-[10px]">CLUSTER_HEALTH</span>
-          </Link>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/routing">
-            <span className="material-symbols-outlined">hub</span>
-            <span className="font-label-code text-[10px]">GLOBAL_ROUTING</span>
-          </Link>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/connections">
-            <span className="material-symbols-outlined">settings_ethernet</span>
-            <span className="font-label-code text-[10px]">CONNECTIONS</span>
-          </Link>
-          <div className="bg-[#00ff41]/20 text-[#00e639] border-l-4 border-[#00e639] flex items-center gap-3 px-4 py-3 font-bold cursor-default">
-            <span className="material-symbols-outlined">warning</span>
-            <span className="font-label-code text-[10px]">ALERTS</span>
-          </div>
-          <Link className="text-[#b9ccb2] flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:opacity-100 hover:text-white transition-all" href="/settings">
-            <span className="material-symbols-outlined">terminal</span>
-            <span className="font-label-code text-[10px]">SETTINGS</span>
-          </Link>
-        </nav>
-        <div className="px-4 mt-auto">
-          <div className="border border-[#3b4b37] p-2 bg-[#1c1b1b]/40 rounded-sm">
-            <div className="flex justify-between font-label-code text-[8px] text-[#00e639] mb-1">
-              <span>CPU_UTIL</span>
-              <span>42.8%</span>
-            </div>
-            <div className="h-1 bg-[#2a2a2a] w-full overflow-hidden flex gap-0.5">
-              <div className="h-full bg-[#00e639] w-[4px]"></div>
-              <div className="h-full bg-[#00e639] w-[4px]"></div>
-              <div className="h-full bg-[#00e639] w-[4px]"></div>
-              <div className="h-full bg-[#00e639] w-[4px]"></div>
-              <div className="h-full bg-[#00e639] w-[4px]"></div>
-              <div className="h-full bg-[#2a2a2a] w-[4px]"></div>
-              <div className="h-full bg-[#2a2a2a] w-[4px]"></div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
       {/* Main Content Area */}
-      <main className="ml-64 p-6 h-[calc(100vh-64px)] overflow-hidden flex gap-6">
+      <div className="p-6 min-h-screen overflow-hidden flex gap-6">
         
         {/* Left Section: Diagnostic Matrix & Filters */}
         <section className="flex-1 flex flex-col space-y-6 overflow-hidden">
@@ -339,23 +280,7 @@ export default function PipelineAlerts() {
           </div>
         </aside>
 
-      </main>
-
-      {/* Footer */}
-      <footer className="fixed bottom-0 w-full h-8 z-50 bg-[#2a2a2a] text-[#00e639] font-body-mono-sm border-t border-[#00e639]/30 flex justify-between items-center px-6">
-        <div className="flex items-center gap-4 text-[10px]">
-          <span className="font-label-code font-bold">[SYSTEM_STATUS: NOMINAL]</span>
-          <span className="opacity-50">|</span>
-          <span className="font-label-code">[THREAD_COUNT: 1024]</span>
-          <span className="opacity-50">|</span>
-          <span className="font-label-code">[UPTIME: 99.998%]</span>
-        </div>
-        <div className="flex gap-6 items-center text-[10px]">
-          <a className="text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline cursor-pointer" href="#">DOCS</a>
-          <a className="text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline cursor-pointer" href="#">API_REF</a>
-          <a className="text-[#b9ccb2]/60 hover:text-[#74f5ff] transition-colors underline cursor-pointer" href="#">SYS_LOGS</a>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }

@@ -15,6 +15,272 @@ interface PacketFlag {
   status: "SYNC" | "REPL" | "LAG";
 }
 
+interface GlobeNode {
+  name: string;
+  lat: number;
+  lon: number;
+  color: string;
+  textColor: string;
+  details: string;
+}
+
+function InteractiveGlobe() {
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  
+  const nodes: GlobeNode[] = [
+    { name: "NODE_US_EAST_01", lat: 37.77, lon: -122.41, color: "rgba(0, 255, 65, 1)", textColor: "#00ff41", details: "THROUGHPUT: 18.2 TB/s" },
+    { name: "NODE_EU_CENT_04", lat: 50.11, lon: 8.68, color: "rgba(0, 241, 254, 1)", textColor: "#00f1fe", details: "SYNC_RATE: 120.4 Gbit" },
+    { name: "NODE_ASIA_SOUTH_01", lat: 19.07, lon: 72.87, color: "rgba(255, 180, 171, 1)", textColor: "#ffb4ab", details: "LATENCY: 214ms" }
+  ];
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let width = canvas.width = canvas.offsetWidth;
+    let height = canvas.height = canvas.offsetHeight;
+
+    const handleResize = () => {
+      if (!canvas) return;
+      width = canvas.width = canvas.offsetWidth;
+      height = canvas.height = canvas.offsetHeight;
+    };
+    window.addEventListener("resize", handleResize);
+
+    const radius = 130;
+    let angleX = 0.3;
+    let angleY = 0.8;
+    let targetAngleX = 0.3;
+    let targetAngleY = 0.8;
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    const sphereDots: { x: number; y: number; z: number }[] = [];
+    const latCount = 16;
+    const lonCount = 28;
+    for (let i = 1; i < latCount; i++) {
+      const lat = (Math.PI * i) / latCount - Math.PI / 2;
+      for (let j = 0; j < lonCount; j++) {
+        const lon = (2 * Math.PI * j) / lonCount;
+        sphereDots.push({
+          x: radius * Math.cos(lat) * Math.sin(lon),
+          y: radius * Math.sin(lat),
+          z: radius * Math.cos(lat) * Math.cos(lon)
+        });
+      }
+    }
+
+    const handleMouseDown = (e: MouseEvent) => {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+      targetAngleY += dx * 0.007;
+      targetAngleX += dy * 0.007;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    };
+
+    const handleMouseUp = () => {
+      isDragging = false;
+    };
+
+    canvas.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    let animationFrameId: number;
+    let pulseAngle = 0;
+
+    const render = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      angleX += (targetAngleX - angleX) * 0.1;
+      angleY += (targetAngleY - angleY) * 0.1;
+
+      angleX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, angleX));
+
+      if (!isDragging) {
+        targetAngleY += 0.0012;
+      }
+
+      pulseAngle += 0.05;
+      const pulseRadius = 6 + Math.sin(pulseAngle) * 4;
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const fov = 350;
+
+      const projectedDots: { px: number; py: number; zVal: number }[] = [];
+      for (const d of sphereDots) {
+        const cosY = Math.cos(angleY);
+        const sinY = Math.sin(angleY);
+        let x1 = d.x * cosY - d.z * sinY;
+        let z1 = d.x * sinY + d.z * cosY;
+
+        const cosX = Math.cos(angleX);
+        const sinX = Math.sin(angleX);
+        let y2 = d.y * cosX - z1 * sinX;
+        let z2 = d.y * sinX + z1 * cosX;
+
+        const scale = fov / (fov + z2);
+        projectedDots.push({
+          px: centerX + x1 * scale,
+          py: centerY + y2 * scale,
+          zVal: z2
+        });
+      }
+
+      for (const p of projectedDots) {
+        const isFront = p.zVal < 0;
+        const opacity = isFront 
+          ? Math.max(0.1, 0.45 * (1 + p.zVal / radius)) 
+          : Math.max(0.02, 0.1 * (1 - p.zVal / radius));
+
+        ctx.beginPath();
+        ctx.arc(p.px, p.py, isFront ? 1.2 : 0.8, 0, 2 * Math.PI);
+        ctx.fillStyle = isFront ? `rgba(114, 255, 112, ${opacity})` : `rgba(59, 75, 55, ${opacity})`;
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = "rgba(235, 255, 226, 0.07)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      const projectedNodes = nodes.map(node => {
+        const radLat = (node.lat * Math.PI) / 180;
+        const radLon = (node.lon * Math.PI) / 180;
+        
+        const nx = radius * Math.cos(radLat) * Math.sin(radLon);
+        const ny = -radius * Math.sin(radLat);
+        const nz = radius * Math.cos(radLat) * Math.cos(radLon);
+
+        const cosY = Math.cos(angleY);
+        const sinY = Math.sin(angleY);
+        let x1 = nx * cosY - nz * sinY;
+        let z1 = nx * sinY + nz * cosY;
+
+        const cosX = Math.cos(angleX);
+        const sinX = Math.sin(angleX);
+        let y2 = ny * cosX - z1 * sinX;
+        let z2 = ny * sinX + z1 * cosX;
+
+        const scale = fov / (fov + z2);
+        return {
+          ...node,
+          px: centerX + x1 * scale,
+          py: centerY + y2 * scale,
+          zVal: z2,
+          isFront: z2 < 0
+        };
+      });
+
+      // Draw lines
+      for (let i = 0; i < projectedNodes.length; i++) {
+        for (let j = i + 1; j < projectedNodes.length; j++) {
+          const n1 = projectedNodes[i];
+          const n2 = projectedNodes[j];
+          const bothFront = n1.isFront && n2.isFront;
+          const opacity = bothFront ? 0.35 : 0.08;
+
+          ctx.beginPath();
+          ctx.moveTo(n1.px, n1.py);
+          const midX = (n1.px + n2.px) / 2;
+          const midY = (n1.py + n2.py) / 2 - 30;
+          ctx.quadraticCurveTo(midX, midY, n2.px, n2.py);
+          
+          ctx.strokeStyle = bothFront ? "rgba(0, 241, 254, 0.4)" : "rgba(59, 75, 55, 0.2)";
+          ctx.lineWidth = bothFront ? 1.5 : 0.8;
+          ctx.stroke();
+        }
+      }
+
+      // Draw nodes and label cards
+      for (const n of projectedNodes) {
+        const opacity = n.isFront ? 1.0 : 0.2;
+        
+        if (n.isFront) {
+          ctx.beginPath();
+          ctx.arc(n.px, n.py, pulseRadius, 0, 2 * Math.PI);
+          ctx.strokeStyle = n.color.replace("1)", "0.3)");
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.px, n.py, n.isFront ? 4.5 : 2.5, 0, 2 * Math.PI);
+        ctx.fillStyle = n.color;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        if (n.isFront) {
+          ctx.beginPath();
+          ctx.moveTo(n.px, n.py);
+          ctx.lineTo(n.px + (n.px > centerX ? 25 : -25), n.py - 20);
+          ctx.strokeStyle = n.color.replace("1)", "0.5)");
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          const textX = n.px + (n.px > centerX ? 25 : -25);
+          const textY = n.py - 20;
+          ctx.font = "bold 9px monospace";
+          
+          ctx.fillStyle = "rgba(28, 27, 27, 0.85)";
+          const boxWidth = 120;
+          const boxHeight = 28;
+          const boxX = n.px > centerX ? textX : textX - boxWidth;
+          const boxY = textY - boxHeight / 2;
+          
+          ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+          ctx.strokeStyle = n.color.replace("1)", "0.8)");
+          ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+          ctx.fillStyle = n.textColor;
+          ctx.fillText(n.name, boxX + 6, boxY + 11);
+          ctx.fillStyle = "#b9ccb2";
+          ctx.font = "8px monospace";
+          ctx.fillText(n.details, boxX + 6, boxY + 22);
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (canvas) {
+        canvas.removeEventListener("mousedown", handleMouseDown);
+      }
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return (
+    <div className="relative w-[500px] h-[500px] flex items-center justify-center">
+      <canvas 
+        ref={canvasRef} 
+        className="w-full h-full cursor-grab active:cursor-grabbing z-10"
+      />
+    </div>
+  );
+}
+
 export default function GlobalRouting() {
   const [latencies, setLatencies] = useState<LatencyNode[]>([
     { name: "US-EAST-01", lat: "12ms", color: "text-[#00e639]" },
@@ -58,12 +324,10 @@ export default function GlobalRouting() {
 
     const interval = setInterval(() => {
       const msg = messages[Math.floor(Math.random() * messages.length)];
-      setConsoleMsgs(prev => [...prev, msg].slice(-15)); // Keep last 15
+      setConsoleMsgs(prev => [...prev, msg].slice(-15));
       
-      // Slightly fluctuate throughput
       setThroughput(t => Math.max(95, Math.min(99.99, t + (Math.random() - 0.5) * 0.5)));
 
-      // Update packet table values
       setPackets(prev => prev.map(p => {
         const delta = (Math.random() - 0.5) * 5;
         const nextLag = Math.max(8, Number((p.lag + delta).toFixed(1)));
@@ -81,44 +345,13 @@ export default function GlobalRouting() {
   }, []);
 
   return (
-    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-primary-container selection:text-on-primary-container overflow-hidden h-[calc(100vh-64px)] flex flex-col">
+    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-primary-container selection:text-on-primary-container overflow-hidden h-screen flex flex-col">
       <div className="flex flex-1 overflow-hidden relative">
-        {/* SideNavBar */}
-        <aside className="fixed left-0 top-16 h-[calc(100vh-64px)] z-35 flex flex-col pt-4 bg-[#0e0e0e]/95 backdrop-blur-md text-[#00dbe7] w-64 border-r border-[#3b4b37]">
-          <div className="p-4 border-b border-[#3b4b37]">
-            <div className="font-label-code text-[#ebffe2] text-[10px] mb-1">NODE_ACTIVE</div>
-            <div className="font-body-mono-sm opacity-60 text-xs">US-EAST-01 // ROOT_AUTH</div>
-          </div>
-          <nav className="flex-1">
-            <Link className="text-[#b9ccb2] px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:text-white flex items-center gap-3 cursor-pointer group" href="/live-cdc">
-              <span className="material-symbols-outlined group-hover:text-[#00e639]">settings_ethernet</span>
-              <span className="font-body-mono text-sm">LIVE_CDC</span>
-            </Link>
-            <Link className="text-[#b9ccb2] px-4 py-3 opacity-70 hover:bg-[#353534]/30 hover:text-white flex items-center gap-3 cursor-pointer group" href="/cluster">
-              <span className="material-symbols-outlined group-hover:text-[#00e639]">monitor_heart</span>
-              <span className="font-body-mono text-sm">CLUSTER_HEALTH</span>
-            </Link>
-            <div className="bg-[#00f1fe]/20 text-[#00f1fe] border-l-4 border-[#00f1fe] px-4 py-3 font-bold flex items-center gap-3 cursor-default">
-              <span className="material-symbols-outlined">language</span>
-              <span className="font-body-mono text-sm">GLOBAL_ROUTING</span>
-            </div>
-          </nav>
-          <div className="p-4 bg-[#1c1b1b]/50 border-t border-[#3b4b37]">
-            <div className="text-label-code mb-2 text-[#00e639] text-[10px] tracking-wide">DATA_STREAM_IO</div>
-            <div className="h-12 bg-black/40 rounded flex items-end gap-1 p-1">
-              <div className="w-1 bg-[#00e639] h-1/2 animate-pulse"></div>
-              <div className="w-1 bg-[#00e639] h-3/4"></div>
-              <div className="w-1 bg-[#00e639] h-full animate-pulse"></div>
-              <div className="w-1 bg-[#00e639] h-1/3"></div>
-              <div className="w-1 bg-[#00e639] h-2/3"></div>
-            </div>
-          </div>
-        </aside>
 
         {/* Main Content Area */}
-        <main className="ml-64 flex-grow relative overflow-hidden bg-[#0A0A0A] flex z-10 h-[calc(100vh-64px)]">
+        <div className="flex-grow relative overflow-hidden bg-[#0A0A0A] flex z-10 h-screen">
           {/* Scanline Overlay */}
-          <div className="absolute inset-0 scanline z-10"></div>
+          <div className="absolute inset-0 scanline z-10 pointer-events-none"></div>
           
           {/* Left Sidebar Data Panel */}
           <div className="w-80 h-full border-r border-[#3b4b37] bg-[#131313]/40 backdrop-blur-sm z-20 flex flex-col p-4 gap-4 overflow-y-auto custom-scrollbar">
@@ -171,62 +404,8 @@ export default function GlobalRouting() {
             {/* Background Grid Texture */}
             <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(#00e639 1px, transparent 1px)", backgroundSize: "32px 32px" }}></div>
             
-            <div className="relative w-[500px] h-[500px] flex items-center justify-center">
-              {/* Topology SVG Layer */}
-              <svg className="absolute inset-0 w-[500px] h-[500px] z-20 pointer-events-none overflow-visible">
-                {/* SVG Connections between nodes */}
-                <line className="topology-line" opacity="0.6" stroke="#00e639" strokeWidth="3" x1="150" x2="350" y1="200" y2="350"></line>
-                <line className="topology-line" opacity="0.4" stroke="#00f1fe" strokeWidth="2" x1="350" x2="420" y1="350" y2="240"></line>
-                <line className="topology-line" opacity="0.3" stroke="#ffb4ab" strokeWidth="1.5" x1="150" x2="80" y1="200" y2="300"></line>
-                <line className="topology-line" opacity="0.5" stroke="#00f1fe" strokeWidth="2.5" x1="150" x2="250" y1="200" y2="80"></line>
-              </svg>
-
-              {/* The Globe Globe projection */}
-              <div className="relative w-[400px] h-[400px] rounded-full border border-[#ebffe2]/20 shadow-[0_0_120px_rgba(0,230,57,0.12)] overflow-hidden z-10">
-                <img 
-                  alt="Atmospheric Globe projection with navigation markers." 
-                  className="w-full h-full object-cover opacity-70 mix-blend-screen" 
-                  src="https://lh3.googleusercontent.com/aida-earth-globe-projection"
-                  onError={(e) => {
-                    e.currentTarget.src = "https://lh3.googleusercontent.com/aida-public/AB6AXuA0zxEktgiFQ-hxibs4KAmQ79QymqSX_bNZQhU0UJ9rZynHtNFC72AmFJZz7DIYa8NveiWbwdJ5lDRYiqE6DtpB1-H16z6H3SNwExi44BgAgaYY1Ae6fwtN5XYY5gOo1lpOnsW54j2cEAr5g1FSVilWsAtOb2bkXcyYBCnvW5x2p5dBSk8TOkygWLs_czanyTO3OxwOjGngcThrZXInVFNj3EgmeoGQNmNvaVC3dHwAWEGDZcgVKad3u0RLXkmxCiSq6hWUv6XlQR0";
-                  }}
-                />
-              </div>
-
-              {/* Luminous Node: US_EAST */}
-              <div className="absolute top-[200px] left-[150px] w-10 h-10 bg-[#ebffe2] rounded-full z-30 node-glow-primary border-2 border-white/40 flex flex-wrap p-1 items-center justify-center translate-x-[-50%] translate-y-[-50%] overflow-hidden">
-                {Array.from({ length: 16 }).map((_, idx) => (
-                  <div key={idx} className="w-1.5 h-1.5 bg-[#00ff41]/80 rounded-[1px] m-[1px]"></div>
-                ))}
-              </div>
-
-              {/* Luminous Node: EU_WEST */}
-              <div className="absolute top-[350px] left-[350px] w-12 h-12 bg-[#00f1fe] rounded-full z-30 node-glow-secondary border-2 border-white/50 flex flex-wrap p-1 items-center justify-center translate-x-[-50%] translate-y-[-50%] overflow-hidden">
-                {Array.from({ length: 25 }).map((_, idx) => (
-                  <div key={idx} className="w-1.5 h-1.5 bg-[#00f1fe]/80 rounded-[1px] m-[1px]"></div>
-                ))}
-              </div>
-
-              {/* Luminous Node: ASIA */}
-              <div className="absolute top-[240px] left-[420px] w-8 h-8 bg-[#ffb4ab] rounded-full z-30 node-glow-tertiary border border-white/30 translate-x-[-50%] translate-y-[-50%]"></div>
-
-              {/* Labels */}
-              <div className="absolute top-[120px] left-[150px] p-2 bg-[#201f1f]/90 backdrop-blur-md border border-[#00e639] text-xs z-40 tactical-bracket translate-x-[-50%]">
-                <div className="text-[#00ff41] font-label-code mb-1 font-bold text-[10px]">NODE_US_EAST_01</div>
-                <div className="flex gap-2 items-center text-[9px] text-[#b9ccb2]">
-                  <span className="w-2 h-2 rounded-full bg-[#00ff41] animate-ping"></span>
-                  <span>THROUGHPUT: 18.2 TB/s</span>
-                </div>
-              </div>
-
-              <div className="absolute top-[400px] left-[350px] p-2 bg-[#201f1f]/90 backdrop-blur-md border border-[#00f1fe] text-xs z-40 tactical-bracket translate-x-[-50%]">
-                <div className="text-[#00f1fe] font-label-code mb-1 font-bold text-[10px]">NODE_EU_CENT_04</div>
-                <div className="flex gap-2 items-center text-[9px] text-[#b9ccb2]">
-                  <span className="w-2 h-2 rounded-full bg-[#00f1fe] animate-pulse"></span>
-                  <span>SYNC_RATE: 120.4 Gbit</span>
-                </div>
-              </div>
-            </div>
+            {/* Interactive 3D Globe Component */}
+            <InteractiveGlobe />
 
             {/* Floating Telemetry Coordinates */}
             <div className="absolute top-8 left-8 space-y-4 pointer-events-none">
@@ -306,22 +485,8 @@ export default function GlobalRouting() {
               </div>
             </div>
           </div>
-        </main>
+        </div>
       </div>
-
-      {/* Footer */}
-      <footer className="bg-[#1c1b1b] text-error flex items-center px-6 justify-between fixed bottom-0 w-full z-50 h-8 border-t border-error/30 font-label-code text-[10px]">
-        <div className="flex gap-4 items-center">
-          <span className="flicker font-bold">[SYSTEM_READY] // KNOWLEDGE_GRAPH_ONLINE</span>
-          <span className="opacity-40">|</span>
-          <span className="text-[#b9ccb2]">MEMORY_STATUS: <span className="text-[#00e639]">OPTIMAL</span></span>
-        </div>
-        <div className="flex gap-6">
-          <a className="text-[#ffdad6] hover:bg-error-container hover:text-on-error-container px-2 h-full flex items-center transition-all" href="#">HYBRID_V5_STABLE</a>
-          <a className="text-[#ffdad6] hover:bg-error-container hover:text-on-error-container px-2 h-full flex items-center transition-all" href="#">RECOVERY_MODE</a>
-          <a className="text-[#ffdad6] hover:bg-error-container hover:text-on-error-container px-2 h-full flex items-center transition-all" href="#">DEBUG_CONSOLE</a>
-        </div>
-      </footer>
     </div>
   );
 }

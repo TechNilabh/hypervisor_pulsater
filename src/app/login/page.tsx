@@ -167,8 +167,8 @@ export default function Login() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate successful login authentication
-    router.push("/live-cdc");
+    // Simulate successful login authentication, pushing to identity screen first
+    router.push("/identity");
   };
 
   return (
