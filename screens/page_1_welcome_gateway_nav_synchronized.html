@@ -1,0 +1,427 @@
+<html class="dark" lang="en"><head></head><body class="font-body-mono selection:bg-secondary-fixed selection:text-on-secondary-fixed">```html
+
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HYPERVISOR_PULSATER // SYSTEMS_ENGINE</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed": "#002203",
+                    "surface-tint": "#00e639",
+                    "inverse-primary": "#006e16",
+                    "tertiary-fixed-dim": "#ffb4ab",
+                    "inverse-on-surface": "#313030",
+                    "surface-container-highest": "#353534",
+                    "secondary-container": "#00f1fe",
+                    "on-secondary-fixed-variant": "#004f54",
+                    "surface-dim": "#131313",
+                    "on-tertiary-container": "#c40015",
+                    "surface-container-lowest": "#0e0e0e",
+                    "primary-container": "#00ff41",
+                    "primary": "#ebffe2",
+                    "on-error": "#690005",
+                    "inverse-surface": "#e5e2e1",
+                    "surface-variant": "#353534",
+                    "tertiary-fixed": "#ffdad6",
+                    "on-primary-fixed-variant": "#00530e",
+                    "on-secondary": "#00363a",
+                    "on-surface": "#e5e2e1",
+                    "secondary-fixed": "#74f5ff",
+                    "surface-container-low": "#1c1b1b",
+                    "outline": "#84967e",
+                    "on-error-container": "#ffdad6",
+                    "on-surface-variant": "#b9ccb2",
+                    "secondary-fixed-dim": "#00dbe7",
+                    "on-primary-container": "#007117",
+                    "on-tertiary-fixed": "#410002",
+                    "primary-fixed-dim": "#00e639",
+                    "error": "#ffb4ab",
+                    "tertiary": "#fff7f6",
+                    "surface-container-high": "#2a2a2a",
+                    "surface": "#131313",
+                    "on-background": "#e5e2e1",
+                    "surface-container": "#201f1f",
+                    "error-container": "#93000a",
+                    "on-tertiary": "#690006",
+                    "outline-variant": "#3b4b37",
+                    "tertiary-container": "#ffd2cd",
+                    "on-secondary-fixed": "#002022",
+                    "background": "#131313",
+                    "secondary": "#ddfcff",
+                    "on-tertiary-fixed-variant": "#93000c",
+                    "on-secondary-container": "#006a70",
+                    "on-primary": "#003907",
+                    "surface-bright": "#3a3939",
+                    "primary-fixed": "#72ff70"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin": "24px",
+                    "container-max": "100%",
+                    "stack-compact": "8px",
+                    "gutter": "16px",
+                    "unit": "4px"
+            },
+            "fontFamily": {
+                    "body-mono-sm": ["JetBrains Mono"],
+                    "headline-lg": ["Space Grotesk"],
+                    "display-tech": ["Space Grotesk"],
+                    "body-mono": ["JetBrains Mono"],
+                    "headline-lg-mobile": ["Space Grotesk"],
+                    "label-code": ["JetBrains Mono"],
+                    "headline-md": ["Space Grotesk"]
+            },
+            "fontSize": {
+                    "body-mono-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                    "display-tech": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-mono": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "label-code": ["10px", {"lineHeight": "12px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0A0A0A;
+            color: #e5e2e1;
+            overflow-x: hidden;
+        }
+        .scanline {
+            background: linear-gradient(to bottom, rgba(0, 241, 254, 0.05) 50%, rgba(0, 0, 0, 0) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+        .tactical-bracket::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 10px; height: 10px;
+            border-top: 2px solid #74f5ff; border-left: 2px solid #74f5ff;
+        }
+        .tactical-bracket::after {
+            content: '';
+            position: absolute;
+            bottom: 0; right: 0; width: 10px; height: 10px;
+            border-bottom: 2px solid #74f5ff; border-right: 2px solid #74f5ff;
+        }
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(0, 241, 254, 0.2);
+        }
+        .glow-cyan-border {
+            box-shadow: 0 0 8px rgba(0, 241, 254, 0.4);
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .cursor-blink { animation: blink 1s step-end infinite; }
+        
+        .segmented-progress span {
+            display: inline-block;
+            width: 4px;
+            height: 12px;
+            background: #004f54;
+            margin-right: 2px;
+        }
+        .segmented-progress span.active {
+            background: #00f1fe;
+            box-shadow: 0 0 5px #00f1fe;
+        }
+    </style>
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant shadow-[0_0_15px_rgba(0,241,254,0.1)] flex justify-between items-center px-margin h-16">
+<div class="font-display-tech text-headline-md text-surface-tint tracking-tighter">HYPERVISOR_PULSATER</div>
+<div class="hidden md:flex items-center gap-gutter">
+<a class="font-body-mono text-body-mono text-secondary-fixed border-b-2 border-secondary-fixed pb-1" href="#">TRANSACTIONS</a>
+<a class="font-body-mono text-body-mono text-on-surface-variant hover:text-secondary-fixed transition-colors" href="#">REPLICATION</a>
+<a class="font-body-mono text-body-mono text-on-surface-variant hover:text-secondary-fixed transition-colors" href="#">TOOLKIT</a>
+<a class="font-body-mono text-body-mono text-on-surface-variant hover:text-secondary-fixed transition-colors" href="#">METRICS</a>
+</div>
+<div class="flex items-center gap-stack-compact">
+<div class="hidden sm:flex items-center gap-2 mr-2">
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-200 rounded">settings_input_component</button>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-200 rounded">terminal</button>
+</div>
+<!-- Auth State Container -->
+<div class="flex items-center gap-4 border-l border-outline-variant pl-4">
+<!-- Logic for logged out state -->
+<button class="px-4 py-1.5 border border-secondary-fixed text-secondary-fixed font-label-code text-label-code rounded hover:bg-secondary-fixed/10 transition-all glow-cyan-border whitespace-nowrap">
+        LOGIN / SIGNUP
+      </button>
+<!-- Example of Avatar State (hidden by default in this template but available for transition) -->
+<div class="hidden items-center gap-3 group cursor-pointer">
+<div class="text-right hidden lg:block">
+<div class="font-label-code text-[10px] text-surface-tint leading-none">OPERATOR_01</div>
+<div class="font-body-mono-sm text-[10px] text-on-surface-variant">LEVEL_ADMIN</div>
+</div>
+<div class="w-8 h-8 rounded bg-surface-container-highest border border-outline-variant flex items-center justify-center group-hover:border-secondary-fixed transition-colors">
+<span class="material-symbols-outlined text-secondary-fixed text-lg">person_filled</span>
+</div>
+</div>
+<button class="hidden lg:block px-4 py-2 bg-secondary-container text-on-secondary-container font-label-code text-label-code rounded active:skew-x-2 transition-transform">DEPLOY_NODE</button>
+</div>
+</div>
+</nav>
+<!-- Hero Section -->
+<section class="relative h-screen flex flex-col items-center justify-center pt-16 overflow-hidden">
+<!-- Starry Coordinates Background -->
+<div class="absolute inset-0 z-0 opacity-40"></div>
+<div class="relative z-10 text-center px-margin">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container-low border border-outline-variant rounded mb-8">
+<span class="w-2 h-2 bg-primary-fixed rounded-full animate-pulse"></span>
+<span class="font-label-code text-label-code text-on-surface-variant tracking-widest uppercase">Sub-Millisecond CDC Logic</span>
+</div>
+<h1 class="font-display-tech text-display-tech md:text-[84px] text-primary-fixed mb-4 tracking-tighter">
+                HYPERVISOR PULSATER<br/><br/></h1>
+<p class="font-body-mono text-headline-md text-on-surface-variant max-w-3xl mx-auto mb-12">
+                Asynchronous Change Data Capture Middleware <br/>
+<span class="text-surface-tint">Core Status: Ready for Deployment</span>
+</p>
+<button class="px-10 py-5 bg-transparent border-2 border-secondary-fixed text-secondary-fixed font-headline-md rounded-full hover:bg-secondary-fixed/10 transition-all group flex items-center gap-4 mx-auto glow-cyan">
+                INITIALIZE TERMINAL LINK
+                <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+<!-- Floating Metric Chips (Gutters) -->
+<div class="absolute left-margin top-1/2 -translate-y-1/2 flex flex-col gap-gutter hidden lg:flex">
+<div class="p-4 bg-surface/40 backdrop-blur-md border-l-2 border-primary-fixed tactical-bracket relative">
+<div class="font-label-code text-label-code text-on-surface-variant">LENCY_MS</div>
+<div class="font-display-tech text-headline-md text-primary-fixed">0.024</div>
+</div>
+<div class="p-4 bg-surface/40 backdrop-blur-md border-l-2 border-secondary-fixed tactical-bracket relative">
+<div class="font-label-code text-label-code text-on-surface-variant">OPS_RATE</div>
+<div class="font-display-tech text-headline-md text-secondary-fixed">840K</div>
+</div>
+</div>
+<!-- Hyper-realistic Digital Planet Bottom -->
+<div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-[140%] h-[50vh] z-0">
+<img class="w-full h-full object-cover object-top opacity-60 mask-gradient" data-alt="A hyper-realistic cinematic shot of Planet Earth seen from space, glowing with a vibrant cyber-cyan atmospheric ring. Holographic digital grid lines and data navigation markers are projected across the continents. The overall aesthetic is dark obsidian with neon highlights, fitting a high-tech terminal interface. Deep blacks and vibrant electric blues dominate the color palette, creating a sense of global connectivity and advanced technology." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBG7HjZlxxjJdemOaEpwVwOL2VIAQfh1stiBSwG_XuZnhoX-ZxfmH00rsr5199g3zEmdks58h3OUG4otKq8DmzbYhKzz4JO9Au-mbEHgb846L-jN5aCfdh47LYnoSp2pslCT5GRbMwxlIN-kN3HLEYLACIfI3pfTR2WpSXbATON1xIxaxz0LwOOpwt6bPDenbmarxJY_-HKVd5ml2U9zY7R512WT_IUMzCN2sj0mzM-iLqXt-lG6Pd3zEsz4FElI3LMd0Z6X8QziV0" style="mask-image: linear-gradient(to top, black 40%, transparent 100%); -webkit-mask-image: linear-gradient(to top, black 40%, transparent 100%);"/>
+</div>
+</section>
+<!-- Flow Section (Transactions + Analytics) -->
+<section class="py-32 px-margin relative border-t border-outline-variant bg-surface-container-lowest">
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-24 items-center">
+<div class="order-2 md:order-1">
+<div class="font-label-code text-label-code text-surface-tint mb-4">[MODULE: TRANSACTION_PIPELINE]</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-8">Transactions + Analytics.</h2>
+<p class="font-body-mono text-body-mono text-on-surface-variant mb-10 leading-relaxed">
+                    Powered by high-performance Go execution worker pools and thread-safe channels. Pulsater ensures zero-data loss during high-velocity state changes, bridging the gap between volatile transactional streams and analytical cold storage with sub-millisecond precision.
+                </p>
+<div class="flex flex-col gap-stack-compact mb-10">
+<div class="flex items-center gap-4 text-on-surface">
+<span class="material-symbols-outlined text-primary-fixed">check_circle</span>
+<span class="">Lock-free channel orchestration</span>
+</div>
+<div class="flex items-center gap-4 text-on-surface">
+<span class="material-symbols-outlined text-primary-fixed">check_circle</span>
+<span class="">Atomic batch-flush sequencing</span>
+</div>
+</div>
+<button class="px-8 py-3 border border-outline-variant hover:border-secondary-fixed text-on-surface-variant hover:text-secondary-fixed transition-all font-label-code text-label-code">LEARN_MORE</button>
+</div>
+<div class="order-1 md:order-2">
+<div class="bg-surface border border-outline-variant rounded-xl p-4 shadow-2xl relative overflow-hidden">
+<div class="scanline absolute inset-0"></div>
+<div class="flex justify-between items-center mb-4 border-b border-outline-variant pb-2">
+<div class="flex gap-2">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+<div class="w-2 h-2 rounded-full bg-tertiary-fixed-dim"></div>
+<div class="w-2 h-2 rounded-full bg-surface-tint"></div>
+</div>
+<div class="font-label-code text-label-code opacity-50">NODE_08_TELEMETRY</div>
+</div>
+<div class="grid grid-cols-2 gap-4 h-64">
+<div class="bg-surface-container-low rounded border border-outline-variant p-4 flex flex-col justify-between">
+<div class="font-label-code text-label-code text-secondary-fixed">CPU_LOAD</div>
+<div class="h-24 w-full"></div>
+</div>
+<div class="bg-surface-container-low rounded border border-outline-variant p-4">
+<div class="font-label-code text-label-code text-primary-fixed">NET_THROUGHPUT</div>
+<div class="mt-4 flex flex-col gap-2">
+<div class="segmented-progress flex"><span class="active"></span><span class="active"></span><span class="active"></span><span class="active"></span><span class="active"></span><span class="active"></span><span></span><span></span></div>
+<div class="font-display-tech text-headline-md">12.4 GB/s</div>
+</div>
+</div>
+<div class="col-span-2 bg-surface-container-low rounded border border-outline-variant p-4 relative overflow-hidden">
+<div class="font-label-code text-label-code text-on-surface-variant">PIPELINE_STAGES_3D</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Matrix Section (Proof of Ingestion) -->
+<section class="py-32 px-margin relative bg-surface-dim">
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-24 items-center">
+<div class="relative aspect-square md:aspect-auto h-[400px] border border-outline-variant rounded bg-surface-container-lowest tactical-bracket p-8 overflow-hidden group">
+<div class="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity"></div>
+<div class="relative z-10 font-body-mono-sm text-body-mono-sm text-primary-fixed space-y-2">
+<div class="">&gt; INITIALIZING HANDSHAKE...</div>
+<div class="text-on-surface-variant">&gt; PUBLIC_KEY: 0x82...FA21</div>
+<div class="text-on-surface-variant">&gt; CHALLENGE: PENDING_RESPONSE</div>
+<div class="text-secondary-fixed">&gt; ENCRYPTION_LAYER: ASYNC_AES_256</div>
+<div class="text-on-surface">&gt; HANDSHAKE_SUCCESSFUL.</div>
+<div class="pt-4 flex gap-4">
+<div class="w-8 h-8 border border-primary-fixed flex items-center justify-center animate-pulse"><span class="material-symbols-outlined text-[16px]">radar</span></div>
+<div class="w-8 h-8 border border-outline-variant flex items-center justify-center"><span class="material-symbols-outlined text-[16px]">qr_code_2</span></div>
+</div>
+</div>
+</div>
+<div>
+<div class="font-label-code text-label-code text-secondary-fixed mb-4">[CRYPTO_LAYER: INGESTION_PROOF]</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-8">Proof of Ingestion.</h2>
+<p class="font-body-mono text-body-mono text-on-surface-variant mb-10 leading-relaxed">
+                    Utilizing atomic architecture, every block flush is cryptographically verified. Pulsater converts raw .jsonl streams into immutable ledger entries before persistence, ensuring your data warehouse reflects absolute truth with verifiable lineage.
+                </p>
+<div class="grid grid-cols-2 gap-stack-compact">
+<div class="p-6 bg-surface-container-high border border-outline-variant rounded">
+<div class="font-display-tech text-headline-md text-primary-fixed">99.999%</div>
+<div class="font-label-code text-label-code text-on-surface-variant uppercase mt-1">Consistency Rate</div>
+</div>
+<div class="p-6 bg-surface-container-high border border-outline-variant rounded">
+<div class="font-display-tech text-headline-md text-secondary-fixed">0ms</div>
+<div class="font-label-code text-label-code text-on-surface-variant uppercase mt-1">Data Drift</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Toolkit Section (IDE Panel) -->
+<section class="py-32 px-margin border-y border-outline-variant bg-surface-container-lowest">
+<div class="max-w-7xl mx-auto">
+<div class="text-center mb-16">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Developer Toolkit</h2>
+<p class="text-on-surface-variant font-body-mono mt-4">Native console access to the heartbeat of your data streams.</p>
+</div>
+<div class="bg-[#1E1E1E] rounded-xl border border-outline-variant shadow-2xl overflow-hidden font-body-mono-sm text-body-mono-sm">
+<!-- Editor Header -->
+<div class="bg-[#2D2D2D] px-4 py-2 flex items-center justify-between border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<span class="text-secondary-fixed flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">description</span> live_cdc_stream.log</span>
+<span class="text-on-surface-variant opacity-50">sys_config.yaml</span>
+<span class="text-on-surface-variant opacity-50">metrics_export.go</span>
+</div>
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">search</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">close</span>
+</div>
+</div>
+<!-- Editor Content -->
+<div class="p-6 h-96 overflow-y-auto space-y-2 bg-[#0A0A0A]">
+<div class="flex gap-4">
+<span class="text-on-surface-variant opacity-30 select-none">102</span>
+<span class="text-on-surface-variant">[14:22:01.004]</span>
+<span class="px-2 bg-primary-container/20 text-on-primary-container text-[10px] font-bold rounded">INSERT</span>
+<span class="text-secondary-fixed">payload: { "id": "uuid-808", "state": "active", "val": 420.69 }</span>
+</div>
+<div class="flex gap-4">
+<span class="text-on-surface-variant opacity-30 select-none">103</span>
+<span class="text-on-surface-variant">[14:22:01.012]</span>
+<span class="px-2 bg-secondary-container/20 text-on-secondary-container text-[10px] font-bold rounded">UPDATE</span>
+<span class="text-surface-tint">delta: { "prev_state": "idle", "new_state": "active" }</span>
+</div>
+<div class="flex gap-4">
+<span class="text-on-surface-variant opacity-30 select-none">104</span>
+<span class="text-on-surface-variant">[14:22:01.045]</span>
+<span class="px-2 bg-error-container/20 text-on-error-container text-[10px] font-bold rounded">DELETE</span>
+<span class="text-error">target: { "id": "tmp-991" }</span>
+</div>
+<div class="flex gap-4">
+<span class="text-on-surface-variant opacity-30 select-none">105</span>
+<span class="text-on-surface-variant">[14:22:01.050]</span>
+<span class="px-2 bg-primary-container/20 text-on-primary-container text-[10px] font-bold rounded">INSERT</span>
+<span class="text-secondary-fixed">payload: { "id": "uuid-809", "state": "init", "val": 100.00 }</span>
+</div>
+<div class="flex gap-4">
+<span class="text-on-surface-variant opacity-30 select-none">106</span>
+<span class="text-on-surface-variant">[14:22:01.102]</span>
+<span class="text-primary-fixed">&gt; Syncing to BigQuery shard [us-east-1a]...</span>
+</div>
+<div class="flex gap-4">
+<span class="text-on-surface-variant opacity-30 select-none">107</span>
+<span class="text-on-surface-variant">[14:22:01.115]</span>
+<span class="text-on-surface">&gt; COMMIT_SUCCESS: TxID: 0x9f1a23</span>
+</div>
+<div class="flex gap-4">
+<span class="text-on-surface-variant opacity-30 select-none">108</span>
+<span class="text-on-surface">&gt; <span class="cursor-blink">_</span></span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Metrics Section -->
+<section class="py-32 px-margin bg-surface">
+<div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- Col 1 -->
+<div class="p-8 border border-outline-variant bg-surface-container rounded-lg tactical-bracket relative group hover:border-primary-fixed transition-colors">
+<div class="mb-8">
+<span class="material-symbols-outlined text-[48px] text-primary-fixed">storage</span>
+</div>
+<h3 class="font-headline-md text-on-surface mb-4">Block-Partition Storage</h3>
+<p class="font-body-mono-sm text-on-surface-variant mb-8">Distributed cold storage with sub-millisecond indexing. Data is sliced across nodes for parallelized retrieval.</p>
+<div class="h-24">
+<img class="w-full h-full object-cover rounded opacity-40 group-hover:opacity-100 transition-opacity" data-alt="A stylized 3D isometric representation of digital data slices and server rack modules glowing with neon green accents. The setting is a dark, high-tech server room with a cybernetic aesthetic. Soft glow and sharp technical details emphasize high-performance hardware and modern data architecture. The lighting is low-key, focused on the glowing circuit patterns." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBofeEZBQg2HUxNJ9s2s42JtXcF7YNauchchUSdxe-luMsX5zFqxaaO-1jURAw4-jAn3Xq55LqB948r2AD9fby5ZCVRKcydFf_XGyp77Mtx80twql9Wg3bweNY3WrqzyE-TugUE8TgU73zDDX91SqLzXALaoL9lqQ5s0_SQdVctzxbzC3GN0ld17bb3oKTEaA2jEVtATXUWUqMuOZwKQvkgGdnpmDftBzpoasjGfEqM1qx49CXG-a0-Yb1BrTzjoL1HzOcC-Y7aNx8"/>
+</div>
+</div>
+<!-- Col 2 -->
+<div class="p-8 border border-outline-variant bg-surface-container rounded-lg tactical-bracket relative group hover:border-secondary-fixed transition-colors">
+<div class="mb-8">
+<span class="material-symbols-outlined text-[48px] text-secondary-fixed" style="font-variation-settings: 'FILL' 1;">shield_lock</span>
+</div>
+<h3 class="font-headline-md text-on-surface mb-4">Channel Isolation</h3>
+<p class="font-body-mono-sm text-on-surface-variant mb-8">Encapsulated communication tunnels for every worker routine. Zero-leak memory safety by design.</p>
+<div class="flex items-end gap-2 h-24">
+<div class="flex-1 bg-secondary-fixed/20 h-[20%] rounded-t group-hover:h-[80%] transition-all duration-700"></div>
+<div class="flex-1 bg-secondary-fixed/20 h-[40%] rounded-t group-hover:h-[60%] transition-all duration-700 delay-100"></div>
+<div class="flex-1 bg-secondary-fixed/20 h-[60%] rounded-t group-hover:h-[90%] transition-all duration-700 delay-200"></div>
+<div class="flex-1 bg-secondary-fixed/20 h-[30%] rounded-t group-hover:h-[40%] transition-all duration-700 delay-300"></div>
+<div class="flex-1 bg-secondary-fixed/20 h-[50%] rounded-t group-hover:h-[70%] transition-all duration-700 delay-400"></div>
+</div>
+</div>
+<!-- Col 3 -->
+<div class="p-8 border border-outline-variant bg-surface-container rounded-lg tactical-bracket relative group hover:border-surface-tint transition-colors">
+<div class="mb-8">
+<span class="material-symbols-outlined text-[48px] text-surface-tint">bolt</span>
+</div>
+<h3 class="font-headline-md text-on-surface mb-4">High-Throughput</h3>
+<p class="font-body-mono-sm text-on-surface-variant mb-8">Elastic scalability capable of handling massive transactional bursts without back-pressure.</p>
+<div class="text-center">
+<div class="font-display-tech text-[42px] text-surface-tint leading-none">14,250</div>
+<div class="font-label-code text-label-code text-on-surface-variant mt-2 uppercase">Rows / Sec</div>
+<div class="mt-4 w-full h-8 overflow-hidden"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-surface-dim border-t border-outline-variant w-full py-8 px-margin flex flex-col md:flex-row justify-between items-center gap-stack-compact">
+<div class="font-label-code text-label-code text-surface-tint">© 2024 HYPERVISOR_PULSATER // ASYNCHRONOUS_CDC_ENGINE</div>
+<div class="flex gap-gutter font-body-mono-sm text-body-mono-sm text-on-surface-variant">
+<a class="hover:text-primary-fixed-dim transition-colors" href="#">DOCUMENTATION</a>
+<a class="hover:text-primary-fixed-dim transition-colors" href="#">SYSTEM_STATUS</a>
+<a class="hover:text-primary-fixed-dim transition-colors" href="#">SECURITY_LABS</a>
+<a class="hover:text-primary-fixed-dim transition-colors" href="#">API_REFERENCE</a>
+</div>
+<div class="flex gap-4">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary-fixed transition-colors">hub</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-secondary-fixed transition-colors">code</button>
+</div>
+</footer>
+
+
+```</body></html>

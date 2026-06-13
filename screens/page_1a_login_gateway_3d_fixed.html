@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HYPERVISOR_PULSATER // GATEWAY</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary": "#003907",
+                        "inverse-primary": "#006e16",
+                        "on-error": "#690005",
+                        "on-secondary-fixed-variant": "#004f54",
+                        "surface-container-high": "#2a2a2a",
+                        "primary-container": "#00ff41",
+                        "on-tertiary-fixed-variant": "#93000c",
+                        "background": "#131313",
+                        "surface-tint": "#00e639",
+                        "primary-fixed-dim": "#00e639",
+                        "on-primary-container": "#007117",
+                        "tertiary-fixed": "#ffdad6",
+                        "surface-dim": "#131313",
+                        "on-error-container": "#ffdad6",
+                        "on-background": "#e5e2e1",
+                        "on-tertiary-fixed": "#410002",
+                        "surface-bright": "#3a3939",
+                        "inverse-surface": "#e5e2e1",
+                        "on-secondary-fixed": "#002022",
+                        "secondary": "#ddfcff",
+                        "on-tertiary-container": "#c40015",
+                        "surface-container-lowest": "#0e0e0e",
+                        "secondary-fixed": "#74f5ff",
+                        "on-primary-fixed": "#002203",
+                        "surface-variant": "#353534",
+                        "surface": "#131313",
+                        "on-tertiary": "#690006",
+                        "on-secondary-container": "#006a70",
+                        "surface-container-low": "#1c1b1b",
+                        "primary": "#ebffe2",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#ffd2cd",
+                        "on-surface-variant": "#b9ccb2",
+                        "error-container": "#93000a",
+                        "secondary-container": "#00f1fe",
+                        "outline-variant": "#3b4b37",
+                        "surface-container": "#201f1f",
+                        "inverse-on-surface": "#313030",
+                        "secondary-fixed-dim": "#00dbe7",
+                        "on-secondary": "#00363a",
+                        "primary-fixed": "#72ff70",
+                        "tertiary": "#fff7f6",
+                        "outline": "#84967e",
+                        "on-surface": "#e5e2e1",
+                        "surface-container-highest": "#353534",
+                        "tertiary-fixed-dim": "#ffb4ab",
+                        "on-primary-fixed-variant": "#00530e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "unit": "4px",
+                        "stack-compact": "8px",
+                        "margin": "24px",
+                        "container-max": "100%"
+                    },
+                    "fontFamily": {
+                        "label-code": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "display-tech": ["Space Grotesk"],
+                        "headline-lg": ["Space Grotesk"],
+                        "body-mono-sm": ["JetBrains Mono"],
+                        "body-mono": ["JetBrains Mono"],
+                        "headline-md": ["Space Grotesk"]
+                    },
+                    "fontSize": {
+                        "label-code": ["10px", {"lineHeight": "12px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "display-tech": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "body-mono-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "body-mono": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #050505;
+            color: #e5e2e1;
+            overflow-x: hidden;
+        }
+        .scanlines {
+            position: relative;
+            overflow: hidden;
+        }
+        .scanlines::before {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .tactical-bracket-tl { border-top: 2px solid #00f1fe; border-left: 2px solid #00f1fe; width: 20px; height: 20px; position: absolute; top: -2px; left: -2px; }
+        .tactical-bracket-br { border-bottom: 2px solid #00f1fe; border-right: 2px solid #00f1fe; width: 20px; height: 20px; position: absolute; bottom: -2px; right: -2px; }
+        
+        .tab-active { color: #00f1fe; border-bottom: 2px solid #00f1fe; }
+        .glitch-hover:active { transform: skewX(2deg); opacity: 0.8; }
+        
+        @keyframes flicker {
+            0% { opacity: 0.8; }
+            5% { opacity: 0.9; }
+            10% { opacity: 0.8; }
+            15% { opacity: 1; }
+            25% { opacity: 0.8; }
+            30% { opacity: 1; }
+            100% { opacity: 1; }
+        }
+        .flicker-anim { animation: flicker 3s infinite; }
+
+        input:focus {
+            outline: none !important;
+            border-color: #00f1fe !important;
+            box-shadow: 0 0 10px rgba(0, 241, 254, 0.2) !important;
+        }
+
+        /* Glassmorphism Authenticate Card enhancement */
+        .glass-card {
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+<script src="https://ajax.googleapis.com/ajax/libs/threejs/r125/three.min.js"></script>
+</head>
+<body class="font-body-mono bg-background min-h-screen flex items-center justify-center p-gutter">
+<nav class="fixed top-0 left-0 w-full z-50 border-b border-outline-variant bg-background/80 backdrop-blur-md px-margin py-4 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<span class="font-display-tech text-headline-md text-secondary-fixed tracking-tighter">HYPERVISOR_PULSATER_v2.0.4</span>
+<div class="h-4 w-[1px] bg-outline-variant"></div>
+<span class="font-label-code text-label-code text-on-surface-variant uppercase tracking-widest">System Gateway</span>
+</div>
+<div class="flex items-center gap-gutter">
+<div class="flex items-center gap-2 px-3 py-1.5 border border-secondary-fixed/30 rounded-none bg-secondary-fixed/5">
+<div class="w-2 h-2 rounded-full bg-secondary-fixed animate-pulse"></div>
+<span class="font-label-code text-label-code text-secondary-fixed">OPERATOR_01</span>
+<span class="material-symbols-outlined text-[18px] text-secondary-fixed">account_circle</span>
+</div>
+</div>
+</nav>
+<!-- Global Grid Texture Layer -->
+<div class="fixed inset-0 pointer-events-none opacity-[0.03]" style="background-image: radial-gradient(#00f1fe 1px, transparent 1px); background-size: 32px 32px;"></div>
+<main class="w-full max-w-[1200px] h-full min-h-[700px] grid grid-cols-1 md:grid-cols-2 bg-surface-container-lowest overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.9)] relative border border-outline-variant rounded-lg mt-12 transition-transform duration-300 ease-out" id="main-interface">
+<!-- LEFT PANEL: CYBERNETIC AVATAR -->
+<section class="relative hidden md:flex flex-col items-center justify-center overflow-hidden bg-black scanlines">
+<div class="absolute inset-0 z-0" id="threejs-container">
+<!-- Three.js scene will render here -->
+</div>
+<div class="relative z-20 p-margin flex flex-col items-center pointer-events-none w-full h-full justify-center">
+<!-- Brackets surrounding scene container -->
+<div class="relative w-[450px] h-[550px] flex items-center justify-center">
+<div class="tactical-bracket-tl"></div>
+<div class="tactical-bracket-br"></div>
+</div>
+<div class="mt-stack-compact flex flex-col items-center">
+<span class="font-label-code text-label-code text-secondary-fixed opacity-60 uppercase tracking-[0.2em]">[ SYSTEM_STATUS: MONITORING ]</span>
+<div class="flex gap-1 mt-2">
+<div class="w-1 h-4 bg-secondary-fixed"></div>
+<div class="w-1 h-4 bg-secondary-fixed/60"></div>
+<div class="w-1 h-4 bg-secondary-fixed/40"></div>
+<div class="w-1 h-4 bg-secondary-fixed/20 animate-pulse"></div>
+</div>
+</div>
+</div>
+<!-- Absolute HUD elements -->
+<div class="absolute top-margin left-margin font-label-code text-label-code text-primary-fixed-dim flex flex-col gap-1 z-20">
+<span class="">COORD_X: 42.088</span>
+<span class="">COORD_Y: 19.992</span>
+<span class="text-error">LATENCY: 12ms</span>
+</div>
+<div class="absolute bottom-margin right-margin font-label-code text-label-code text-secondary-fixed-dim z-20">
+<span class="">NODE: //PULSATER_01</span>
+</div>
+</section>
+<!-- RIGHT PANEL: AUTHENTICATION CONSOLE -->
+<section class="p-margin md:p-16 flex flex-col justify-center bg-surface relative glass-card">
+<div class="mb-12">
+<h1 class="font-display-tech text-display-tech text-secondary-fixed tracking-tighter mb-2">HYPERVISOR PULSATER</h1>
+<p class="font-body-mono text-body-mono text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]">terminal</span> 
+                ESTABLISHING ASYNCHRONOUS_CDC_ENGINE...
+            </p>
+</div>
+<!-- TAB TOGGLE -->
+<div class="flex border-b border-outline-variant mb-10 w-full" id="auth-tabs">
+<button class="flex-1 py-4 font-label-code text-label-code tracking-widest text-secondary-fixed border-b-2 border-secondary-fixed transition-all" id="tab-auth" onclick="toggleTab('auth')">AUTHENTICATE NODE ACCESS</button>
+<button class="flex-1 py-4 font-label-code text-label-code tracking-widest text-on-surface-variant hover:text-secondary-fixed transition-all" id="tab-register" onclick="toggleTab('register')">REGISTER NODE ACCESS</button>
+</div>
+<!-- FORM CONTENT -->
+<div class="space-y-stack-compact">
+<!-- AUTH FORM (LOGIN) -->
+<form class="space-y-6" id="form-auth">
+<div class="space-y-2">
+<label class="font-label-code text-label-code text-secondary-fixed-dim block">[ EMAIL / USERNAME ]</label>
+<div class="relative group">
+<input class="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-secondary-fixed text-on-surface font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0" placeholder="UID@PULSATER.NET" type="text"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-label-code text-label-code text-secondary-fixed-dim block">[ ACCESS_TOKEN_PASSWORD ]</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-secondary-fixed text-on-surface font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0" placeholder="••••••••" type="password"/>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-secondary-fixed">visibility</span>
+</div>
+</div>
+<div class="flex items-center justify-between font-body-mono-sm text-body-mono-sm">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="rounded-none bg-surface border-outline text-secondary-fixed focus:ring-offset-background" type="checkbox"/>
+<span class="text-on-surface-variant group-hover:text-on-surface transition-colors">PERSIST_SESSION</span>
+</label>
+<a class="text-secondary-fixed-dim hover:underline decoration-secondary-fixed-dim/30" href="#">RECOVER_CREDENTIALS</a>
+</div>
+<button class="w-full bg-secondary-container text-on-secondary py-4 font-label-code text-headline-md tracking-widest hover:brightness-110 active:scale-[0.98] hover:shadow-[0_0_20px_rgba(0,241,254,0.4)] transition-all glitch-hover mt-4 flex items-center justify-center gap-4 group" type="submit">
+                    AUTHENTICATE NODE ACCESS
+                    <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">login</span>
+</button>
+</form>
+<!-- REGISTER FORM (HIDDEN BY DEFAULT) -->
+<form class="space-y-6 hidden" id="form-register">
+<div class="space-y-2">
+<label class="font-label-code text-label-code text-secondary-fixed-dim block">[ NODE_IDENTIFIER ]</label>
+<input class="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-secondary-fixed text-on-surface font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0" placeholder="GHOST_IN_THE_SHELL" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="font-label-code text-label-code text-secondary-fixed-dim block">[ EMAIL_PROTOCOL ]</label>
+<input class="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-secondary-fixed text-on-surface font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0" placeholder="USER@PULSATER.NET" type="email"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-2">
+<label class="font-label-code text-label-code text-secondary-fixed-dim block">[ NEW_TOKEN ]</label>
+<input class="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-secondary-fixed text-on-surface font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0" placeholder="••••••••" type="password"/>
+</div>
+<div class="space-y-2">
+<label class="font-label-code text-label-code text-secondary-fixed-dim block">[ CONFIRM_TOKEN ]</label>
+<input class="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-secondary-fixed text-on-surface font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<button class="w-full border border-secondary-fixed text-secondary-fixed py-4 font-label-code text-headline-md tracking-widest hover:bg-secondary-fixed/10 active:scale-[0.98] transition-all glitch-hover mt-4 flex items-center justify-center gap-4 group" type="submit">
+                    REGISTER NODE ACCESS
+                    <span class="material-symbols-outlined group-hover:rotate-12 transition-transform">key</span>
+</button>
+</form>
+</div>
+<!-- ALTERNATIVE AUTH -->
+<div class="mt-12 flex flex-col items-center">
+<div class="flex items-center gap-4 w-full mb-8">
+<div class="h-[1px] bg-outline-variant flex-1"></div>
+<span class="font-label-code text-label-code text-on-surface-variant">EXTERNAL_GATEWAYS</span>
+<div class="h-[1px] bg-outline-variant flex-1"></div>
+</div>
+<div class="flex gap-gutter">
+<button class="w-12 h-12 flex items-center justify-center border border-outline-variant text-on-surface-variant hover:text-secondary-fixed hover:border-secondary-fixed hover:bg-secondary-fixed/5 transition-all">
+<svg class="w-5 h-5 fill-current" viewbox="0 0 24 24"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.908 3.152-1.896 4.136-1.248 1.248-3.224 2.536-6.424 2.536-5.176 0-9.272-4.2-9.272-9.36s4.096-9.36 9.272-9.36c2.8 0 4.912 1.112 6.392 2.512l2.312-2.312c-2.088-1.992-4.856-3.488-8.704-3.488-6.616 0-12.04 5.424-12.04 12.04s5.424 12.04 12.04 12.04c3.56 0 6.256-1.176 8.368-3.368 2.16-2.16 2.84-5.216 2.84-7.664 0-.712-.064-1.408-.192-2.04h-11.016z"></path></svg>
+</button>
+<button class="w-12 h-12 flex items-center justify-center border border-outline-variant text-on-surface-variant hover:text-secondary-fixed hover:border-secondary-fixed hover:bg-secondary-fixed/5 transition-all">
+<svg class="w-5 h-5 fill-current" viewbox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"></path></svg>
+</button>
+<button class="w-12 h-12 flex items-center justify-center border border-outline-variant text-on-surface-variant hover:text-secondary-fixed hover:border-secondary-fixed hover:bg-secondary-fixed/5 transition-all">
+<span class="material-symbols-outlined">fingerprint</span>
+</button>
+</div>
+<a class="mt-12 font-label-code text-label-code text-on-surface-variant hover:text-secondary-fixed flex items-center gap-2 transition-colors group" href="/">
+<span class="material-symbols-outlined text-[12px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                BACK TO GATEWAY
+            </a>
+</div>
+<!-- Absolute HUD elements -->
+<div class="absolute bottom-4 left-margin flex items-center gap-2 opacity-30">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary-fixed-dim animate-ping"></div>
+<span class="font-label-code text-[8px] uppercase tracking-widest">Secure Handshake: v.4.0.12_BUILD</span>
+</div>
+</section>
+</main>
+<script>
+    // Three.js Integration
+    (function() {
+        const container = document.getElementById('threejs-container');
+        if (!container) return;
+        
+        let width = container.clientWidth;
+        let height = container.clientHeight;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+        camera.position.z = 5;
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0x00ff41, 1);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        // Biometric Sphere Geometry (Abstracted Data Node)
+        const geometry = new THREE.SphereGeometry(2, 64, 64);
+        const material = new THREE.MeshPhongMaterial({
+            color: 0x050505,
+            emissive: 0x00ff41,
+            emissiveIntensity: 0.3,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const sphere = new THREE.Mesh(geometry, material);
+        scene.add(sphere);
+
+        // Floating Data Particles
+        const particleCount = 200;
+        const particlesGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+
+        for (let i = 0; i < particleCount * 3; i++) {
+            positions[i] = (Math.random() - 0.5) * 10;
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+            color: 0x00f2ff,
+            size: 0.05,
+            transparent: true,
+            opacity: 0.6
+        });
+
+        const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particles);
+
+        // Interaction logic
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetX = 0;
+        let targetY = 0;
+
+        window.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Smooth rotation based on mouse
+            targetX += (mouseX - targetX) * 0.05;
+            targetY += (mouseY - targetY) * 0.05;
+
+            sphere.rotation.y += 0.005;
+            sphere.rotation.x = targetY * 0.5;
+            sphere.rotation.z = targetX * 0.5;
+
+            // Pulse effect
+            const time = Date.now() * 0.002;
+            sphere.scale.setScalar(1 + Math.sin(time) * 0.03);
+
+            particles.rotation.y -= 0.002;
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            const newWidth = container.clientWidth;
+            const newHeight = container.clientHeight;
+            camera.aspect = newWidth / newHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(newWidth, newHeight);
+        });
+
+        animate();
+    })();
+
+    // Tab Toggle Logic
+    function toggleTab(target) {
+        const authForm = document.getElementById('form-auth');
+        const regForm = document.getElementById('form-register');
+        const authTab = document.getElementById('tab-auth');
+        const regTab = document.getElementById('tab-register');
+
+        if (target === 'auth') {
+            authForm.classList.remove('hidden');
+            regForm.classList.add('hidden');
+            authTab.classList.add('text-secondary-fixed', 'border-b-2', 'border-secondary-fixed');
+            authTab.classList.remove('text-on-surface-variant');
+            regTab.classList.remove('text-secondary-fixed', 'border-b-2', 'border-secondary-fixed');
+            regTab.classList.add('text-on-surface-variant');
+        } else {
+            regForm.classList.remove('hidden');
+            authForm.classList.add('hidden');
+            regTab.classList.add('text-secondary-fixed', 'border-b-2', 'border-secondary-fixed');
+            regTab.classList.remove('text-on-surface-variant');
+            authTab.classList.remove('text-secondary-fixed', 'border-b-2', 'border-secondary-fixed');
+            authTab.classList.add('text-on-surface-variant');
+        }
+    }
+
+    // Atmospheric Perspective Interactions
+    document.addEventListener('mousemove', (e) => {
+        const moveX = (e.clientX / window.innerWidth - 0.5) * 4;
+        const moveY = (e.clientY / window.innerHeight - 0.5) * 4;
+        const main = document.getElementById('main-interface');
+        if (main) {
+            main.style.transform = `perspective(1000px) rotateY(${moveX}deg) rotateX(${-moveY}deg)`;
+        }
+    });
+</script>
+</body></html>

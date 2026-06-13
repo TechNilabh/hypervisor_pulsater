@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HYPERVISOR PULSATER // IDENTITY AUTH</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#00f1fe",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#002022",
+                        "on-error": "#690005",
+                        "on-primary-fixed": "#002203",
+                        "tertiary-fixed": "#ffdad6",
+                        "secondary-fixed-dim": "#00dbe7",
+                        "on-primary-fixed-variant": "#00530e",
+                        "secondary": "#ddfcff",
+                        "inverse-primary": "#006e16",
+                        "outline": "#84967e",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-variant": "#353534",
+                        "surface-container-low": "#1c1b1b",
+                        "on-secondary": "#00363a",
+                        "on-secondary-fixed-variant": "#004f54",
+                        "tertiary-fixed-dim": "#ffb4ab",
+                        "secondary-fixed": "#74f5ff",
+                        "surface-container-high": "#2a2a2a",
+                        "error": "#ffb4ab",
+                        "surface-bright": "#3a3939",
+                        "surface": "#131313",
+                        "surface-container": "#201f1f",
+                        "on-primary-container": "#007117",
+                        "tertiary-container": "#ffd2cd",
+                        "on-primary": "#003907",
+                        "primary-fixed": "#72ff70",
+                        "primary-fixed-dim": "#00e639",
+                        "on-background": "#e5e2e1",
+                        "primary": "#ebffe2",
+                        "surface-container-highest": "#353534",
+                        "background": "#131313",
+                        "on-secondary-container": "#006a70",
+                        "outline-variant": "#3b4b37",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#93000c",
+                        "on-tertiary-container": "#c40015",
+                        "surface-tint": "#00e639",
+                        "on-surface-variant": "#b9ccb2",
+                        "tertiary": "#fff7f6",
+                        "error-container": "#93000a",
+                        "on-surface": "#e5e2e1",
+                        "primary-container": "#00ff41",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#410002",
+                        "surface-dim": "#131313",
+                        "on-tertiary": "#690006"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max": "100%",
+                        "gutter": "16px",
+                        "unit": "4px",
+                        "stack-compact": "8px",
+                        "margin": "24px"
+                    },
+                    "fontFamily": {
+                        "body-mono-sm": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "display-tech": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "body-mono": ["JetBrains Mono"],
+                        "headline-lg": ["Space Grotesk"],
+                        "label-code": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "body-mono-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "display-tech": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-mono": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "label-code": ["10px", {"lineHeight": "12px", "letterSpacing": "0.1em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        @keyframes flicker {
+            0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100% { opacity: 1; }
+            20%, 21.999%, 63%, 63.999%, 65%, 69.999% { opacity: 0.4; }
+        }
+        @keyframes pulse-block {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        .scanline-overlay {
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 255, 65, 0.05) 51%);
+            background-size: 100% 4px;
+        }
+        .bracket-tl::before, .bracket-tl::after,
+        .bracket-tr::before, .bracket-tr::after,
+        .bracket-bl::before, .bracket-bl::after,
+        .bracket-br::before, .bracket-br::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-color: #00e639;
+        }
+        .bracket-tl { top: -2px; left: -2px; border-top: 2px solid; border-left: 2px solid; }
+        .bracket-tr { top: -2px; right: -2px; border-top: 2px solid; border-right: 2px solid; }
+        .bracket-bl { bottom: -2px; left: -2px; border-bottom: 2px solid; border-left: 2px solid; }
+        .bracket-br { bottom: -2px; right: -2px; border-bottom: 2px solid; border-right: 2px solid; }
+        
+        .flicker { animation: flicker 3s infinite; }
+        .scanning-line {
+            height: 2px;
+            background: #00ff41;
+            box-shadow: 0 0 15px #00ff41;
+            animation: scanline 4s linear infinite;
+        }
+        .segment-bar div {
+            width: 8px;
+            height: 100%;
+            margin-right: 2px;
+            background: #1c1b1b;
+        }
+        .segment-bar div.active {
+            background: #00e639;
+            box-shadow: 0 0 5px #00e639;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-mono selection:bg-primary-container selection:text-on-primary-container overflow-hidden h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-gutter py-unit bg-background/80 backdrop-blur-xl border-b border-outline-variant shadow-[0_0_8px_rgba(0,242,255,0.1)]">
+<div class="font-display-tech text-headline-md tracking-tighter text-primary-fixed-dim flicker uppercase">
+            HYPERVISOR PULSATER // SYSTEMS ENGINE v1.0.4
+        </div>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="text-on-surface-variant font-label-code hover:text-secondary-container transition-colors uppercase" href="#">Network_Map</a>
+<a class="text-primary-fixed border-b-2 border-primary-fixed pb-1 font-label-code uppercase" href="#">Identity_Auth</a>
+<a class="text-on-surface-variant font-label-code hover:text-secondary-container transition-colors uppercase" href="#">Core_Logs</a>
+<div class="flex gap-4 ml-6 border-l border-outline-variant pl-6">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">hub</span>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">settings_input_antenna</span>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">lan</span>
+</div>
+</nav>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full z-40 flex flex-col pt-16 bg-surface-container-lowest/90 backdrop-blur-md border-r border-outline-variant w-64 hidden md:flex">
+<div class="px-4 py-6 border-b border-outline-variant">
+<div class="font-label-code text-primary uppercase text-xs">NODE_ACTIVE</div>
+<div class="font-body-mono text-secondary-fixed-dim text-lg">US-EAST-01</div>
+</div>
+<div class="flex flex-col mt-4">
+<div class="text-on-surface-variant px-4 py-3 opacity-70 flex items-center gap-3 hover:bg-surface-variant/30 hover:text-on-surface cursor-pointer transition-all active:scale-95 duration-75">
+<span class="material-symbols-outlined text-xl">settings_ethernet</span>
+<span class="font-label-code uppercase">LIVE_CDC</span>
+</div>
+<div class="bg-secondary-container/20 text-secondary-container border-l-4 border-secondary-container px-4 py-3 font-bold flex items-center gap-3">
+<span class="material-symbols-outlined text-xl">monitor_heart</span>
+<span class="font-label-code uppercase">CLUSTER_HEALTH</span>
+</div>
+<div class="text-on-surface-variant px-4 py-3 opacity-70 flex items-center gap-3 hover:bg-surface-variant/30 hover:text-on-surface cursor-pointer transition-all active:scale-95 duration-75">
+<span class="material-symbols-outlined text-xl">language</span>
+<span class="font-label-code uppercase">GLOBAL_ROUTING</span>
+</div>
+</div>
+<div class="mt-auto p-4 bg-surface-container-low/50">
+<div class="text-[10px] font-label-code text-outline uppercase mb-2">System Diagnostics</div>
+<div class="h-1 bg-surface-variant w-full relative overflow-hidden">
+<div class="absolute inset-0 bg-primary-fixed-dim w-3/4 animate-pulse"></div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-grow pt-16 md:pl-64 pb-8 overflow-auto scanline-overlay">
+<div class="max-w-6xl mx-auto p-gutter grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+<!-- Left Pane: Identity Grid Scanner -->
+<section class="flex flex-col gap-unit relative group">
+<div class="flex items-center justify-between bg-surface-container-highest px-3 py-1 border border-outline-variant">
+<span class="text-label-code font-label-code text-primary-fixed uppercase tracking-widest">Identity Grid Scanner // UNIT_04</span>
+<span class="material-symbols-outlined text-sm text-outline">close</span>
+</div>
+<div class="relative flex-grow bg-surface-container-lowest border border-outline-variant overflow-hidden p-6 aspect-[4/5] lg:aspect-auto">
+<!-- Tactical Brackets -->
+<div class="absolute bracket-tl"></div>
+<div class="absolute bracket-tr"></div>
+<div class="absolute bracket-bl"></div>
+<div class="absolute bracket-br"></div>
+<!-- Scan Line -->
+<div class="absolute inset-x-0 z-10 scanning-line pointer-events-none"></div>
+<!-- Avatar Display -->
+<div class="w-full h-full relative bg-surface-container overflow-hidden border border-outline-variant/30">
+<img class="w-full h-full object-cover grayscale brightness-75 contrast-125 opacity-80" data-alt="A highly detailed close-up of a futuristic cybernetic pilot wearing a complex tactical helmet with a dark visor reflecting neon data streams. The suit is composed of heavy white industrial plating with visible mechanical joints and carbon fiber detailing. The lighting is cold and atmospheric, casting deep shadows against a dark void background, reinforcing a high-precision military cyberpunk aesthetic with sharp, jagged textures." src="https://lh3.googleusercontent.com/aida-public/AB6AXuANiRp2jG9NlKt2AGeR6gxF0gA9GZGloUmt5AUifQmLJ3xSgMqpgPKnz22yNXHMlFh4wePeXijv5mCHiCpEtyxRcTIBQHXh1RL01JUCgv8qFqb_oLnr_AjZowLkULQWh92KC3SnaISF1Ty4UzZ0a_fRPBYElQKzmLXI_wUWXjzEwCTm3XVcrkc-V_9z9va-K9J0VIuy98JgzmuvsdBqYWi8niD5ldh3f_V9jWVkghBcTa5jpclPiwsekZDIXKoVSeCMw79C4Vh1Xok"/>
+<!-- HUD Overlays -->
+<div class="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent">
+<div class="font-label-code text-primary-fixed text-[10px] mb-1">NODE ACCESS DEPLOYMENT: SCANNING ID...</div>
+<div class="flex items-end justify-between">
+<div class="text-headline-md font-display-tech text-error flicker tracking-widest uppercase">ACCESS DENIED</div>
+<div class="text-[10px] font-label-code text-outline-variant">ERR_CODE: PX-808</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Pane: Node Avatar Selector & Utilities -->
+<section class="flex flex-col gap-6">
+<!-- Node Avatar Matrix -->
+<div class="flex flex-col gap-unit">
+<div class="flex items-center justify-between bg-surface-container-highest px-3 py-1 border border-outline-variant">
+<span class="text-label-code font-label-code text-secondary-fixed-dim uppercase tracking-widest">Node Avatar Selector // CLUSTER_POOL</span>
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-sm text-secondary-fixed-dim">filter_list</span>
+<span class="material-symbols-outlined text-sm text-outline">more_vert</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Slot 1 -->
+<div class="bg-surface-container-low border border-outline-variant p-3 hover:border-secondary-fixed-dim transition-all group cursor-pointer">
+<div class="flex justify-between items-start mb-3">
+<div class="w-8 h-8 bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-outline text-lg">person_search</span>
+</div>
+<div class="text-[10px] font-label-code text-outline uppercase">Node_01</div>
+</div>
+<div class="font-body-mono-sm text-on-surface-variant truncate">AV-X2-CORE-22.7</div>
+<div class="mt-2 h-1 bg-surface-variant overflow-hidden">
+<div class="h-full bg-secondary-fixed-dim w-1/3"></div>
+</div>
+</div>
+<!-- Slot 2 -->
+<div class="bg-secondary-container/10 border border-secondary-container p-3 group cursor-pointer relative overflow-hidden">
+<div class="absolute top-0 right-0 p-1 bg-secondary-container text-on-secondary-fixed font-label-code text-[8px] px-2">ACTIVE</div>
+<div class="flex justify-between items-start mb-3">
+<div class="w-8 h-8 bg-secondary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary-container text-lg">psychology</span>
+</div>
+<div class="text-[10px] font-label-code text-secondary-container uppercase">Node_02</div>
+</div>
+<div class="font-body-mono-sm text-secondary-container truncate font-bold">ASY06.5_STABLE</div>
+<div class="mt-2 h-1 bg-surface-variant overflow-hidden">
+<div class="h-full bg-secondary-container w-full animate-pulse"></div>
+</div>
+</div>
+<!-- Slot 3 -->
+<div class="bg-surface-container-low border border-outline-variant p-3 hover:border-secondary-fixed-dim transition-all group cursor-pointer">
+<div class="flex justify-between items-start mb-3">
+<div class="w-8 h-8 bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-outline text-lg">memory</span>
+</div>
+<div class="text-[10px] font-label-code text-outline uppercase">Node_03</div>
+</div>
+<div class="font-body-mono-sm text-on-surface-variant truncate">R.XCOMM_4.5</div>
+<div class="mt-2 h-1 bg-surface-variant overflow-hidden">
+<div class="h-full bg-outline-variant w-0"></div>
+</div>
+</div>
+<!-- Slot 4 -->
+<div class="bg-surface-container-low border border-outline-variant p-3 hover:border-secondary-fixed-dim transition-all group cursor-pointer opacity-50">
+<div class="flex justify-between items-start mb-3">
+<div class="w-8 h-8 bg-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-outline text-lg">lock</span>
+</div>
+<div class="text-[10px] font-label-code text-outline uppercase">Node_04</div>
+</div>
+<div class="font-body-mono-sm text-on-surface-variant truncate">LOCKED_BY_ROOT</div>
+</div>
+</div>
+</div>
+<!-- Validation Progress Tier -->
+<div class="mt-auto bg-surface-container-lowest border border-outline-variant p-6 flex flex-col gap-6">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary-fixed-dim text-sm" style="font-variation-settings: 'FILL' 1;">security</span>
+<h3 class="font-label-code text-label-code text-on-surface uppercase tracking-widest">Validation Progress Tier // DEC_SEQ</h3>
+</div>
+<!-- Track 1 -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between text-[10px] font-label-code uppercase text-outline">
+<span>Core_Hash_Verification</span>
+<span>84%</span>
+</div>
+<div class="segment-bar h-3 flex w-full">
+<div class="active"></div><div class="active"></div><div class="active"></div><div class="active"></div><div class="active"></div>
+<div class="active"></div><div class="active"></div><div class="active"></div><div class="active"></div><div class="active"></div>
+<div class="active"></div><div class="active"></div><div class="active"></div><div class="active"></div><div class="active"></div>
+<div class="active"></div><div class="active"></div><div class="active"></div><div></div><div></div>
+</div>
+</div>
+<!-- Track 2 -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between text-[10px] font-label-code uppercase text-outline">
+<span>Sub-millisecond_Sync</span>
+<span>42%</span>
+</div>
+<div class="segment-bar h-3 flex w-full">
+<div class="active"></div><div class="active"></div><div class="active"></div><div class="active"></div><div class="active"></div>
+<div class="active"></div><div class="active"></div><div class="active"></div><div></div><div></div>
+<div></div><div></div><div></div><div></div><div></div>
+<div></div><div></div><div></div><div></div><div></div>
+</div>
+</div>
+<!-- Track 3 -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between text-[10px] font-label-code uppercase text-outline">
+<span>Neural_Handshake</span>
+<span>COMPUTING...</span>
+</div>
+<div class="segment-bar h-3 flex w-full" id="pulsing-track">
+<div></div><div></div><div></div><div></div><div></div>
+<div></div><div></div><div></div><div></div><div></div>
+<div></div><div></div><div></div><div></div><div></div>
+<div></div><div></div><div></div><div></div><div></div>
+</div>
+</div>
+<button class="w-full bg-primary-fixed-dim text-on-primary-fixed font-label-code py-3 uppercase tracking-widest hover:brightness-110 active:flicker transition-all border-b-4 border-on-primary-fixed-variant">
+                        Override Identity Protocol
+                    </button>
+</div>
+</section>
+</div>
+</main>
+<!-- Footer -->
+<footer class="fixed bottom-0 w-full z-50 h-8 flex items-center px-margin justify-between bg-surface-container-low border-t border-error/30">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-error text-xs animate-pulse">radio_button_checked</span>
+<div class="font-label-code text-label-code text-error uppercase">[SYSTEM_READY] // INTERRUPT_LISTENER_ACTIVE</div>
+</div>
+<div class="flex gap-6">
+<a class="text-on-error-container font-label-code text-[10px] hover:text-error transition-all uppercase" href="#">V1.0.4_STABLE</a>
+<a class="text-on-error-container font-label-code text-[10px] hover:text-error transition-all uppercase" href="#">RECOVERY_MODE</a>
+<a class="text-on-error-container font-label-code text-[10px] hover:text-error transition-all uppercase" href="#">DEBUG_CONSOLE</a>
+</div>
+</footer>
+<script>
+        // Micro-interactions for the pulsing progress bar
+        const pulseTrack = document.getElementById('pulsing-track');
+        const segments = pulseTrack.querySelectorAll('div');
+        let index = 0;
+
+        function animatePulse() {
+            segments.forEach(s => s.classList.remove('active'));
+            const count = 5;
+            for(let i=0; i<count; i++){
+                let target = (index + i) % segments.length;
+                segments[target].classList.add('active');
+                segments[target].style.opacity = (count - i) / count;
+            }
+            index = (index + 1) % segments.length;
+            setTimeout(animatePulse, 100);
+        }
+        animatePulse();
+
+        // Random glitch effect on text
+        const flickerElements = document.querySelectorAll('.flicker');
+        setInterval(() => {
+            flickerElements.forEach(el => {
+                if(Math.random() > 0.95) {
+                    el.style.transform = `translateX(${Math.random() * 2 - 1}px)`;
+                    setTimeout(() => el.style.transform = 'none', 50);
+                }
+            });
+        }, 1000);
+    </script>
+</body></html>

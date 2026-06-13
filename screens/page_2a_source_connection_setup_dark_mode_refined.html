@@ -1,0 +1,421 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>HYPERVISOR_PULSATER_v2.0.4 | SOURCE_NODE_CONFIG</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary": "#003907",
+                        "inverse-primary": "#006e16",
+                        "on-error": "#690005",
+                        "on-secondary-fixed-variant": "#004f54",
+                        "surface-container-high": "#2a2a2a",
+                        "primary-container": "#00ff41",
+                        "on-tertiary-fixed-variant": "#93000c",
+                        "background": "#131313",
+                        "surface-tint": "#00e639",
+                        "primary-fixed-dim": "#00e639",
+                        "on-primary-container": "#007117",
+                        "tertiary-fixed": "#ffdad6",
+                        "surface-dim": "#131313",
+                        "on-error-container": "#ffdad6",
+                        "on-background": "#e5e2e1",
+                        "on-tertiary-fixed": "#410002",
+                        "surface-bright": "#3a3939",
+                        "inverse-surface": "#e5e2e1",
+                        "on-secondary-fixed": "#002022",
+                        "secondary": "#ddfcff",
+                        "on-tertiary-container": "#c40015",
+                        "surface-container-lowest": "#0e0e0e",
+                        "secondary-fixed": "#74f5ff",
+                        "on-primary-fixed": "#002203",
+                        "surface-variant": "#353534",
+                        "surface": "#131313",
+                        "on-tertiary": "#690006",
+                        "on-secondary-container": "#006a70",
+                        "surface-container-low": "#1c1b1b",
+                        "primary": "#ebffe2",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#ffd2cd",
+                        "on-surface-variant": "#b9ccb2",
+                        "error-container": "#93000a",
+                        "secondary-container": "#00f1fe",
+                        "outline-variant": "#3b4b37",
+                        "surface-container": "#201f1f",
+                        "inverse-on-surface": "#313030",
+                        "secondary-fixed-dim": "#00dbe7",
+                        "on-secondary": "#00363a",
+                        "primary-fixed": "#72ff70",
+                        "tertiary": "#fff7f6",
+                        "outline": "#84967e",
+                        "on-surface": "#e5e2e1",
+                        "surface-container-highest": "#353534",
+                        "tertiary-fixed-dim": "#ffb4ab",
+                        "on-primary-fixed-variant": "#00530e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "unit": "4px",
+                        "stack-compact": "8px",
+                        "margin": "24px",
+                        "container-max": "100%"
+                    },
+                    "fontFamily": {
+                        "label-code": ["JetBrains Mono"],
+                        "headline-lg": ["Space Grotesk"],
+                        "display-tech": ["Space Grotesk"],
+                        "body-mono-sm": ["JetBrains Mono"],
+                        "body-mono": ["JetBrains Mono"],
+                        "headline-md": ["Space Grotesk"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0A0A0A;
+            color: #e5e2e1;
+            overflow-x: hidden;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .scanline {
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 230, 57, 0.05) 51%);
+            background-size: 100% 4px;
+        }
+        .corner-bracket {
+            position: relative;
+        }
+        .corner-bracket::before, .corner-bracket::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-color: #00e639;
+        }
+        .bracket-tl::before { top: 0; left: 0; border-top: 1px solid; border-left: 1px solid; }
+        .bracket-tr::after { top: 0; right: 0; border-top: 1px solid; border-right: 1px solid; }
+        .bracket-bl::before { bottom: 0; left: 0; border-bottom: 1px solid; border-left: 1px solid; }
+        .bracket-br::after { bottom: 0; right: 0; border-bottom: 1px solid; border-right: 1px solid; }
+        
+        .segmented-progress {
+            display: flex;
+            gap: 2px;
+        }
+        .progress-block {
+            height: 8px;
+            width: 10px;
+            background: #1c1b1b;
+        }
+        .progress-block.active {
+            background: #00e639;
+            box-shadow: 0 0 4px #00e639;
+        }
+        
+        .glass-module {
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(132, 150, 126, 0.2);
+        }
+        
+        @keyframes flicker {
+            0% { opacity: 0.8; }
+            5% { opacity: 0.5; }
+            10% { opacity: 0.9; }
+            100% { opacity: 1; }
+        }
+        .animate-flicker:active {
+            animation: flicker 0.1s infinite;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0e0e0e;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #00e639;
+        }
+    </style>
+</head>
+<body class="scanline">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant shadow-[0_0_8px_rgba(0,230,57,0.15)] flex justify-between items-center px-gutter h-14 w-full bg-surface-container-lowest">
+<div class="flex items-center gap-4">
+<span class="font-display-tech text-headline-md tracking-tighter text-primary-fixed-dim">HYPERVISOR_PULSATER_v2.0.4</span>
+<span class="text-on-surface-variant font-body-mono opacity-50 border-l border-outline-variant pl-4">NODE::[US-EAST-1]</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="bg-surface-variant/30 flex items-center px-3 py-1 border border-outline-variant">
+<span class="material-symbols-outlined text-primary-fixed-dim text-sm mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-label-code w-48 text-primary-fixed-dim placeholder:text-outline-variant" placeholder="QUERY_SYS_LOGS..." type="text">
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-fixed-dim cursor-pointer hover:text-primary-fixed transition-colors">terminal</span>
+<span class="material-symbols-outlined text-primary-fixed-dim cursor-pointer hover:text-primary-fixed transition-colors">settings_input_component</span>
+<span class="material-symbols-outlined text-primary-fixed-dim cursor-pointer hover:text-primary-fixed transition-colors">notifications_active</span>
+<div class="flex items-center gap-2 border-l border-outline-variant pl-4"><div class="flex items-center gap-3 pl-4 border-l border-outline-variant"><div class="w-8 h-8 rounded-full bg-primary-fixed-dim flex items-center justify-center text-on-primary font-bold shadow-[0_0_8px_rgba(0,230,57,0.3)]">01</div><div class="flex flex-col"><span class="font-label-code text-[10px] text-primary-fixed-dim leading-none">OPERATOR_01</span><span class="font-label-code text-[8px] text-on-surface-variant/60 leading-none">LEVEL_4_AUTH</span></div></div></div>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-14 h-[calc(100vh-88px)] w-64 z-40 bg-surface-container-lowest/90 backdrop-blur-xl border-r border-outline-variant flex flex-col py-4 space-y-1 bg-black">
+<div class="px-4 mb-6">
+<h3 class="font-headline-md text-primary-fixed">OPERATOR_01</h3>
+<p class="font-label-code text-secondary-fixed-dim opacity-70">[NODE: US-EAST-1]</p>
+</div>
+<nav class="flex-1">
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-surface-variant hover:opacity-100 transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">sensors</span>
+<span class="font-label-code">LIVE_CDC</span>
+</a>
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-surface-variant hover:opacity-100 transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">dns</span>
+<span class="font-label-code">CLUSTER_HEALTH</span>
+</a>
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-surface-variant hover:opacity-100 transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-label-code">GLOBAL_ROUTING</span>
+</a>
+<a class="bg-primary-container/20 text-primary-fixed-dim border-l-4 border-primary-fixed-dim flex items-center gap-3 px-4 py-3 transition-all" href="#">
+<span class="material-symbols-outlined">settings_ethernet</span>
+<span class="font-label-code">CONNECTIONS</span>
+</a>
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-surface-variant hover:opacity-100 transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="font-label-code">ALERTS</span>
+</a>
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 opacity-70 hover:bg-surface-variant hover:opacity-100 transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">terminal</span>
+<span class="font-label-code">SETTINGS</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 mt-14 mb-8 min-h-[calc(100vh-88px)] p-margin grid grid-cols-10 gap-gutter">
+<!-- Left Pane: SOURCE NODE CONFIGURATION (60%) -->
+<section class="col-span-10 lg:col-span-6 space-y-gutter bg-surface-container-lowest/50">
+<div class="glass-module p-6 border-l-2 border-primary-fixed-dim relative overflow-hidden bg-surface-container-lowest">
+<div class="absolute top-0 right-0 p-2 opacity-20 pointer-events-none">
+<span class="font-label-code text-xs">[FORM_ID: 99x-ALPHA]</span>
+</div>
+<header class="flex items-center gap-2 mb-6 border-b border-outline-variant pb-2">
+<span class="material-symbols-outlined text-primary-fixed-dim">database</span>
+<h2 class="font-headline-lg text-primary-fixed-dim tracking-tight">SOURCE NODE CONFIGURATION</h2>
+</header>
+<form class="space-y-6">
+<!-- DB Config -->
+<div class="grid grid-cols-2 gap-margin">
+<div class="space-y-2">
+<label class="font-label-code text-on-surface-variant flex items-center gap-1">
+<span class="text-primary-fixed-dim text-[8px]">▶</span> DB_TYPE
+                            </label>
+<div class="relative">
+<select class="w-full border-b border-outline-variant focus:border-primary-fixed-dim focus:ring-0 text-primary-fixed-dim font-body-mono px-2 py-2 appearance-none bg-surface-container-lowest">
+<option>POSTGRESQL_v15</option>
+<option>MYSQL_v8</option>
+<option>MONGODB_ATLAS</option>
+</select>
+<span class="absolute right-2 top-2 material-symbols-outlined pointer-events-none text-on-surface-variant">arrow_drop_down</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-label-code text-on-surface-variant flex items-center gap-1">
+<span class="text-primary-fixed-dim text-[8px]">▶</span> HOST
+                            </label>
+<div class="corner-bracket bracket-tl bracket-tr bracket-bl bracket-br p-px">
+<input class="w-full bg-surface-container-low border-none focus:ring-1 focus:ring-primary-fixed-dim/30 text-primary-fixed-dim font-body-mono px-3 py-2 placeholder:text-outline-variant bg-surface-container-lowest" type="text" value="db-cluster-primary.internal">
+</div>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-margin">
+<div class="space-y-2">
+<label class="font-label-code text-on-surface-variant flex items-center gap-1">
+<span class="text-primary-fixed-dim text-[8px]">▶</span> PORT
+                            </label>
+<input class="w-full bg-transparent border-b border-outline-variant focus:border-primary-fixed-dim focus:ring-0 text-primary-fixed-dim font-body-mono px-1 py-1 bg-surface-container-lowest" type="text" value="5432">
+</div>
+<div class="col-span-2 space-y-2">
+<label class="font-label-code text-on-surface-variant flex items-center gap-1">
+<span class="text-primary-fixed-dim text-[8px]">▶</span> DATABASE_NAME
+                            </label>
+<input class="w-full bg-transparent border-b border-outline-variant focus:border-primary-fixed-dim focus:ring-0 text-primary-fixed-dim font-body-mono px-1 py-1 bg-surface-container-lowest" placeholder="IDENTIFIER_REQUIRED" type="text">
+</div>
+</div>
+<!-- Schema Multi-select with Brackets -->
+<div class="space-y-2">
+<label class="font-label-code text-on-surface-variant flex items-center gap-1">
+<span class="text-primary-fixed-dim text-[8px]">▶</span> SCHEMA_SCOPE_WHITELIST
+                        </label>
+<div class="grid grid-cols-4 gap-2">
+<div class="corner-bracket bracket-tl bracket-bl p-2 border-r border-outline-variant bg-primary-container/10 flex justify-between items-center group cursor-pointer">
+<span class="font-label-code text-primary-fixed">public</span>
+<span class="material-symbols-outlined text-sm text-primary-fixed">check_circle</span>
+</div>
+<div class="p-2 border border-outline-variant bg-surface-container-low flex justify-between items-center group cursor-pointer hover:border-primary-fixed-dim transition-colors">
+<span class="font-label-code text-on-surface-variant">analytics</span>
+<span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100">add</span>
+</div>
+<div class="p-2 border border-outline-variant bg-surface-container-low flex justify-between items-center group cursor-pointer hover:border-primary-fixed-dim transition-colors">
+<span class="font-label-code text-on-surface-variant">audit_logs</span>
+<span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100">add</span>
+</div>
+<div class="corner-bracket bracket-tr bracket-br p-2 border-l border-outline-variant bg-surface-container-low flex justify-between items-center group cursor-pointer hover:border-primary-fixed-dim transition-colors">
+<span class="font-label-code text-on-surface-variant text-xs opacity-50">MORE...</span>
+</div>
+</div>
+</div>
+<!-- Storage Destination Section -->
+<div class="pt-8 mt-8 border-t border-dashed border-outline-variant space-y-6">
+<header class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary-fixed-dim">save_as</span>
+<h3 class="font-headline-md text-secondary-fixed-dim tracking-tight">STORAGE DESTINATION</h3>
+</header>
+<div class="grid grid-cols-2 gap-margin">
+<div class="space-y-2">
+<label class="font-label-code text-on-surface-variant">OUTPUT_DIRECTORY</label>
+<div class="bg-surface-container-lowest border border-outline-variant p-2 font-body-mono text-secondary-fixed-dim flex items-center gap-2 bg-black">
+<span class="text-xs opacity-50">mnt/</span>
+<input class="bg-transparent border-none focus:ring-0 w-full p-0 bg-surface-container-lowest" type="text" value="telemetry/flow_probes/active_stream">
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-label-code text-on-surface-variant">FLUSH_INTERVAL_MS</label>
+<input class="w-full accent-secondary-fixed-dim h-1 bg-surface-container-high rounded-full appearance-none cursor-pointer" type="range">
+<div class="flex justify-between font-label-code text-[8px] text-on-surface-variant">
+<span class="">500ms</span>
+<span class="text-secondary-fixed-dim">CURRENT: 2000ms</span>
+<span class="">10000ms</span>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-label-code text-on-surface-variant">PARTITION_FORMAT</label>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<input checked="" class="text-secondary-fixed-dim focus:ring-0 bg-transparent border-secondary-fixed-dim" name="partition" type="radio">
+<span class="font-label-code text-secondary-fixed-dim">YYYY-MM-DD</span>
+</div>
+<div class="flex items-center gap-2 opacity-50">
+<input class="text-secondary-fixed-dim focus:ring-0 bg-transparent border-outline" name="partition" type="radio">
+<span class="font-label-code">EPOCH_CHUNK</span>
+</div>
+<div class="flex items-center gap-2 opacity-50">
+<input class="text-secondary-fixed-dim focus:ring-0 bg-transparent border-outline" name="partition" type="radio">
+<span class="font-label-code">PROTO_BUFFER</span>
+</div>
+</div>
+</div>
+</div>
+</form>
+</div>
+</section>
+<!-- Right Pane: CONNECTION DIAGNOSTIC LOG (40%) -->
+<section class="col-span-10 lg:col-span-4 flex flex-col gap-gutter">
+<!-- Console Card -->
+<div class="flex-1 glass-module flex flex-col border border-outline-variant relative">
+<div class="bg-surface-container-high px-3 py-1 flex items-center justify-between border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error animate-pulse"></span>
+<span class="font-label-code text-on-surface text-[10px]">CONNECTION DIAGNOSTIC LOG</span>
+</div>
+<div class="flex gap-1">
+<span class="w-2 h-2 bg-outline-variant"></span>
+<span class="w-2 h-2 bg-outline-variant"></span>
+</div>
+</div>
+<div class="flex-1 p-4 font-body-mono text-[11px] overflow-y-auto custom-scrollbar bg-surface-container-lowest/50" id="terminal-logs"><p class="text-on-surface-variant opacity-40">[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]</p><p class="text-on-surface-variant opacity-40">[08:22:25] POLLING_SOURCE... SUCCESS</p><p class="text-on-surface-variant opacity-40">[08:22:35] METRIC_HARVEST: 124 flows/sec</p><p class="text-on-surface-variant opacity-40">[08:22:35] METRIC_HARVEST: 124 flows/sec</p><p class="text-on-surface-variant opacity-40">[08:22:31] KEEPALIVE_SENT -&gt; MESH_GATEWAY</p><p class="text-on-surface-variant opacity-40">[08:22:25] POLLING_SOURCE... SUCCESS</p><p class="text-on-surface-variant opacity-40">[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]</p><p class="text-on-surface-variant opacity-40">[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]</p><p class="text-on-surface-variant opacity-40">[08:22:31] KEEPALIVE_SENT -&gt; MESH_GATEWAY</p><p class="text-on-surface-variant opacity-40">[08:22:25] POLLING_SOURCE... SUCCESS</p><p class="text-on-surface-variant opacity-40">[08:22:31] KEEPALIVE_SENT -&gt; MESH_GATEWAY</p><p class="text-on-surface-variant opacity-40">[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]</p><p class="text-on-surface-variant opacity-40">[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]</p><p class="text-on-surface-variant opacity-40">[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]</p><p class="text-on-surface-variant opacity-40">[08:22:35] METRIC_HARVEST: 124 flows/sec</p><p class="text-on-surface-variant opacity-40">[08:22:31] KEEPALIVE_SENT -&gt; MESH_GATEWAY</p><p class="text-on-surface-variant opacity-40">[08:22:25] POLLING_SOURCE... SUCCESS</p><p class="text-on-surface-variant opacity-40">[08:22:31] KEEPALIVE_SENT -&gt; MESH_GATEWAY</p><p class="text-on-surface-variant opacity-40">[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]</p><p class="text-on-surface-variant opacity-40">[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]</p><p class="text-on-surface-variant opacity-40">[08:22:31] KEEPALIVE_SENT -&gt; MESH_GATEWAY</p><p class="text-on-surface-variant opacity-40">[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]</p><p class="text-on-surface-variant opacity-40">[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]</p><p class="text-on-surface-variant opacity-40">[08:22:35] METRIC_HARVEST: 124 flows/sec</p><p class="text-on-surface-variant opacity-40">[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]</p><p class="text-on-surface-variant opacity-40">[08:22:25] POLLING_SOURCE... SUCCESS</p><p class="text-on-surface-variant opacity-40">[08:22:35] METRIC_HARVEST: 124 flows/sec</p><p class="text-on-surface-variant opacity-40">[08:22:35] METRIC_HARVEST: 124 flows/sec</p></div>
+<div class="p-4 border-t border-outline-variant bg-surface-container-lowest">
+<div class="flex items-center justify-between mb-4">
+<span class="font-label-code text-on-surface-variant text-[10px]">WORKER_POOL_SATURATION</span>
+<span class="font-label-code text-primary-fixed-dim text-[10px]">62% ACTIVE</span>
+</div>
+<div class="segmented-progress">
+<div class="progress-block active"></div>
+<div class="progress-block active"></div>
+<div class="progress-block active"></div>
+<div class="progress-block active"></div>
+<div class="progress-block active"></div>
+<div class="progress-block active"></div>
+<div class="progress-block"></div>
+<div class="progress-block"></div>
+<div class="progress-block"></div>
+<div class="progress-block"></div>
+</div>
+</div>
+</div>
+<!-- Action Bar -->
+<div class="glass-module p-4 space-y-3">
+<button class="w-full bg-primary-fixed-dim text-on-primary font-label-code py-3 flex items-center justify-center gap-2 animate-flicker hover:shadow-[0_0_15px_rgba(0,230,57,0.4)] transition-all">
+<span class="material-symbols-outlined">bolt</span>
+                    ESTABLISH CONNECTION
+                </button>
+<div class="grid grid-cols-2 gap-3">
+<button class="border border-outline text-on-surface-variant font-label-code py-2 hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">gesture</span>
+                        TEST WORKER
+                    </button>
+<button class="border border-outline text-on-surface-variant font-label-code py-2 hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">terminal</span>
+                        DUMP_CONFIG
+                    </button>
+</div>
+<div class="flex justify-between items-center px-1">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary-fixed-dim animate-ping"></div>
+<span class="font-label-code text-[9px] text-primary-fixed-dim">DAEMON_ACTIVE</span>
+</div>
+<span class="font-label-code text-[9px] text-on-surface-variant">PID: 1042 // THREADS: 12</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="fixed bottom-0 w-full h-8 z-50 bg-surface-container-high border-t border-primary-fixed-dim/30 shadow-[0_-4px_12px_rgba(0,0,0,0.5)] flex justify-between items-center px-margin">
+<div class="font-label-code text-primary-fixed flex gap-4">
+<span class="">[SYSTEM_STATUS: NOMINAL]</span>
+<span class="hidden md:inline">[THREAD_COUNT: 1024]</span>
+<span class="hidden md:inline">[UPTIME: 99.998%]</span>
+</div>
+<div class="flex gap-6">
+<a class="font-body-mono-sm text-on-surface-variant/60 hover:text-secondary-fixed transition-colors underline decoration-primary-fixed-dim/30" href="#">DOCS</a>
+<a class="font-body-mono-sm text-on-surface-variant/60 hover:text-secondary-fixed transition-colors underline decoration-primary-fixed-dim/30" href="#">API_REF</a>
+<a class="font-body-mono-sm text-on-surface-variant/60 hover:text-secondary-fixed transition-colors underline decoration-primary-fixed-dim/30" href="#">SYS_LOGS</a>
+</div>
+</footer>
+<script>
+        // Micro-interaction for logs
+        const logContainer = document.getElementById('terminal-logs');
+        const phrases = [
+            "[08:22:25] POLLING_SOURCE... SUCCESS",
+            "[08:22:28] SYNC_BUFFER_CLEARED [0x00FF21]",
+            "[08:22:31] KEEPALIVE_SENT -> MESH_GATEWAY",
+            "[08:22:35] METRIC_HARVEST: 124 flows/sec"
+        ];
+        
+        setInterval(() => {
+            const p = document.createElement('p');
+            p.className = 'text-on-surface-variant opacity-40';
+            p.textContent = phrases[Math.floor(Math.random() * phrases.length)];
+            logContainer.appendChild(p);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            if (logContainer.children.length > 20) logContainer.removeChild(logContainer.firstChild);
+        }, 3000);
+    </script>
+
+
+</body></html>

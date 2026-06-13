@@ -1,0 +1,779 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>HYPERVISOR PULSATER // LIVE_CDC_REPLICATION</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        @keyframes flicker {
+            0% { opacity: 1; }
+            5% { opacity: 0.9; }
+            10% { opacity: 1; }
+            15% { opacity: 0.85; }
+            25% { opacity: 1; }
+            80% { opacity: 1; }
+            85% { opacity: 0.7; }
+            90% { opacity: 1; }
+            100% { opacity: 1; }
+        }
+        .flicker { animation: flicker 3s infinite; }
+        
+        .scanline-overlay {
+            background: linear-gradient(to bottom, rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .tactical-bracket {
+            position: relative;
+        }
+        .tactical-bracket::before, .tactical-bracket::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-color: #84967e;
+            pointer-events: none;
+        }
+        .tactical-bracket::before { top: 0; left: 0; border-top: 1px solid; border-left: 1px solid; }
+        .tactical-bracket::after { bottom: 0; right: 0; border-bottom: 1px solid; border-right: 1px solid; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #0e0e0e; }
+        ::-webkit-scrollbar-thumb { background: #3b4b37; }
+        ::-webkit-scrollbar-thumb:hover { background: #00e639; }
+
+        .glitch-hover:hover {
+            text-shadow: 2px 0 #00f1fe, -2px 0 #00e639;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-on-surface": "#313030",
+                    "outline": "#84967e",
+                    "tertiary-container": "#ffd2cd",
+                    "surface-container-highest": "#353534",
+                    "on-error": "#690005",
+                    "on-secondary": "#00363a",
+                    "outline-variant": "#3b4b37",
+                    "secondary-fixed-dim": "#00dbe7",
+                    "on-primary-fixed": "#002203",
+                    "surface-container": "#201f1f",
+                    "tertiary-fixed-dim": "#ffb4ab",
+                    "surface-variant": "#353534",
+                    "on-primary-fixed-variant": "#00530e",
+                    "on-tertiary": "#690006",
+                    "on-primary-container": "#007117",
+                    "on-error-container": "#ffdad6",
+                    "surface": "#131313",
+                    "error": "#ffb4ab",
+                    "tertiary-fixed": "#ffdad6",
+                    "secondary": "#ddfcff",
+                    "primary": "#ebffe2",
+                    "surface-dim": "#131313",
+                    "secondary-container": "#00f1fe",
+                    "error-container": "#93000a",
+                    "primary-fixed": "#72ff70",
+                    "on-tertiary-container": "#c40015",
+                    "secondary-fixed": "#74f5ff",
+                    "on-background": "#e5e2e1",
+                    "on-tertiary-fixed": "#410002",
+                    "on-surface": "#e5e2e1",
+                    "on-secondary-container": "#006a70",
+                    "tertiary": "#fff7f6",
+                    "primary-fixed-dim": "#00e639",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-surface-variant": "#b9ccb2",
+                    "inverse-primary": "#006e16",
+                    "surface-container-low": "#1c1b1b",
+                    "inverse-surface": "#e5e2e1",
+                    "surface-bright": "#3a3939",
+                    "on-secondary-fixed": "#002022",
+                    "on-tertiary-fixed-variant": "#93000c",
+                    "surface-tint": "#00e639",
+                    "on-primary": "#003907",
+                    "surface-container-high": "#2a2a2a",
+                    "on-secondary-fixed-variant": "#004f54",
+                    "primary-container": "#00ff41",
+                    "background": "#131313"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin": "24px",
+                    "container-max": "100%",
+                    "stack-compact": "8px",
+                    "unit": "4px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "body-mono": ["JetBrains Mono"],
+                    "label-code": ["JetBrains Mono"],
+                    "headline-md": ["Space Grotesk"],
+                    "display-tech": ["Space Grotesk"]
+            },
+            "fontSize": {
+                    "body-mono": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-code": ["10px", {"lineHeight": "12px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-tech": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-mono selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+<!-- TopNavBar -->
+<header class="fixed top-0 z-50 w-full max-w-full flex justify-between items-center px-gutter py-unit bg-background/80 backdrop-blur-xl border-b border-outline-variant shadow-[0_0_8px_rgba(0,242,255,0.1)]">
+<div class="flex items-center gap-4">
+<span class="font-display-tech text-headline-md tracking-tighter text-primary-fixed-dim">HYPERVISOR PULSATER // SYSTEMS ENGINE v1.0.4</span>
+<div class="hidden md:flex gap-4 ml-8">
+<button class="text-primary-fixed border-b-2 border-primary-fixed pb-1 font-label-code flicker">LIVE_CDC</button>
+<button class="text-on-surface-variant font-label-code hover:text-secondary-container transition-colors">CLUSTER_HEALTH</button>
+<button class="text-on-surface-variant font-label-code hover:text-secondary-container transition-colors">GLOBAL_ROUTING</button>
+</div>
+</div>
+<div class="flex items-center gap-4 text-primary">
+<span class="material-symbols-outlined hover:text-secondary-container transition-colors cursor-pointer" data-icon="hub">hub</span>
+<span class="material-symbols-outlined hover:text-secondary-container transition-colors cursor-pointer" data-icon="settings_input_antenna">settings_input_antenna</span>
+<span class="material-symbols-outlined hover:text-secondary-container transition-colors cursor-pointer" data-icon="lan">lan</span>
+</div>
+</header>
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full z-40 flex flex-col pt-16 bg-surface-container-lowest/90 backdrop-blur-md border-r border-outline-variant w-64 hidden lg:flex">
+<div class="px-gutter py-4 border-b border-outline-variant/30">
+<div class="font-label-code text-primary">NODE_ACTIVE</div>
+<div class="font-body-mono text-body-mono text-secondary-fixed-dim opacity-70">US-EAST-01</div>
+</div>
+<div class="flex-1 py-4 flex flex-col">
+<div class="bg-secondary-container/20 text-secondary-container border-l-4 border-secondary-container px-4 py-3 font-bold flex items-center gap-3 transition-transform duration-75 scale-95">
+<span class="material-symbols-outlined" data-icon="settings_ethernet">settings_ethernet</span>
+<span class="font-body-mono text-body-mono">LIVE_CDC</span>
+</div>
+<div class="text-on-surface-variant px-4 py-3 opacity-70 hover:bg-surface-variant/30 hover:text-on-surface flex items-center gap-3 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="monitor_heart">monitor_heart</span>
+<span class="font-body-mono text-body-mono">CLUSTER_HEALTH</span>
+</div>
+<div class="text-on-surface-variant px-4 py-3 opacity-70 hover:bg-surface-variant/30 hover:text-on-surface flex items-center gap-3 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="language">language</span>
+<span class="font-body-mono text-body-mono">GLOBAL_ROUTING</span>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-16 pb-8 lg:pl-64 h-screen overflow-hidden flex flex-col">
+<!-- Top Telemetry Strip -->
+<div class="px-gutter py-2 bg-surface-container-low border-b border-outline-variant/30 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-primary-fixed-dim rounded-full flicker"></span>
+<span class="font-label-code text-primary-fixed-dim">CLUSTER: ACTIVE</span>
+</div>
+<div class="font-label-code text-on-surface-variant">REGION: <span class="text-on-surface">US-WEST-2</span></div>
+<div class="font-label-code text-on-surface-variant">UPTIME: <span class="text-on-surface">14D 08H 22M</span></div>
+</div>
+<div class="font-label-code text-secondary-fixed-dim animate-pulse">STREAMING LIVE_DATA_TX...</div>
+</div>
+<!-- Performance Metric Cluster -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 px-gutter py-4">
+<!-- Ingestion Rate -->
+<div class="bg-surface-container/80 backdrop-blur-md border border-outline-variant p-4 tactical-bracket">
+<div class="font-label-code text-on-surface-variant mb-1">INGESTION RATE</div>
+<div class="flex items-baseline gap-2">
+<span class="font-display-tech text-headline-md text-primary-fixed-dim">14,250</span>
+<span class="font-label-code text-on-surface-variant">ROWS/SEC</span>
+</div>
+<div class="mt-2 h-1 bg-surface-variant/50 overflow-hidden">
+<div class="h-full bg-primary-fixed-dim" style="width: 78%"></div>
+</div>
+</div>
+<!-- Active Coroutines -->
+<div class="bg-surface-container/80 backdrop-blur-md border border-outline-variant p-4 tactical-bracket">
+<div class="font-label-code text-on-surface-variant mb-1">ACTIVE COROUTINES</div>
+<div class="flex items-baseline gap-2">
+<span class="font-display-tech text-headline-md text-secondary-fixed-dim">3</span>
+<span class="font-label-code text-on-surface-variant">GOROUTINES</span>
+</div>
+<div class="mt-2 flex gap-1">
+<div class="h-1 flex-1 bg-secondary-fixed-dim"></div>
+<div class="h-1 flex-1 bg-secondary-fixed-dim"></div>
+<div class="h-1 flex-1 bg-secondary-fixed-dim"></div>
+<div class="h-1 flex-1 bg-surface-variant/50"></div>
+<div class="h-1 flex-1 bg-surface-variant/50"></div>
+</div>
+</div>
+<!-- Channel Saturation -->
+<div class="bg-surface-container/80 backdrop-blur-md border border-outline-variant p-4 tactical-bracket">
+<div class="font-label-code text-on-surface-variant mb-1">CHANNEL SATURATION</div>
+<div class="flex items-baseline gap-2"><span class="font-display-tech text-headline-md text-error">12%</span><span class="font-label-code text-on-surface-variant">SATURATION</span></div>
+<div class="mt-2 flex gap-0.5"><div class="mt-2 h-1 bg-surface-variant/50 overflow-hidden flex gap-0.5"><div class="h-full bg-error" style="width: 8%"></div><div class="h-full bg-error" style="width: 8%"></div><div class="h-full flex-1 bg-surface-variant/50"></div></div></div>
+</div>
+</div>
+<!-- Layout 70/30 Split -->
+<div class="flex-1 flex flex-col md:flex-row gap-4 px-gutter pb-4 overflow-hidden">
+<!-- Left Wide Panel (70%) -->
+<div class="flex-[7] bg-surface-container-lowest border border-outline-variant flex flex-col overflow-hidden relative">
+<div class="scanline-overlay absolute inset-0 z-0"></div>
+<div class="flex items-center justify-between px-4 py-2 border-b border-outline-variant bg-surface-container-high/50 z-10">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-body-mono text-primary-fixed-dim" data-icon="terminal">terminal</span>
+<span class="font-label-code text-primary-fixed-dim">live_cdc_stream.log</span>
+</div>
+<div class="flex gap-2">
+<span class="w-2 h-2 rounded-full bg-error/40"></span>
+<span class="w-2 h-2 rounded-full bg-secondary-fixed-dim/40"></span>
+<span class="w-2 h-2 rounded-full bg-primary-fixed-dim/40"></span>
+</div>
+</div>
+<div class="flex-1 overflow-auto p-4 z-10">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-surface-container-lowest">
+<tr class="border-b border-outline-variant/30">
+<th class="py-2 font-label-code text-on-surface-variant">TIMESTAMP</th>
+<th class="py-2 font-label-code text-on-surface-variant">SOURCE_TABLE</th>
+<th class="py-2 font-label-code text-on-surface-variant text-center">ACTION</th>
+<th class="py-2 font-label-code text-on-surface-variant">PAYLOAD_SNAPSHOT</th>
+</tr>
+</thead>
+<tbody class="font-body-mono-sm text-on-surface/80"><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:47.833</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "nkfeojf9m", "v": 51 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:46.340</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "vmnnqk6rl", "v": 59 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:44.830</td>
+                <td class="py-2">metadata_kv</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "fdfblhdyc", "v": 61 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:43.338</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "xrcwon0k5", "v": 90 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:41.833</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "l74ze27xr", "v": 11 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:40.338</td>
+                <td class="py-2">audit_log</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "phfv72jdx", "v": 47 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:38.840</td>
+                <td class="py-2">user_sessions</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "3d48ktvkt", "v": 36 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:37.337</td>
+                <td class="py-2">audit_log</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "e2p8773md", "v": 44 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:35.836</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "98xnpuypi", "v": 22 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:34.327</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "cpz3fb133", "v": 29 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:32.827</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "5jj2khl2w", "v": 72 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:31.329</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "3l973bcyn", "v": 10 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:29.859</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "ehp072jr4", "v": 12 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:28.341</td>
+                <td class="py-2">user_sessions</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "s5hdpx7b2", "v": 88 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:26.837</td>
+                <td class="py-2">metadata_kv</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "e2w94e3eb", "v": 38 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:25.327</td>
+                <td class="py-2">audit_log</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "x9qlga1el", "v": 49 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:23.836</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "zvx84738h", "v": 52 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:22.334</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "e8u99hs0f", "v": 97 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:20.834</td>
+                <td class="py-2">user_sessions</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "qyu22a51m", "v": 46 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:19.328</td>
+                <td class="py-2">audit_log</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "71e53l71h", "v": 36 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:17.827</td>
+                <td class="py-2">metadata_kv</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "7tt8j7e35", "v": 98 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:16.332</td>
+                <td class="py-2">metadata_kv</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "7u7z82shm", "v": 44 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:14.827</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "uj1536vxu", "v": 52 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:13.351</td>
+                <td class="py-2">audit_log</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "yt1zwbbd8", "v": 99 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:11.834</td>
+                <td class="py-2">user_sessions</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "qi9ebzdrh", "v": 74 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:10.333</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "xya6cyac7", "v": 69 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:08.827</td>
+                <td class="py-2">metadata_kv</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "94b86joml", "v": 91 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:07.334</td>
+                <td class="py-2">audit_log</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "u0i922bcv", "v": 17 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:05.846</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "qwixpi5pb", "v": 62 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:04.336</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "wfhxuuoop", "v": 12 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:02.829</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "0uikdxt8j", "v": 20 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:01.771</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "t1na62yj6", "v": 5 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:24:00.771</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "qad55k83y", "v": 89 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:58.335</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "m3l51h2r4", "v": 73 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:56.829</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "8g9gs1c7y", "v": 74 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:55.334</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "ioot399sq", "v": 59 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:53.839</td>
+                <td class="py-2">user_sessions</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "hafm9vy9i", "v": 70 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:52.791</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "bb851top2", "v": 15 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:51.776</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "hj9x2dzll", "v": 8 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:49.787</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "9zsg5jhrj", "v": 12 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:48.777</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "7twzd6xbz", "v": 15 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:46.784</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "vffzd7hh8", "v": 90 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:45.778</td>
+                <td class="py-2">metadata_kv</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "tjambme7p", "v": 54 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:43.329</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "ue3r12tk3", "v": 35 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:41.829</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "u7kiofkvn", "v": 58 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:40.338</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "wx9e39697", "v": 77 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:38.829</td>
+                <td class="py-2">metadata_kv</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "ce2vi2s4l", "v": 46 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:37.341</td>
+                <td class="py-2">metadata_kv</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "lvvrtd0f3", "v": 26 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:35.830</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "wt4ztgbvi", "v": 70 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:34.335</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold text-[8px] rounded-none">UPDATE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "xjafl9f1e", "v": 77 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:32.833</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "0vom5b9t3", "v": 12 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:31.341</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "e9s3uxqn1", "v": 73 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:29.829</td>
+                <td class="py-2">transactions_v2</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "r07u3fwvj", "v": 81 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:28.332</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "pm2qkkug8", "v": 61 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:26.835</td>
+                <td class="py-2">billing_events</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "api6vx6nc", "v": 0 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:25.327</td>
+                <td class="py-2">audit_log</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-on-primary-container text-primary font-bold text-[8px] rounded-none">INSERT</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "6jl0fu64j", "v": 80 }</td>
+            </tr><tr class="border-b border-outline-variant/10 hover:bg-surface-variant/20">
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">2026-06-12 19:23:24.209</td>
+                <td class="py-2">metadata_kv</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 bg-error-container text-on-error-container font-bold text-[8px] rounded-none">DELETE</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "il8eirw6q", "v": 4 }</td>
+            </tr></tbody>
+</table>
+</div>
+</div>
+<!-- Right Narrow Panel (30%) -->
+<div class="flex-[3] flex flex-col gap-4">
+<!-- Top Card: Schema Capacity -->
+<div class="bg-surface-container border border-outline-variant flex flex-col">
+<div class="px-4 py-2 border-b border-outline-variant bg-surface-container-high/50 flex items-center justify-between">
+<span class="font-label-code text-on-surface-variant">SCHEMA_CAPACITY</span>
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant" data-icon="expand_more">expand_more</span>
+</div>
+<div class="p-4 space-y-4">
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] font-label-code">
+<span class="text-on-surface">USERS_DB</span>
+<span class="text-secondary-fixed-dim">84%</span>
+</div>
+<div class="h-1 bg-surface-variant/30 overflow-hidden">
+<div class="h-full bg-secondary-fixed-dim" style="width: 84%"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] font-label-code">
+<span class="text-on-surface">TX_INDEX_L3</span>
+<span class="text-primary-fixed-dim">31%</span>
+</div>
+<div class="h-1 bg-surface-variant/30 overflow-hidden">
+<div class="h-full bg-primary-fixed-dim" style="width: 31%"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] font-label-code">
+<span class="text-on-surface">BLOB_STORE_S3</span>
+<span class="text-error">92%</span>
+</div>
+<div class="h-1 bg-surface-variant/30 overflow-hidden">
+<div class="h-full bg-error" style="width: 92%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Card: Micro-utility Buttons -->
+<div class="bg-surface-container border border-outline-variant flex flex-col flex-1">
+<div class="px-4 py-2 border-b border-outline-variant bg-surface-container-high/50">
+<span class="font-label-code text-on-surface-variant">MICRO_UTILITIES</span>
+</div>
+<div class="p-4 grid grid-cols-2 gap-2 flex-1">
+<button class="flex flex-col items-center justify-center gap-1 border border-outline-variant bg-surface-container-low hover:bg-surface-variant/50 group transition-all">
+<span class="material-symbols-outlined text-secondary-container group-hover:scale-110 transition-transform" data-icon="map">map</span>
+<span class="text-[9px] font-label-code text-on-surface-variant">MAPS</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 border border-outline-variant bg-surface-container-low hover:bg-surface-variant/50 group transition-all">
+<span class="material-symbols-outlined text-primary-fixed-dim group-hover:scale-110 transition-transform" data-icon="query_stats">query_stats</span>
+<span class="text-[9px] font-label-code text-on-surface-variant">METRICS</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 border border-outline-variant bg-surface-container-low hover:bg-surface-variant/50 group transition-all">
+<span class="material-symbols-outlined text-on-surface group-hover:scale-110 transition-transform" data-icon="database">database</span>
+<span class="text-[9px] font-label-code text-on-surface-variant">STORAGE</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 border border-outline-variant bg-surface-container-low hover:bg-surface-variant/50 group transition-all">
+<span class="material-symbols-outlined text-secondary-fixed-dim group-hover:scale-110 transition-transform" data-icon="inventory_2">inventory_2</span>
+<span class="text-[9px] font-label-code text-on-surface-variant">PACKETS</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 border border-outline-variant bg-surface-container-low hover:bg-surface-variant/50 group transition-all">
+<span class="material-symbols-outlined text-tertiary-fixed-dim group-hover:scale-110 transition-transform" data-icon="router">router</span>
+<span class="text-[9px] font-label-code text-on-surface-variant">GATEWAY</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 border border-outline-variant bg-surface-container-low hover:bg-surface-variant/50 group transition-all">
+<span class="material-symbols-outlined text-error group-hover:scale-110 transition-transform" data-icon="security">security</span>
+<span class="text-[9px] font-label-code text-on-surface-variant">FIREWALL</span>
+</button>
+</div>
+<div class="h-24 p-2">
+<div class="w-full h-full relative overflow-hidden border border-outline-variant/30">
+
+<div class="absolute inset-0 flex items-center justify-center bg-background/20">
+<span class="font-label-code text-[8px] text-primary-fixed-dim tracking-[0.3em]">ENCRYPT_TX_STREAM</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="fixed bottom-0 w-full z-50 h-8 flex items-center px-margin justify-between bg-surface-container-low border-t border-error/30 text-error">
+<div class="font-label-code text-label-code">[SYSTEM_READY] // INTERRUPT_LISTENER_ACTIVE</div>
+<div class="flex gap-4 font-label-code text-label-code">
+<span class="hover:bg-error-container hover:text-on-error-container px-2 cursor-pointer transition-colors flicker">V1.0.4_STABLE</span>
+<span class="hover:bg-error-container hover:text-on-error-container px-2 cursor-pointer transition-colors">RECOVERY_MODE</span>
+<span class="hover:bg-error-container hover:text-on-error-container px-2 cursor-pointer transition-colors">DEBUG_CONSOLE</span>
+</div>
+</footer>
+<script>
+        // Simple log generation simulation
+        const tables = ['user_sessions', 'transactions_v2', 'audit_log', 'metadata_kv', 'billing_events'];
+        const actions = [
+            { label: 'INSERT', style: 'bg-on-primary-container text-primary' },
+            { label: 'UPDATE', style: 'bg-secondary-container text-on-secondary-container' },
+            { label: 'DELETE', style: 'bg-error-container text-on-error-container' }
+        ];
+
+        function addLogRow() {
+            const tbody = document.querySelector('tbody');
+            const row = document.createElement('tr');
+            row.className = 'border-b border-outline-variant/10 hover:bg-surface-variant/20';
+            
+            const time = new Date().toISOString().replace('T', ' ').slice(0, 23);
+            const table = tables[Math.floor(Math.random() * tables.length)];
+            const action = actions[Math.floor(Math.random() * actions.length)];
+            
+            row.innerHTML = `
+                <td class="py-2 text-primary-fixed-dim whitespace-nowrap">${time}</td>
+                <td class="py-2">${table}</td>
+                <td class="py-2 text-center">
+                    <span class="px-2 py-0.5 ${action.style} font-bold text-[8px] rounded-none">${action.label}</span>
+                </td>
+                <td class="py-2 font-body-mono-sm opacity-60 truncate max-w-[200px]">{ "uuid": "${Math.random().toString(36).substr(2, 9)}", "v": ${Math.floor(Math.random() * 100)} }</td>
+            `;
+            
+            tbody.insertBefore(row, tbody.firstChild);
+            if (tbody.children.length > 50) {
+                tbody.removeChild(tbody.lastChild);
+            }
+        }
+
+        setInterval(addLogRow, 1500);
+    </script>
+
+
+</body></html>

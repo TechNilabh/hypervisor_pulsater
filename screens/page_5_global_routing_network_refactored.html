@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GLOBAL_ROUTING // SYSTEMS ENGINE</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-on-surface": "#313030",
+                        "outline": "#84967e",
+                        "tertiary-container": "#ffd2cd",
+                        "surface-container-highest": "#353534",
+                        "on-error": "#690005",
+                        "on-secondary": "#00363a",
+                        "outline-variant": "#3b4b37",
+                        "secondary-fixed-dim": "#00dbe7",
+                        "on-primary-fixed": "#002203",
+                        "surface-container": "#201f1f",
+                        "tertiary-fixed-dim": "#ffb4ab",
+                        "surface-variant": "#353534",
+                        "on-primary-fixed-variant": "#00530e",
+                        "on-tertiary": "#690006",
+                        "on-primary-container": "#007117",
+                        "on-error-container": "#ffdad6",
+                        "surface": "#131313",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#ffdad6",
+                        "secondary": "#ddfcff",
+                        "primary": "#ebffe2",
+                        "surface-dim": "#131313",
+                        "secondary-container": "#00f1fe",
+                        "error-container": "#93000a",
+                        "primary-fixed": "#72ff70",
+                        "on-tertiary-container": "#c40015",
+                        "secondary-fixed": "#74f5ff",
+                        "on-background": "#e5e2e1",
+                        "on-tertiary-fixed": "#410002",
+                        "on-surface": "#e5e2e1",
+                        "on-secondary-container": "#006a70",
+                        "tertiary": "#fff7f6",
+                        "primary-fixed-dim": "#00e639",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-surface-variant": "#b9ccb2",
+                        "inverse-primary": "#006e16",
+                        "surface-container-low": "#1c1b1b",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-bright": "#3a3939",
+                        "on-secondary-fixed": "#002022",
+                        "on-tertiary-fixed-variant": "#93000c",
+                        "surface-tint": "#00e639",
+                        "on-primary": "#003907",
+                        "surface-container-high": "#2a2a2a",
+                        "on-secondary-fixed-variant": "#004f54",
+                        "primary-container": "#00ff41",
+                        "background": "#131313"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin": "24px",
+                        "container-max": "100%",
+                        "stack-compact": "8px",
+                        "unit": "4px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "body-mono": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "label-code": ["JetBrains Mono"],
+                        "headline-md": ["Space Grotesk"],
+                        "body-mono-sm": ["JetBrains Mono"],
+                        "headline-lg": ["Space Grotesk"],
+                        "display-tech": ["Space Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-mono": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "label-code": ["10px", {"lineHeight": "12px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-mono-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "display-tech": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        @keyframes flicker {
+            0% { opacity: 0.85; }
+            5% { opacity: 0.95; }
+            10% { opacity: 0.75; }
+            15% { opacity: 1; }
+            25% { opacity: 0.8; }
+            30% { opacity: 1; }
+            100% { opacity: 1; }
+        }
+        .flicker { animation: flicker 2s infinite; }
+        
+        .scanline {
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 242, 255, 0.05) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+
+        .tactical-bracket {
+            position: relative;
+        }
+        .tactical-bracket::before, .tactical-bracket::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-color: #00e639;
+        }
+        .tactical-bracket::before { top: 0; left: 0; border-top: 1px solid; border-left: 1px solid; }
+        .tactical-bracket::after { bottom: 0; right: 0; border-bottom: 1px solid; border-right: 1px solid; }
+
+        .glitch-text:hover {
+            text-shadow: 2px 0 #00f1fe, -2px 0 #ffb4ab;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 2px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #3b4b37; }
+
+        .globe-container {
+            perspective: 2000px;
+        }
+
+        .node-glow-primary {
+            box-shadow: 0 0 25px 5px rgba(0, 230, 57, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.4);
+        }
+        .node-glow-secondary {
+            box-shadow: 0 0 25px 5px rgba(0, 241, 254, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.4);
+        }
+        .node-glow-tertiary {
+            box-shadow: 0 0 25px 5px rgba(255, 180, 171, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.4);
+        }
+
+        .pixel-array {
+            display: grid;
+            grid-template-columns: repeat(8, 4px);
+            grid-template-rows: repeat(8, 4px);
+            gap: 1px;
+        }
+        .pixel-block {
+            width: 4px;
+            height: 4px;
+        }
+
+        .topology-line {
+            filter: drop-shadow(0 0 2px rgba(0, 230, 57, 0.4));
+            stroke-linecap: round;
+        }
+
+        .segment-bar span {
+            display: inline-block;
+            width: 4px;
+            height: 12px;
+            margin-right: 2px;
+            background: #1c1b1b;
+        }
+        .segment-bar span.active {
+            background: #00e639;
+            box-shadow: 0 0 4px #00e639;
+        }
+    </style>
+</head>
+<body class="bg-[#0A0A0A] text-on-surface font-body-mono selection:bg-primary-container selection:text-on-primary-container overflow-hidden h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-background/80 backdrop-blur-xl text-primary flex justify-between items-center px-gutter py-unit w-full max-w-full docked full-width top-0 border-b border-outline-variant shadow-[0_0_8px_rgba(0,242,255,0.1)] z-50">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary-fixed-dim">hub</span>
+<h1 class="font-display-tech text-headline-md tracking-tighter text-primary-fixed-dim">HYPERVISOR PULSATER // SYSTEMS ENGINE v1.0.4</h1>
+</div>
+<nav class="hidden md:flex gap-8 items-center">
+<a class="text-on-surface-variant font-label-code hover:text-secondary-container transition-colors" href="#">LIVE_CDC</a>
+<a class="text-on-surface-variant font-label-code hover:text-secondary-container transition-colors" href="#">CLUSTER_HEALTH</a>
+<a class="text-primary-fixed border-b-2 border-primary-fixed pb-1 font-label-code flicker" href="#">GLOBAL_ROUTING</a>
+</nav>
+<div class="flex gap-4">
+<span class="material-symbols-outlined hover:text-secondary-container transition-colors cursor-pointer">settings_input_antenna</span>
+<span class="material-symbols-outlined hover:text-secondary-container transition-colors cursor-pointer">lan</span>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden relative">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full z-40 flex flex-col pt-16 bg-surface-container-lowest/90 backdrop-blur-md text-secondary-fixed-dim w-64 border-r border-outline-variant">
+<div class="p-4 border-b border-outline-variant">
+<div class="font-label-code text-primary mb-1">NODE_ACTIVE</div>
+<div class="font-body-mono-sm opacity-60">US-EAST-01 // ROOT_AUTH</div>
+</div>
+<nav class="flex-1">
+<div class="text-on-surface-variant px-4 py-3 opacity-70 hover:bg-surface-variant/30 hover:text-on-surface flex items-center gap-3 cursor-pointer group">
+<span class="material-symbols-outlined group-hover:text-primary">settings_ethernet</span>
+<span class="font-body-mono text-body-mono">LIVE_CDC</span>
+</div>
+<div class="text-on-surface-variant px-4 py-3 opacity-70 hover:bg-surface-variant/30 hover:text-on-surface flex items-center gap-3 cursor-pointer group">
+<span class="material-symbols-outlined group-hover:text-primary">monitor_heart</span>
+<span class="font-body-mono text-body-mono">CLUSTER_HEALTH</span>
+</div>
+<div class="bg-secondary-container/20 text-secondary-container border-l-4 border-secondary-container px-4 py-3 font-bold flex items-center gap-3 cursor-pointer">
+<span class="material-symbols-outlined">language</span>
+<span class="font-body-mono text-body-mono">GLOBAL_ROUTING</span>
+</div>
+</nav>
+<div class="p-4 bg-surface-container-low border-t border-outline-variant">
+<div class="text-label-code mb-2 text-primary-fixed-dim">DATA_STREAM_IO</div>
+<div class="h-12 bg-black/40 rounded flex items-end gap-1 p-1">
+<div class="w-1 bg-primary-fixed-dim h-1/2 animate-pulse"></div>
+<div class="w-1 bg-primary-fixed-dim h-3/4"></div>
+<div class="w-1 bg-primary-fixed-dim h-full animate-pulse"></div>
+<div class="w-1 bg-primary-fixed-dim h-1/3"></div>
+<div class="w-1 bg-primary-fixed-dim h-2/3"></div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-64 flex-1 relative overflow-hidden bg-[#0A0A0A] flex">
+<!-- Scanline Overlay -->
+<div class="absolute inset-0 scanline z-10"></div>
+<!-- Left Sidebar Data Panel -->
+<div class="w-80 h-full border-r border-outline-variant bg-surface/40 backdrop-blur-sm z-20 flex flex-col p-4 gap-4 overflow-y-auto custom-scrollbar">
+<div class="tactical-bracket p-3 bg-surface-container-low/80 border border-outline-variant">
+<div class="flex justify-between items-center mb-2">
+<span class="font-label-code text-primary-fixed-dim">[NODE_LATENCY_INDEX]</span>
+<span class="material-symbols-outlined text-[12px] opacity-40">close</span>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-body-mono-sm">
+<span class="opacity-50">US-EAST-01</span>
+<span class="text-primary-fixed-dim">12ms</span>
+</div>
+<div class="flex justify-between text-body-mono-sm">
+<span class="opacity-50">EU-WEST-02</span>
+<span class="text-secondary-fixed-dim">84ms</span>
+</div>
+<div class="flex justify-between text-body-mono-sm">
+<span class="opacity-50">ASIA-SOUTH-01</span>
+<span class="text-error">214ms</span>
+</div>
+</div>
+</div>
+<div class="tactical-bracket p-3 bg-surface-container-low/80 border border-outline-variant">
+<div class="flex justify-between items-center mb-2">
+<span class="font-label-code text-primary-fixed-dim">[CONNECTION_POOL]</span>
+</div>
+<div class="text-display-tech text-headline-md font-bold text-primary mb-1">98.42%</div>
+<div class="font-body-mono-sm text-on-surface-variant mb-4">THROUGHPUT_STABLE</div>
+<div class="segment-bar flex">
+<span class="active"></span><span class="active"></span><span class="active"></span><span class="active"></span>
+<span class="active"></span><span class="active"></span><span class="active"></span><span class="active"></span>
+<span class="active"></span><span></span><span></span><span></span>
+</div>
+</div>
+<div class="flex-1 bg-black p-2 font-body-mono-sm border border-outline-variant overflow-hidden">
+<div class="text-primary opacity-40 mb-1 font-label-code">SYSTEM_STREAM</div>
+<div class="custom-scrollbar overflow-y-auto h-[400px] text-[10px] leading-tight space-y-1" id="console-stream">
+<p class="text-primary-fixed-dim">&gt;&gt; REQUEST_HANDOFF: node_771 -&gt; node_004</p>
+<p class="text-secondary-container">&gt;&gt; TCP_ACK: packet_id_0923 verified</p>
+<p class="text-on-surface-variant">&gt;&gt; BUFFERING_READY: seq_551</p>
+<p class="text-primary-fixed-dim">&gt;&gt; ROUTE_OPTIMIZED: via satellite_link_alpha</p>
+<p class="text-error flicker">!! DROPPED_PACKET: resending seq_552</p>
+<p class="text-on-surface-variant">&gt;&gt; TRACE: hopping to hop_22_east</p>
+</div>
+</div>
+</div>
+<!-- Central Earth & Knowledge Topology -->
+<div class="flex-1 relative globe-container flex items-center justify-center p-8 overflow-visible">
+<!-- Background Grid Texture -->
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#00e639 1px, transparent 1px); background-size: 32px 32px;"></div>
+<div class="relative w-[700px] h-[700px] flex items-center justify-center">
+<!-- Topology SVG Layer -->
+<svg class="absolute inset-0 w-full h-full z-20 pointer-events-none overflow-visible" viewbox="0 0 700 700">
+<!-- Knowledge Graph Links -->
+<line class="topology-line" opacity="0.6" stroke="#00e639" stroke-width="4" x1="250" x2="450" y1="250" y2="450"></line>
+<line class="topology-line" opacity="0.4" stroke="#00f1fe" stroke-width="2" x1="450" x2="550" y1="450" y2="280"></line>
+<line class="topology-line" opacity="0.3" stroke="#ffb4ab" stroke-width="1.5" x1="250" x2="150" y1="250" y2="400"></line>
+<line class="topology-line" opacity="0.8" stroke="#00e639" stroke-width="6" x1="450" x2="600" y1="450" y2="550"></line>
+<line class="topology-line" opacity="0.5" stroke="#00f1fe" stroke-width="3" x1="250" x2="350" y1="250" y2="100"></line>
+</svg>
+<!-- The Globe -->
+<div class="relative w-[500px] h-[500px] rounded-full border border-primary/20 shadow-[0_0_150px_rgba(0,230,57,0.15)] overflow-hidden z-10">
+<img alt="Earth projection" class="w-full h-full object-cover opacity-70 mix-blend-screen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0zxEktgiFQ-hxibs4KAmQ79QymqSX_bNZQhU0UJ9rZynHtNFC72AmFJZz7DIYa8NveiWbwdJ5lDRYiqE6DtpB1-H16z6H3SNwExi44BgAgaYY1Ae6fwtN5XYY5gOo1lpOnsW54j2cEAr5g1FSVilWsAtOb2bkXcyYBCnvW5x2p5dBSk8TOkygWLs_czanyTO3OxwOjGngcThrZXInVFNj3EgmeoGQNmNvaVC3dHwAWEGDZcgVKad3u0RLXkmxCiSq6hWUv6XlQR0"/>
+</div>
+<!-- Luminous Nodes -->
+<!-- Node 1: US_EAST (Centerish Left) -->
+<div class="absolute top-[250px] left-[250px] w-12 h-12 bg-primary rounded-full z-30 node-glow-primary border-4 border-white/40 flex items-center justify-center translate-x-[-50%] translate-y-[-50%]">
+<div class="pixel-array" id="array-us-east"></div>
+</div>
+<!-- Node 2: EU_WEST (Centerish Right) -->
+<div class="absolute top-[450px] left-[450px] w-16 h-16 bg-secondary-container rounded-full z-30 node-glow-secondary border-4 border-white/50 flex items-center justify-center translate-x-[-50%] translate-y-[-50%]">
+<div class="pixel-array" id="array-eu-west"></div>
+</div>
+<!-- Node 3: ASIA_PACIFIC (Top Right) -->
+<div class="absolute top-[280px] left-[550px] w-8 h-8 bg-tertiary-fixed-dim rounded-full z-30 node-glow-tertiary border-2 border-white/30 translate-x-[-50%] translate-y-[-50%]"></div>
+<!-- Labels -->
+<div class="absolute top-[210px] left-[250px] p-2 bg-surface-container/80 backdrop-blur-md border border-primary-fixed-dim text-body-mono-sm z-40 tactical-bracket translate-x-[-50%]">
+<div class="text-primary font-label-code mb-1">NODE_US_EAST_01</div>
+<div class="flex gap-2 items-center text-[10px]">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span>
+<span>THROUGHPUT: 18.2 TB/s</span>
+</div>
+</div>
+<div class="absolute top-[490px] left-[450px] p-2 bg-surface-container/80 backdrop-blur-md border border-secondary-fixed-dim text-body-mono-sm z-40 tactical-bracket translate-x-[-50%]">
+<div class="text-secondary-fixed-dim font-label-code mb-1">NODE_EU_CENT_04</div>
+<div class="flex gap-2 items-center text-[10px]">
+<span class="w-2 h-2 rounded-full bg-secondary-container animate-pulse"></span>
+<span>SYNC_RATE: 120.4 Gbit</span>
+</div>
+</div>
+</div>
+<!-- Floating Telemetry -->
+<div class="absolute top-8 left-8 space-y-4">
+<div class="text-on-surface-variant font-label-code text-[14px] bg-black/40 p-2 border-l-2 border-primary">
+                        LAT: 40.7128° N<br/>
+                        LON: 74.0060° W<br/>
+                        ALT: 22,400 KM<br/>
+                        LAG_MS: 12.04
+                    </div>
+</div>
+<div class="absolute bottom-8 right-8 text-right">
+<div class="font-display-tech text-headline-md text-primary opacity-40">REAL-TIME_KNOWLEDGE_SYNTHESIS</div>
+<div class="font-label-code text-on-surface-variant">NODE_DENSITY: 30,000 // TOPOLOGY_DEPTH: LEVEL_4</div>
+</div>
+</div>
+<!-- Right Sidebar Data Panel -->
+<div class="w-80 h-full border-l border-outline-variant bg-surface/40 backdrop-blur-sm z-20 flex flex-col p-4 gap-4 overflow-y-auto custom-scrollbar">
+<div class="tactical-bracket p-3 bg-surface-container-low/80 border border-outline-variant">
+<div class="font-label-code text-primary-fixed-dim mb-3">GLOBAL_NODE_HEALTH</div>
+<div class="grid grid-cols-2 gap-2">
+<div class="p-2 bg-black/40 border border-outline-variant">
+<div class="text-[10px] opacity-50 mb-1">CPU_LOAD</div>
+<div class="text-headline-md font-bold text-primary">24%</div>
+</div>
+<div class="p-2 bg-black/40 border border-outline-variant">
+<div class="text-[10px] opacity-50 mb-1">MEM_USAGE</div>
+<div class="text-headline-md font-bold text-primary">12.8G</div>
+</div>
+</div>
+</div>
+<div class="tactical-bracket p-3 bg-surface-container-low/80 border border-outline-variant aspect-square relative overflow-hidden">
+<div class="font-label-code text-primary-fixed-dim mb-2 uppercase">routing_topology_v5</div>
+<div class="absolute inset-0 flex items-center justify-center">
+<svg class="w-full h-full p-4" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="none" r="40" stroke="#3b4b37" stroke-dasharray="2 2"></circle>
+<circle class="animate-pulse" cx="50" cy="50" fill="#00e639" r="3"></circle>
+<path d="M50 50 L20 20 M50 50 L80 20 M50 50 L50 90" stroke="#00e639" stroke-width="1"></path>
+<circle cx="20" cy="20" fill="#00f1fe" r="2.5"></circle>
+<circle cx="80" cy="20" fill="#00f1fe" r="2.5"></circle>
+<circle cx="50" cy="90" fill="#ffb4ab" r="2.5"></circle>
+</svg>
+</div>
+</div>
+<div class="tactical-bracket p-3 bg-surface-container-low/80 border border-outline-variant flex-1 overflow-hidden flex flex-col">
+<div class="font-label-code text-primary-fixed-dim mb-2 uppercase">packet_routing_flags</div>
+<div class="overflow-y-auto custom-scrollbar flex-1">
+<table class="w-full text-left font-body-mono-sm">
+<thead class="text-[10px] opacity-40 sticky top-0 bg-surface-container-low">
+<tr>
+<th class="pb-2">PID</th>
+<th class="pb-2">LAG_MS</th>
+<th class="pb-2">STATUS</th>
+</tr>
+</thead>
+<tbody class="text-[11px] divide-y divide-outline-variant/20">
+<tr><td class="py-1">#8080</td><td>12.1</td><td class="text-primary">SYNC</td></tr>
+<tr><td class="py-1">#1024</td><td>84.5</td><td class="text-secondary-container">REPL</td></tr>
+<tr><td class="py-1">#0042</td><td>214.2</td><td class="text-error">LAG</td></tr>
+<tr><td class="py-1">#9911</td><td>15.8</td><td class="text-primary">SYNC</td></tr>
+<tr><td class="py-1">#3221</td><td>11.2</td><td class="text-primary">SYNC</td></tr>
+<tr><td class="py-1">#5512</td><td>24.7</td><td class="text-primary">SYNC</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer -->
+<footer class="bg-surface-container-low text-error flex items-center px-margin justify-between fixed bottom-0 w-full z-50 h-8 border-t border-error/30 font-label-code text-label-code">
+<div class="flex gap-4 items-center">
+<span class="flicker">[SYSTEM_READY] // KNOWLEDGE_GRAPH_ONLINE</span>
+<span class="opacity-40">|</span>
+<span class="text-on-surface">MEMORY_STATUS: <span class="text-primary">OPTIMAL</span></span>
+</div>
+<div class="flex gap-6">
+<a class="text-on-error-container hover:bg-error-container hover:text-on-error-container px-2 h-full flex items-center transition-all" href="#">HYBRID_V5_STABLE</a>
+<a class="text-on-error-container hover:bg-error-container hover:text-on-error-container px-2 h-full flex items-center transition-all" href="#">RECOVERY_MODE</a>
+<a class="text-on-error-container hover:bg-error-container hover:text-on-error-container px-2 h-full flex items-center transition-all" href="#">DEBUG_CONSOLE</a>
+</div>
+</footer>
+<script>
+        // Populate pixel arrays for nodes
+        function populatePixelArray(elementId) {
+            const container = document.getElementById(elementId);
+            if (!container) return;
+            for (let i = 0; i < 64; i++) {
+                const pixel = document.createElement('div');
+                pixel.className = 'pixel-block';
+                // Randomize intensity inspired by binned block data
+                const opacity = Math.random();
+                pixel.style.backgroundColor = `rgba(255, 255, 255, ${opacity * 0.8})`;
+                if (Math.random() > 0.8) pixel.style.backgroundColor = '#00f1fe';
+                container.appendChild(pixel);
+            }
+        }
+
+        populatePixelArray('array-us-east');
+        populatePixelArray('array-eu-west');
+
+        // Dynamic console updates
+        const consoleEl = document.getElementById('console-stream');
+        const messages = [
+            ">> ROUTE_CACHE_CLEARED",
+            ">> NODE_SYST_SYNCING...",
+            "!! LATENCY_SPIKE_US_EAST",
+            ">> REDIRECTING_TRAFFIC_ASIA",
+            ">> TOPOLOGY_GRAPH_RECALIBRATED",
+            ">> PACKET_PRIORITY_ADJUSTED",
+            ">> REPLICATION_THROUGHPUT_MAX"
+        ];
+        
+        setInterval(() => {
+            if (consoleEl) {
+                const p = document.createElement('p');
+                const msg = messages[Math.floor(Math.random() * messages.length)];
+                p.className = msg.startsWith('!!') ? 'text-error flicker' : 'text-primary-fixed-dim';
+                p.textContent = msg;
+                consoleEl.appendChild(p);
+                if (consoleEl.children.length > 50) consoleEl.removeChild(consoleEl.firstChild);
+                consoleEl.scrollTop = consoleEl.scrollHeight;
+            }
+        }, 2000);
+
+        // Simple segment bar pulse
+        setInterval(() => {
+            const bars = document.querySelectorAll('.segment-bar span');
+            const randomIndex = Math.floor(Math.random() * bars.length);
+            bars[randomIndex].classList.toggle('active');
+        }, 500);
+    </script>
+</body></html>

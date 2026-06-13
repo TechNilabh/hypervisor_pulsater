@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HYPERVISOR PULSATER // SYSTEMS ENGINE v1.0.4</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#00f1fe",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary-fixed": "#002022",
+                        "on-error": "#690005",
+                        "on-primary-fixed": "#002203",
+                        "tertiary-fixed": "#ffdad6",
+                        "secondary-fixed-dim": "#00dbe7",
+                        "on-primary-fixed-variant": "#00530e",
+                        "secondary": "#ddfcff",
+                        "inverse-primary": "#006e16",
+                        "outline": "#84967e",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-variant": "#353534",
+                        "surface-container-low": "#1c1b1b",
+                        "on-secondary": "#00363a",
+                        "on-secondary-fixed-variant": "#004f54",
+                        "tertiary-fixed-dim": "#ffb4ab",
+                        "secondary-fixed": "#74f5ff",
+                        "surface-container-high": "#2a2a2a",
+                        "error": "#ffb4ab",
+                        "surface-bright": "#3a3939",
+                        "surface": "#131313",
+                        "surface-container": "#201f1f",
+                        "on-primary-container": "#007117",
+                        "tertiary-container": "#ffd2cd",
+                        "on-primary": "#003907",
+                        "primary-fixed": "#72ff70",
+                        "primary-fixed-dim": "#00e639",
+                        "on-background": "#e5e2e1",
+                        "primary": "#ebffe2",
+                        "surface-container-highest": "#353534",
+                        "background": "#131313",
+                        "on-secondary-container": "#006a70",
+                        "outline-variant": "#3b4b37",
+                        "inverse-on-surface": "#313030",
+                        "on-tertiary-fixed-variant": "#93000c",
+                        "on-tertiary-container": "#c40015",
+                        "surface-tint": "#00e639",
+                        "on-surface-variant": "#b9ccb2",
+                        "tertiary": "#fff7f6",
+                        "error-container": "#93000a",
+                        "on-surface": "#e5e2e1",
+                        "primary-container": "#00ff41",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#410002",
+                        "surface-dim": "#131313",
+                        "on-tertiary": "#690006"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max": "100%",
+                        "gutter": "16px",
+                        "unit": "4px",
+                        "stack-compact": "8px",
+                        "margin": "24px"
+                    },
+                    "fontFamily": {
+                        "body-mono-sm": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "display-tech": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "body-mono": ["JetBrains Mono"],
+                        "headline-lg": ["Space Grotesk"],
+                        "label-code": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "body-mono-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "display-tech": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-mono": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "label-code": ["10px", {"lineHeight": "12px", "letterSpacing": "0.1em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0A0A0A;
+            color: #e5e2e1;
+            overflow-x: hidden;
+        }
+        .scanline-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+        @keyframes flicker {
+            0% { opacity: 1; }
+            10% { opacity: 0.8; }
+            15% { opacity: 0.95; }
+            20% { opacity: 0.85; }
+            100% { opacity: 1; }
+        }
+        .flicker { animation: flicker 0.2s infinite; }
+        .corner-bracket {
+            position: relative;
+        }
+        .corner-bracket::before, .corner-bracket::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-color: #00e639;
+        }
+        .bracket-tl::before { top: -2px; left: -2px; border-top: 1px solid; border-left: 1px solid; }
+        .bracket-tr::after { top: -2px; right: -2px; border-top: 1px solid; border-right: 1px solid; }
+        .bracket-bl::before { bottom: -2px; left: -2px; border-bottom: 1px solid; border-left: 1px solid; }
+        .bracket-br::after { bottom: -2px; right: -2px; border-bottom: 1px solid; border-right: 1px solid; }
+        
+        .progress-segment {
+            width: 4px;
+            height: 12px;
+            background: #1c1b1b;
+            margin-right: 2px;
+        }
+        .progress-segment.active {
+            background: #00e639;
+            box-shadow: 0 0 4px #00e639;
+        }
+
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(60, 1fr);
+            gap: 2px;
+        }
+        .heat-bin {
+            aspect-ratio: 1;
+            background-color: #1c1b1b;
+            transition: all 0.3s ease;
+        }
+        /* Blue to Magenta spectrum based on Image 4 */
+        .heat-level-0 { background-color: #1c1b1b; }
+        .heat-level-1 { background-color: #1e3a8a; } /* Blue */
+        .heat-level-2 { background-color: #3b82f6; } /* Light Blue */
+        .heat-level-3 { background-color: #8b5cf6; } /* Violet */
+        .heat-level-4 { background-color: #d946ef; } /* Magenta */
+        .heat-level-5 { background-color: #f472b6; } /* Pink */
+    </style>
+</head>
+<body class="font-body-mono selection:bg-primary-container selection:text-on-primary-container">
+<div class="fixed inset-0 scanline-overlay z-50 pointer-events-none opacity-20"></div>
+<nav class="fixed top-0 left-0 w-full z-40 flex justify-between items-center px-gutter py-unit bg-background/80 backdrop-blur-xl border-b border-outline-variant shadow-[0_0_8px_rgba(0,242,255,0.1)]">
+<div class="font-display-tech text-headline-md tracking-tighter text-primary-fixed-dim">HYPERVISOR PULSATER // SYSTEMS ENGINE v1.0.4</div>
+<div class="flex items-center gap-margin">
+<div class="flex gap-4">
+<span class="font-label-code text-on-surface-variant hover:text-secondary-container transition-colors cursor-pointer">NODE_X01</span>
+<span class="text-primary-fixed border-b-2 border-primary-fixed pb-1 font-label-code transition-colors cursor-pointer">CLUSTER_HEALTH</span>
+<span class="font-label-code text-on-surface-variant hover:text-secondary-container transition-colors cursor-pointer">TRAFFIC_ROUTING</span>
+</div>
+<div class="flex gap-4 text-primary">
+<span class="material-symbols-outlined cursor-pointer hover:text-secondary-container transition-colors">hub</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-secondary-container transition-colors">settings_input_antenna</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-secondary-container transition-colors">lan</span>
+</div>
+</div>
+</nav>
+<aside class="fixed left-0 top-0 h-full z-40 flex flex-col pt-16 bg-surface-container-lowest/90 backdrop-blur-md border-r border-outline-variant w-64 hidden md:flex">
+<div class="p-4 border-b border-outline-variant">
+<div class="font-label-code text-primary">NODE_ACTIVE</div>
+<div class="text-body-mono opacity-60">US-EAST-01</div>
+</div>
+<div class="flex flex-col mt-4">
+<div class="text-on-surface-variant px-4 py-3 opacity-70 flex items-center gap-3 cursor-pointer hover:bg-surface-variant/30 hover:text-on-surface transition-all">
+<span class="material-symbols-outlined">settings_ethernet</span>
+<span class="font-label-code">LIVE_CDC</span>
+</div>
+<div class="bg-secondary-container/20 text-secondary-container border-l-4 border-secondary-container px-4 py-3 font-bold flex items-center gap-3 cursor-pointer active:scale-95 duration-75">
+<span class="material-symbols-outlined">monitor_heart</span>
+<span class="font-label-code">CLUSTER_HEALTH</span>
+</div>
+<div class="text-on-surface-variant px-4 py-3 opacity-70 flex items-center gap-3 cursor-pointer hover:bg-surface-variant/30 hover:text-on-surface transition-all">
+<span class="material-symbols-outlined">language</span>
+<span class="font-label-code">GLOBAL_ROUTING</span>
+</div>
+</div>
+<div class="mt-auto p-4">
+<div class="bg-surface-container-high p-3 border border-outline-variant rounded-sm">
+<div class="text-label-code mb-2 opacity-50 uppercase tracking-widest">System Load</div>
+<div class="flex gap-1">
+<div class="progress-segment active"></div>
+<div class="progress-segment active"></div>
+<div class="progress-segment active"></div>
+<div class="progress-segment active"></div>
+<div class="progress-segment active"></div>
+<div class="progress-segment"></div>
+<div class="progress-segment"></div>
+<div class="progress-segment"></div>
+</div>
+</div>
+</div>
+</aside>
+<main class="md:ml-64 pt-20 pb-12 px-gutter min-h-screen">
+<div class="flex justify-between items-end mb-8">
+<div>
+<h1 class="font-display-tech text-headline-lg uppercase tracking-tighter">Cluster Resource Health</h1>
+<p class="font-label-code text-primary-fixed-dim opacity-80 mt-1">REAL-TIME TELEMETRY // PERSISTENT CONNECTION: US-EAST-CDC-12</p>
+</div>
+<div class="flex gap-4">
+<button class="bg-primary-container text-on-primary-container px-6 py-2 font-label-code tracking-widest flex items-center gap-2 hover:opacity-90 active:flicker transition-all">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">bolt</span>
+                OPTIMIZE_ALL
+            </button>
+</div>
+</div>
+<!-- 8 Server Nodes Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Node Alpha -->
+<div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="font-label-code text-on-surface-variant opacity-60">ID: N-001-A</div>
+<div class="font-display-tech text-headline-md text-primary-fixed-dim">NODE_ALPHA</div>
+</div>
+<div class="px-2 py-1 bg-primary-fixed/10 border border-primary-fixed/30 text-primary-fixed text-label-code">ONLINE</div>
+</div>
+<div class="space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative corner-bracket bracket-tl bracket-br bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90">
+<circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary-fixed-dim transition-all duration-1000" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="44" stroke-width="4"></circle>
+</svg>
+<span class="absolute text-label-code text-white mt-1">75%</span>
+<span class="text-label-code mt-2 opacity-50">CPU LOAD</span>
+</div>
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative corner-bracket bracket-tr bracket-bl bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90">
+<circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-secondary-fixed-dim transition-all duration-1000" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="110" stroke-width="4"></circle>
+</svg>
+<span class="absolute text-label-code text-white mt-1">38%</span>
+<span class="text-label-code mt-2 opacity-50">MEM ALLOC</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">CONTEXT SWITCH</span><span class="text-primary-fixed">12,402 / s</span></div>
+<div class="h-8 w-full bg-surface-container-highest flex items-end gap-[1px] px-1 py-1">
+<div class="w-full bg-primary-fixed-dim/20 h-1/4"></div><div class="w-full bg-primary-fixed-dim/20 h-2/4"></div><div class="w-full bg-primary-fixed-dim/20 h-3/4"></div><div class="w-full bg-primary-fixed-dim/20 h-2/4"></div><div class="w-full bg-primary-fixed-dim/20 h-4/4"></div>
+</div>
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">GC LATENCY</span><span class="text-error">0.42ms</span></div>
+</div>
+</div>
+</div>
+<!-- Node Bravo -->
+<div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="font-label-code text-on-surface-variant opacity-60">ID: N-002-B</div>
+<div class="font-display-tech text-headline-md text-primary-fixed-dim">NODE_BRAVO</div>
+</div>
+<div class="px-2 py-1 bg-primary-fixed/10 border border-primary-fixed/30 text-primary-fixed text-label-code">ONLINE</div>
+</div>
+<div class="space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative corner-bracket bracket-tl bracket-br bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90">
+<circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="140" stroke-width="4"></circle>
+</svg>
+<span class="absolute text-label-code text-white mt-1">20%</span>
+<span class="text-label-code mt-2 opacity-50">CPU LOAD</span>
+</div>
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative corner-bracket bracket-tr bracket-bl bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90">
+<circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-secondary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="35" stroke-width="4"></circle>
+</svg>
+<span class="absolute text-label-code text-white mt-1">80%</span>
+<span class="text-label-code mt-2 opacity-50">MEM ALLOC</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">CONTEXT SWITCH</span><span class="text-primary-fixed">9,112 / s</span></div>
+<div class="h-8 w-full bg-surface-container-highest flex items-end gap-[1px] px-1 py-1">
+<div class="w-full bg-primary-fixed-dim/20 h-2/4"></div><div class="w-full bg-primary-fixed-dim/20 h-1/4"></div><div class="w-full bg-primary-fixed-dim/20 h-4/4"></div>
+</div>
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">GC LATENCY</span><span class="text-primary-fixed">0.08ms</span></div>
+</div>
+</div>
+</div>
+<!-- Node Charlie -->
+<div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="font-label-code text-on-surface-variant opacity-60">ID: N-003-C</div>
+<div class="font-display-tech text-headline-md text-primary-fixed-dim">NODE_CHARLIE</div>
+</div>
+<div class="px-2 py-1 bg-error/10 border border-error/30 text-error text-label-code animate-pulse">THROTTLED</div>
+</div>
+<div class="space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90">
+<circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-error" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="10" stroke-width="4"></circle>
+</svg>
+<span class="absolute text-label-code text-white mt-1">94%</span>
+<span class="text-label-code mt-2 opacity-50">CPU LOAD</span>
+</div>
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90">
+<circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-secondary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="60" stroke-width="4"></circle>
+</svg>
+<span class="absolute text-label-code text-white mt-1">66%</span>
+<span class="text-label-code mt-2 opacity-50">MEM ALLOC</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">CONTEXT SWITCH</span><span class="text-primary-fixed">45,100 / s</span></div>
+<div class="h-8 w-full bg-surface-container-highest flex items-end gap-[1px] px-1 py-1">
+<div class="w-full bg-error/20 h-4/4"></div><div class="w-full bg-error/60 h-4/4"></div>
+</div>
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">GC LATENCY</span><span class="text-error">1.52ms</span></div>
+</div>
+</div>
+</div>
+<!-- Node Delta -->
+<div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="font-label-code text-on-surface-variant opacity-60">ID: N-004-D</div>
+<div class="font-display-tech text-headline-md text-primary-fixed-dim">NODE_DELTA</div>
+</div>
+<div class="px-2 py-1 bg-primary-fixed/10 border border-primary-fixed/30 text-primary-fixed text-label-code">ONLINE</div>
+</div>
+<div class="space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90">
+<circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="80" stroke-width="4"></circle>
+</svg>
+<span class="absolute text-label-code text-white mt-1">54%</span>
+<span class="text-label-code mt-2 opacity-50">CPU LOAD</span>
+</div>
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90">
+<circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-secondary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="120" stroke-width="4"></circle>
+</svg>
+<span class="absolute text-label-code text-white mt-1">32%</span>
+<span class="text-label-code mt-2 opacity-50">MEM ALLOC</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">CONTEXT SWITCH</span><span class="text-primary-fixed">15,002 / s</span></div>
+<div class="h-8 w-full bg-surface-container-highest flex items-end gap-[1px] px-1 py-1">
+<div class="w-full bg-primary-fixed-dim/20 h-1/4"></div><div class="w-full bg-primary-fixed-dim/20 h-3/4"></div>
+</div>
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">GC LATENCY</span><span class="text-primary-fixed">0.11ms</span></div>
+</div>
+</div>
+</div>
+<!-- Node Echo -->
+<div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="font-label-code text-on-surface-variant opacity-60">ID: N-005-E</div>
+<div class="font-display-tech text-headline-md text-primary-fixed-dim">NODE_ECHO</div>
+</div>
+<div class="px-2 py-1 bg-primary-fixed/10 border border-primary-fixed/30 text-primary-fixed text-label-code">ONLINE</div>
+</div>
+<div class="space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90"><circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle><circle class="text-primary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="150" stroke-width="4"></circle></svg>
+<span class="absolute text-label-code text-white mt-1">15%</span>
+<span class="text-label-code mt-2 opacity-50">CPU LOAD</span>
+</div>
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90"><circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle><circle class="text-secondary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="160" stroke-width="4"></circle></svg>
+<span class="absolute text-label-code text-white mt-1">10%</span>
+<span class="text-label-code mt-2 opacity-50">MEM ALLOC</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">CONTEXT SWITCH</span><span class="text-primary-fixed">2,400 / s</span></div>
+<div class="h-8 w-full bg-surface-container-highest flex items-end gap-[1px] px-1 py-1"><div class="w-full bg-primary-fixed-dim/20 h-1/4"></div></div>
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">GC LATENCY</span><span class="text-primary-fixed">0.02ms</span></div>
+</div>
+</div>
+</div>
+<!-- Node Foxtrot -->
+<div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="font-label-code text-on-surface-variant opacity-60">ID: N-006-F</div>
+<div class="font-display-tech text-headline-md text-primary-fixed-dim">NODE_FOXTROT</div>
+</div>
+<div class="px-2 py-1 bg-primary-fixed/10 border border-primary-fixed/30 text-primary-fixed text-label-code">ONLINE</div>
+</div>
+<div class="space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90"><circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle><circle class="text-primary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="100" stroke-width="4"></circle></svg>
+<span class="absolute text-label-code text-white mt-1">44%</span>
+<span class="text-label-code mt-2 opacity-50">CPU LOAD</span>
+</div>
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90"><circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle><circle class="text-secondary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="120" stroke-width="4"></circle></svg>
+<span class="absolute text-label-code text-white mt-1">32%</span>
+<span class="text-label-code mt-2 opacity-50">MEM ALLOC</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">CONTEXT SWITCH</span><span class="text-primary-fixed">12,122 / s</span></div>
+<div class="h-8 w-full bg-surface-container-highest flex items-end gap-[1px] px-1 py-1"><div class="w-full bg-primary-fixed-dim/20 h-2/4"></div></div>
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">GC LATENCY</span><span class="text-primary-fixed">0.12ms</span></div>
+</div>
+</div>
+</div>
+<!-- Node Golf -->
+<div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="font-label-code text-on-surface-variant opacity-60">ID: N-007-G</div>
+<div class="font-display-tech text-headline-md text-primary-fixed-dim">NODE_GOLF</div>
+</div>
+<div class="px-2 py-1 bg-on-tertiary-fixed-variant border border-error/30 text-error text-label-code">STANDBY</div>
+</div>
+<div class="space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90"><circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle><circle class="text-primary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="170" stroke-width="4"></circle></svg>
+<span class="absolute text-label-code text-white mt-1">3%</span>
+<span class="text-label-code mt-2 opacity-50">CPU LOAD</span>
+</div>
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90"><circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle><circle class="text-secondary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="170" stroke-width="4"></circle></svg>
+<span class="absolute text-label-code text-white mt-1">2%</span>
+<span class="text-label-code mt-2 opacity-50">MEM ALLOC</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">CONTEXT SWITCH</span><span class="text-primary-fixed">12 / s</span></div>
+<div class="h-8 w-full bg-surface-container-highest flex items-end gap-[1px] px-1 py-1"><div class="w-full bg-primary-fixed-dim/20 h-0"></div></div>
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">GC LATENCY</span><span class="text-primary-fixed">0.00ms</span></div>
+</div>
+</div>
+</div>
+<!-- Node Hotel -->
+<div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="font-label-code text-on-surface-variant opacity-60">ID: N-008-H</div>
+<div class="font-display-tech text-headline-md text-primary-fixed-dim">NODE_HOTEL</div>
+</div>
+<div class="px-2 py-1 bg-primary-fixed/10 border border-primary-fixed/30 text-primary-fixed text-label-code">ONLINE</div>
+</div>
+<div class="space-y-6">
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90"><circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle><circle class="text-primary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="90" stroke-width="4"></circle></svg>
+<span class="absolute text-label-code text-white mt-1">48%</span>
+<span class="text-label-code mt-2 opacity-50">CPU LOAD</span>
+</div>
+<div class="flex flex-col items-center justify-center border border-outline-variant py-4 relative bg-black/20">
+<svg class="w-16 h-16 transform -rotate-90"><circle class="text-surface-container-highest" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-width="4"></circle><circle class="text-secondary-fixed-dim" cx="32" cy="32" fill="transparent" r="28" stroke="currentColor" stroke-dasharray="175.9" stroke-dashoffset="75" stroke-width="4"></circle></svg>
+<span class="absolute text-label-code text-white mt-1">58%</span>
+<span class="text-label-code mt-2 opacity-50">MEM ALLOC</span>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">CONTEXT SWITCH</span><span class="text-primary-fixed">22,400 / s</span></div>
+<div class="h-8 w-full bg-surface-container-highest flex items-end gap-[1px] px-1 py-1"><div class="w-full bg-primary-fixed-dim/20 h-3/4"></div><div class="w-full bg-primary-fixed-dim/20 h-4/4"></div></div>
+<div class="flex justify-between items-center text-label-code"><span class="opacity-50">GC LATENCY</span><span class="text-primary-fixed">0.14ms</span></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Transactional Packet Heatmap Matrix -->
+<section class="mt-8 bg-surface-container-low/40 backdrop-blur-md border border-outline-variant p-6 relative overflow-hidden">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h2 class="font-display-tech text-headline-md uppercase tracking-tighter text-secondary-container flex items-center gap-2">
+<span class="material-symbols-outlined">grid_view</span>
+                    Packet Throughput Heatmap Matrix
+                </h2>
+<p class="font-label-code text-on-surface-variant text-body-mono-sm opacity-60">DISTRIBUTED PROCESSING SECTOR ANALYSIS // REAL-TIME PACKET DENSITY</p>
+</div>
+<div class="flex items-center gap-4 font-label-code text-[10px]">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-secondary"></span> <span>IDLE</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-blue-500"></span> <span>NOMINAL</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-violet-500"></span> <span>ELEVATED</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-fuchsia-500"></span> <span>CRITICAL</span>
+</div>
+</div>
+</div>
+<div class="relative">
+<!-- Y-Axis Labels -->
+<div class="absolute -left-10 top-0 bottom-8 flex flex-col justify-between font-label-code text-[8px] opacity-40">
+<span>9.0</span><span>7.5</span><span>6.0</span><span>4.5</span><span>3.0</span><span>1.5</span>
+</div>
+<!-- Matrix Container -->
+<div class="heatmap-grid border-l border-b border-outline-variant/30 pb-2 pl-2" id="packet-heatmap">
+<!-- Javascript will populate 1200+ pixels -->
+</div>
+<!-- X-Axis Labels -->
+<div class="flex justify-between mt-2 ml-2 font-label-code text-[8px] opacity-40">
+<span>2.5</span><span>17.5</span><span>32.5</span><span>47.5</span><span>62.5</span><span>77.5</span><span>92.5</span>
+</div>
+<div class="text-center mt-2 font-label-code text-[10px] opacity-40 tracking-widest uppercase">Sector Processing Coordinate (x, y)</div>
+</div>
+</section>
+</main>
+<footer class="fixed bottom-0 w-full z-50 h-8 flex items-center px-margin justify-between bg-surface-container-low border-t border-error/30 text-error font-label-code">
+<div>[SYSTEM_READY] // INTERRUPT_LISTENER_ACTIVE</div>
+<div class="flex gap-gutter">
+<span class="cursor-pointer hover:bg-error-container hover:text-on-error-container px-2 transition-colors">V1.0.4_STABLE</span>
+<span class="cursor-pointer hover:bg-error-container hover:text-on-error-container px-2 transition-colors">RECOVERY_MODE</span>
+<span class="cursor-pointer hover:bg-error-container hover:text-on-error-container px-2 transition-colors">DEBUG_CONSOLE</span>
+</div>
+</footer>
+<script>
+    const heatmap = document.getElementById('packet-heatmap');
+    const cols = 60;
+    const rows = 20;
+    const totalPixels = cols * rows;
+
+    // Initialize Heatmap Matrix
+    for (let i = 0; i < totalPixels; i++) {
+        const bin = document.createElement('div');
+        bin.className = 'heat-bin';
+        // Initial random distribution modeled after a scatter plot pattern (Image 4)
+        updatePixel(bin, i);
+        heatmap.appendChild(bin);
+    }
+
+    function updatePixel(el, index) {
+        const x = index % cols;
+        const y = Math.floor(index / cols);
+        
+        // Create a basic "cluster" pattern similar to Image 4
+        // Higher density in the center-right upward diagonal
+        const distFromPath = Math.abs(y - (rows - (x / cols * rows) * 0.8));
+        let level = 0;
+        
+        const rand = Math.random();
+        if (distFromPath < 3) {
+            level = rand > 0.3 ? Math.floor(Math.random() * 5) + 1 : 1;
+        } else if (distFromPath < 6) {
+            level = rand > 0.7 ? Math.floor(Math.random() * 3) + 1 : 0;
+        } else {
+            level = rand > 0.95 ? 1 : 0;
+        }
+
+        el.className = `heat-bin heat-level-${level}`;
+    }
+
+    // Dynamic Updates
+    setInterval(() => {
+        const pixels = heatmap.children;
+        for (let i = 0; i < 20; i++) {
+            const randomIndex = Math.floor(Math.random() * totalPixels);
+            updatePixel(pixels[randomIndex], randomIndex);
+        }
+    }, 150);
+</script>
+</body></html>
