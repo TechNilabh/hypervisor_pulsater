@@ -64,6 +64,26 @@ export default function IdentityAuth() {
   const [overrideState, setOverrideState] = useState<"idle" | "running" | "success">("idle");
   const [pulseIndex, setPulseIndex] = useState(0);
 
+  // Redirect if unauthenticated and load existing avatar selection
+  useEffect(() => {
+    const token = localStorage.getItem("session_token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
+    const stored = localStorage.getItem("selected_operator_id");
+    if (stored) {
+      const parts = stored.split(" // ");
+      const avatarId = parts[0];
+      const foundSlot = slots.find(s => s.id === avatarId);
+      if (foundSlot) {
+        setSlots(prev => prev.map(s => ({ ...s, active: s.id === avatarId })));
+        setActiveSlot(foundSlot);
+      }
+    }
+  }, [router]);
+
   // Animate the neural handshake loading bar
   useEffect(() => {
     const interval = setInterval(() => {
@@ -79,25 +99,54 @@ export default function IdentityAuth() {
     setOverrideState("idle");
   };
 
-  const handleOverride = () => {
+  const handleOverride = async () => {
     if (overrideState !== "idle") return;
     setOverrideState("running");
-    
-    // Animate transition and then save operator info
-    setTimeout(() => {
-      setOverrideState("success");
-      
-      // Save identity to localStorage
-      localStorage.setItem("selected_operator_id", `${activeSlot.id} // ${activeSlot.name}`);
-      
-      // Dispatch event to refresh layout sidebar
-      window.dispatchEvent(new Event("operatorChanged"));
-      
-      // Navigate to live dashboard
+
+    const token = localStorage.getItem("session_token");
+    const username = localStorage.getItem("username") || "US-EAST-01";
+
+    if (!token) {
+      setOverrideState("idle");
+      alert("Authentication token not found. Please log in first.");
+      router.push("/login");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:8080/api/v1/users/avatar", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          avatar_id: activeSlot.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update avatar");
+      }
+
+      // We wait a brief moment for visual animation before proceeding
       setTimeout(() => {
-        router.push("/live-cdc");
-      }, 800);
-    }, 2000);
+        setOverrideState("success");
+        // Save identity to localStorage using format expected by sidebar/navbar
+        localStorage.setItem("selected_operator_id", `${activeSlot.id} // ${username}`);
+        // Dispatch event to refresh layout sidebar
+        window.dispatchEvent(new Event("operatorChanged"));
+
+        setTimeout(() => {
+          router.push("/live-cdc");
+        }, 800);
+      }, 1500);
+
+    } catch (err: any) {
+      setOverrideState("idle");
+      alert(err.message || "An error occurred while updating identity");
+    }
   };
 
   return (

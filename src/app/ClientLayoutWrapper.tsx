@@ -12,6 +12,7 @@ export default function ClientLayoutWrapper({
 }) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [operatorId, setOperatorId] = useState("US-EAST-01");
 
   // Read operator status and register listeners
@@ -54,6 +55,11 @@ export default function ClientLayoutWrapper({
     };
   }, []);
 
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname]);
+
   const navLinks = [
     { name: "LIVE_CDC", path: "/live-cdc", icon: "sensors" },
     { name: "CLUSTER_HEALTH", path: "/cluster", icon: "dns" },
@@ -64,18 +70,31 @@ export default function ClientLayoutWrapper({
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0A0A0A] overflow-hidden text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41]">
+    <div className="flex flex-col min-h-screen bg-[#0A0A0A] overflow-x-hidden text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41]">
       
       {/* Background scanline */}
       <div className="fixed inset-0 scanline pointer-events-none opacity-25 z-50"></div>
 
       {/* Fixed Top horizontal navigation bar (stretched 100% wide) */}
-      <nav className="fixed top-0 left-0 right-0 h-16 z-50 bg-[#0e0e0e]/80 backdrop-blur-xl border-b border-[#3b4b37]/50 shadow-[0_0_15px_rgba(0,241,254,0.1)] flex justify-between items-center px-6">
-        <Link href="/" className="font-display-tech text-lg text-[#00e639] tracking-tighter hover:opacity-85 font-bold transition-all">
-          HYPERVISOR_PULSATER
-        </Link>
+      <nav className="fixed top-0 left-0 right-0 h-16 z-50 bg-[#0e0e0e]/80 backdrop-blur-xl border-b border-[#3b4b37]/50 shadow-[0_0_15px_rgba(0,241,254,0.1)] flex justify-between items-center px-4 md:px-6">
+        <div className="flex items-center">
+          {/* Mobile hamburger menu toggle */}
+          <button
+            onClick={() => setIsMobileOpen(!isMobileOpen)}
+            className="md:hidden mr-3 flex items-center justify-center p-1.5 rounded border border-[#3b4b37] bg-[#131313] text-[#00f1fe] hover:text-[#00ff41] hover:border-[#00ff41] transition-all"
+            title="Toggle Menu"
+          >
+            <span className="material-symbols-outlined text-xl">
+              {isMobileOpen ? "close" : "menu"}
+            </span>
+          </button>
+          
+          <Link href="/" className="font-display-tech text-md md:text-lg text-[#00e639] tracking-tighter hover:opacity-85 font-bold transition-all">
+            HYPERVISOR_PULSATER
+          </Link>
+        </div>
         
-        {/* Navigation links synced to routes */}
+        {/* Navigation links synced to routes - Hidden on Mobile */}
         <div className="hidden md:flex items-center gap-6">
           <Link href="/live-cdc" className={`font-body-mono text-xs ${pathname === "/live-cdc" ? "text-[#00f1fe] border-b-2 border-[#00f1fe] pb-1" : "text-[#b9ccb2] hover:text-[#00f1fe] transition-colors"}`}>
             TRANSACTIONS
@@ -92,13 +111,13 @@ export default function ClientLayoutWrapper({
         </div>
 
         {/* Action controls and active identity avatar state */}
-        <div className="flex items-center gap-4 pl-4 border-l border-[#3b4b37]/40">
-          <div className="flex items-center gap-2 mr-2">
+        <div className="flex items-center gap-2 md:gap-4 pl-2 md:pl-4 border-l border-[#3b4b37]/40">
+          <div className="flex items-center gap-1 md:gap-2 mr-1">
             <Link href="/settings" className="material-symbols-outlined p-1.5 text-[#b9ccb2] hover:text-[#00f1fe] hover:bg-[#1c1b1b] rounded transition-all">settings_input_component</Link>
             <Link href="/error-terminal" className="material-symbols-outlined p-1.5 text-[#b9ccb2] hover:text-[#00ff41] hover:bg-[#1c1b1b] rounded transition-all">terminal</Link>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <div className="text-right hidden lg:block">
               <div className="font-label-code text-[9px] text-[#00e639] leading-none font-bold">OPERATOR</div>
               <div className="font-body-mono text-[10px] text-[#00f1fe] mt-1 max-w-[120px] truncate" title={operatorId}>
@@ -110,22 +129,30 @@ export default function ClientLayoutWrapper({
             </Link>
           </div>
 
-          <Link href="/connections" className="hidden lg:block px-4 py-1.5 bg-[#00f1fe]/10 border border-[#00f1fe]/40 text-[#00f1fe] font-label-code text-[10px] rounded hover:bg-[#00f1fe]/20 active:skew-x-2 transition-all">
+          <Link href="/connections" className="hidden sm:block px-3 py-1.5 bg-[#00f1fe]/10 border border-[#00f1fe]/40 text-[#00f1fe] font-label-code text-[10px] rounded hover:bg-[#00f1fe]/20 active:skew-x-2 transition-all">
             DEPLOY_NODE
           </Link>
         </div>
       </nav>
 
+      {/* Backdrop overlay for mobile menu */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 top-16 bg-black/60 backdrop-blur-sm z-30 md:hidden transition-all duration-300"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
       {/* Global Collapsible Sidebar positioned directly underneath top navbar */}
       <aside 
-        className={`fixed left-0 top-16 h-[calc(100vh-64px)] z-40 bg-[#0e0e0e] border-r border-[#3b4b37] flex flex-col pt-4 transition-all duration-300 ${
-          isCollapsed ? "w-16" : "w-64"
-        }`}
+        className={`fixed left-0 top-16 h-[calc(100vh-64px)] z-40 bg-[#0e0e0e] border-r border-[#3b4b37] flex flex-col pt-4 transition-all duration-300 md:translate-x-0 ${
+          isMobileOpen ? "translate-x-0 shadow-[0_0_15px_rgba(0,0,0,0.5)]" : "-translate-x-full"
+        } ${isCollapsed ? "md:w-16" : "md:w-64"} w-64`}
       >
-        {/* Collapsible toggle boundary button */}
+        {/* Collapsible toggle boundary button - Hidden on Mobile */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-10 w-6 h-6 rounded-full bg-[#131313] border border-[#3b4b37] flex items-center justify-center text-[#00f1fe] hover:text-[#00ff41] hover:border-[#00ff41] active:scale-95 transition-all shadow-[0_0_8px_rgba(0,241,254,0.2)] z-50"
+          className="hidden md:flex absolute -right-3 top-10 w-6 h-6 rounded-full bg-[#131313] border border-[#3b4b37] flex items-center justify-center text-[#00f1fe] hover:text-[#00ff41] hover:border-[#00ff41] active:scale-95 transition-all shadow-[0_0_8px_rgba(0,241,254,0.2)] z-50"
           title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
           <span className="material-symbols-outlined text-[14px]">
@@ -159,6 +186,7 @@ export default function ClientLayoutWrapper({
               <Link
                 key={link.path}
                 href={link.path}
+                onClick={() => setIsMobileOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 transition-all relative ${
                   isActive 
                     ? "bg-[#00f1fe]/10 text-[#00f1fe] border-l-4 border-[#00f1fe] font-bold" 
@@ -166,7 +194,7 @@ export default function ClientLayoutWrapper({
                 }`}
               >
                 <span className="material-symbols-outlined text-lg">{link.icon}</span>
-                {!isCollapsed && (
+                {(!isCollapsed || isMobileOpen) && (
                   <span className="font-label-code text-[11px] tracking-wider truncate">
                     {link.name}
                   </span>
@@ -180,16 +208,17 @@ export default function ClientLayoutWrapper({
         <div className="p-4 border-t border-[#3b4b37]/30 flex flex-col gap-2">
           {!isCollapsed ? (
             <div className="flex justify-between items-center text-[10px]">
-              <Link href="/login" className="text-[#b9ccb2] hover:text-[#00f1fe] transition-colors">
+              <Link href="/login" onClick={() => setIsMobileOpen(false)} className="text-[#b9ccb2] hover:text-[#00f1fe] transition-colors">
                 OPERATOR_GATE
               </Link>
-              <Link href="/identity" className="text-[#b9ccb2] hover:text-[#00ff41] transition-colors">
+              <Link href="/identity" onClick={() => setIsMobileOpen(false)} className="text-[#b9ccb2] hover:text-[#00ff41] transition-colors">
                 IDENTITY
               </Link>
             </div>
           ) : (
             <Link 
               href="/login" 
+              onClick={() => setIsMobileOpen(false)}
               className="material-symbols-outlined text-center text-[#b9ccb2] hover:text-[#00f1fe] w-full"
               title="Operator Gate / Identity"
             >
@@ -199,10 +228,10 @@ export default function ClientLayoutWrapper({
         </div>
       </aside>
 
-      {/* Main content shifted right by sidebar width and down by top header height (pt-16) */}
+      {/* Main content shifted right by sidebar width on desktop, and down by top header height (pt-16) */}
       <main 
-        className={`flex-grow min-h-[calc(100vh-64px)] pt-16 bg-[#0A0A0A] transition-all duration-300 ${
-          isCollapsed ? "pl-16" : "pl-64"
+        className={`flex-grow min-h-[calc(100vh-64px)] pt-16 bg-[#0A0A0A] transition-all duration-300 pl-0 ${
+          isCollapsed ? "md:pl-16" : "md:pl-64"
         }`}
       >
         {children}

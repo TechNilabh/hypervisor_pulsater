@@ -11,6 +11,17 @@ export default function Login() {
   const mainRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Go Backend Auth States
+  const [loginIdentifier, setLoginIdentifier] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [regUsername, setRegUsername] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirmPassword, setRegConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
   // Mouse tilt effect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -165,10 +176,69 @@ export default function Login() {
     };
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate successful login authentication, pushing to identity screen first
-    router.push("/identity");
+    setError(null);
+    setSuccessMsg(null);
+    setLoading(true);
+
+    try {
+      if (activeTab === "auth") {
+        const res = await fetch("http://localhost:8080/api/v1/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: loginIdentifier,
+            password: loginPassword,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Authentication failed");
+        }
+        localStorage.setItem("session_token", data.token);
+        localStorage.setItem("user_id", data.user_id);
+        localStorage.setItem("username", data.username);
+        // Store selected_operator_id with actual avatar_id and username
+        localStorage.setItem("selected_operator_id", `${data.avatar_id} // ${data.username}`);
+        // Dispatch event to refresh layout sidebar
+        window.dispatchEvent(new Event("operatorChanged"));
+        router.push("/identity");
+      } else {
+        if (regPassword !== regConfirmPassword) {
+          throw new Error("Passwords do not match");
+        }
+        const res = await fetch("http://localhost:8080/api/v1/auth/signup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: regUsername,
+            email: regEmail,
+            password: regPassword,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Registration failed");
+        }
+        setSuccessMsg("Registration successful! Please authenticate below.");
+        setActiveTab("auth");
+        setLoginIdentifier(regUsername);
+        setLoginPassword("");
+        setRegUsername("");
+        setRegEmail("");
+        setRegPassword("");
+        setRegConfirmPassword("");
+      }
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -250,6 +320,19 @@ export default function Login() {
 
           {/* FORM CONTENT */}
           <div className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-950/40 border border-red-500/50 text-red-400 font-label-code text-[11px] uppercase tracking-wider flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm">warning</span>
+                {error}
+              </div>
+            )}
+            {successMsg && (
+              <div className="p-3 bg-[#002203]/80 border border-[#00ff41]/50 text-[#00ff41] font-label-code text-[11px] uppercase tracking-wider flex items-center gap-2 animate-pulse">
+                <span className="material-symbols-outlined text-sm">check_circle</span>
+                {successMsg}
+              </div>
+            )}
+
             {/* AUTH FORM (LOGIN) */}
             {activeTab === "auth" && (
               <form onSubmit={handleSubmit} className="space-y-6" id="form-auth">
@@ -261,6 +344,8 @@ export default function Login() {
                       className="w-full bg-[#1c1b1b] border-b-2 border-[#3b4b37] focus:border-[#00f1fe] text-white font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0 focus:ring-0 focus:outline-none" 
                       placeholder="UID@PULSATER.NET" 
                       type="text"
+                      value={loginIdentifier}
+                      onChange={(e) => setLoginIdentifier(e.target.value)}
                     />
                   </div>
                 </div>
@@ -272,6 +357,8 @@ export default function Login() {
                       className="w-full bg-[#1c1b1b] border-b-2 border-[#3b4b37] focus:border-[#00f1fe] text-white font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0 focus:ring-0 focus:outline-none pr-10" 
                       placeholder="••••••••" 
                       type={showPassword ? "text" : "password"}
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
                     />
                     <span 
                       onClick={() => setShowPassword(!showPassword)}
@@ -292,10 +379,11 @@ export default function Login() {
                   <a className="text-[#00dbe7] hover:underline decoration-[#00dbe7]/30" href="#">RECOVER_CREDENTIALS</a>
                 </div>
                 <button 
-                  className="w-full bg-[#00f1fe]/10 border border-[#00f1fe] text-[#00f1fe] py-4 font-label-code text-[14px] tracking-widest hover:bg-[#00f1fe]/20 active:scale-[0.98] hover:shadow-[0_0_20px_rgba(0,241,254,0.4)] transition-all glitch-hover mt-4 flex items-center justify-center gap-4 group" 
+                  disabled={loading}
+                  className="w-full bg-[#00f1fe]/10 border border-[#00f1fe] text-[#00f1fe] py-4 font-label-code text-[14px] tracking-widest hover:bg-[#00f1fe]/20 active:scale-[0.98] hover:shadow-[0_0_20px_rgba(0,241,254,0.4)] transition-all glitch-hover mt-4 flex items-center justify-center gap-4 group disabled:opacity-50 disabled:cursor-not-allowed" 
                   type="submit"
                 >
-                  AUTHENTICATE NODE ACCESS
+                  {loading ? "AUTHENTICATING..." : "AUTHENTICATE NODE ACCESS"}
                   <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">login</span>
                 </button>
               </form>
@@ -311,6 +399,8 @@ export default function Login() {
                     className="w-full bg-[#1c1b1b] border-b-2 border-[#3b4b37] focus:border-[#00f1fe] text-white font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0 focus:ring-0 focus:outline-none" 
                     placeholder="GHOST_IN_THE_SHELL" 
                     type="text"
+                    value={regUsername}
+                    onChange={(e) => setRegUsername(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -320,6 +410,8 @@ export default function Login() {
                     className="w-full bg-[#1c1b1b] border-b-2 border-[#3b4b37] focus:border-[#00f1fe] text-white font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0 focus:ring-0 focus:outline-none" 
                     placeholder="USER@PULSATER.NET" 
                     type="email"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -330,6 +422,8 @@ export default function Login() {
                       className="w-full bg-[#1c1b1b] border-b-2 border-[#3b4b37] focus:border-[#00f1fe] text-white font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0 focus:ring-0 focus:outline-none" 
                       placeholder="••••••••" 
                       type="password"
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
@@ -339,14 +433,17 @@ export default function Login() {
                       className="w-full bg-[#1c1b1b] border-b-2 border-[#3b4b37] focus:border-[#00f1fe] text-white font-body-mono p-3 transition-all placeholder:opacity-20 border-t-0 border-l-0 border-r-0 focus:ring-0 focus:outline-none" 
                       placeholder="••••••••" 
                       type="password"
+                      value={regConfirmPassword}
+                      onChange={(e) => setRegConfirmPassword(e.target.value)}
                     />
                   </div>
                 </div>
                 <button 
-                  className="w-full border border-[#74f5ff] text-[#74f5ff] py-4 font-label-code text-[14px] tracking-widest hover:bg-[#74f5ff]/10 active:scale-[0.98] transition-all glitch-hover mt-4 flex items-center justify-center gap-4 group" 
+                  disabled={loading}
+                  className="w-full border border-[#74f5ff] text-[#74f5ff] py-4 font-label-code text-[14px] tracking-widest hover:bg-[#74f5ff]/10 active:scale-[0.98] transition-all glitch-hover mt-4 flex items-center justify-center gap-4 group disabled:opacity-50 disabled:cursor-not-allowed" 
                   type="submit"
                 >
-                  REGISTER NODE ACCESS
+                  {loading ? "REGISTERING..." : "REGISTER NODE ACCESS"}
                   <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">key</span>
                 </button>
               </form>

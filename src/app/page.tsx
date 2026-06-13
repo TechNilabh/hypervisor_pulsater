@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 
-// Interactive 3D Wireframe Sphere Component for Homepage Background
+// Upgraded 3D Wireframe Saturn Planet Component for Homepage Background
 function WireframeSphere() {
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
 
@@ -23,11 +23,12 @@ function WireframeSphere() {
     };
     window.addEventListener("resize", handleResize);
 
+    const radius = 170;
     const points: { x: number; y: number; z: number }[] = [];
-    const numLat = 8;
-    const numLon = 14;
-    const radius = 140;
+    const numLat = 10;
+    const numLon = 18;
 
+    // Generate sphere points
     for (let i = 1; i < numLat; i++) {
       const lat = (Math.PI * i) / numLat - Math.PI / 2;
       for (let j = 0; j < numLon; j++) {
@@ -40,6 +41,7 @@ function WireframeSphere() {
       }
     }
 
+    // Generate sphere lines
     const lines: [number, number][] = [];
     for (let i = 1; i < numLat; i++) {
       const startIdx = (i - 1) * numLon;
@@ -55,13 +57,17 @@ function WireframeSphere() {
       }
     }
 
-    let angleX = 0.2;
-    let angleY = 0.3;
-    let targetAngleX = 0.2;
-    let targetAngleY = 0.3;
+    let angleX = 0.25;
+    let angleY = 0.35;
+    let targetAngleX = 0.25;
+    let targetAngleY = 0.35;
     let isDragging = false;
     let lastMouseX = 0;
     let lastMouseY = 0;
+
+    let orbit1 = 0;
+    let orbit2 = 1.5;
+    let orbit3 = 3.0;
 
     const handleMouseDown = (e: MouseEvent) => {
       isDragging = true;
@@ -102,58 +108,158 @@ function WireframeSphere() {
       angleX += (targetAngleX - angleX) * 0.1;
       angleY += (targetAngleY - angleY) * 0.1;
 
+      angleX = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, angleX));
+
       if (!isDragging) {
-        targetAngleY += 0.0015;
-        targetAngleX += 0.0003;
+        targetAngleY += 0.001;
+        targetAngleX += 0.0002;
       }
 
-      const projected: { px: number; py: number; zVal: number }[] = [];
+      orbit1 += 0.012;
+      orbit2 += 0.008;
+      orbit3 += 0.005;
+
       const centerX = width / 2;
       const centerY = height / 2;
-      const fov = 300;
+      const fov = 400;
 
-      for (const p of points) {
+      const project = (x: number, y: number, z: number) => {
         const cosY = Math.cos(angleY);
         const sinY = Math.sin(angleY);
-        let x1 = p.x * cosY - p.z * sinY;
-        let z1 = p.x * sinY + p.z * cosY;
+        let x1 = x * cosY - z * sinY;
+        let z1 = x * sinY + z * cosY;
 
         const cosX = Math.cos(angleX);
         const sinX = Math.sin(angleX);
-        let y2 = p.y * cosX - z1 * sinX;
-        let z2 = p.y * sinX + z1 * cosX;
+        let y2 = y * cosX - z1 * sinX;
+        let z2 = y * sinX + z1 * cosX;
 
         const scale = fov / (fov + z2 + radius);
-        projected.push({
+        return {
           px: centerX + x1 * scale,
           py: centerY + y2 * scale,
-          zVal: z2,
-        });
-      }
+          zVal: z2
+        };
+      };
 
-      // Draw wireframe lines
+      // 1. Draw Orbit Pathways
+      const drawOrbitPath = (orbitRadius: number, planeType: "XY" | "YZ" | "Tilted") => {
+        ctx.beginPath();
+        const steps = 60;
+        for (let s = 0; s <= steps; s++) {
+          const theta = (2 * Math.PI * s) / steps;
+          let ox = 0, oy = 0, oz = 0;
+          if (planeType === "XY") {
+            ox = orbitRadius * Math.cos(theta);
+            oy = orbitRadius * Math.sin(theta);
+          } else if (planeType === "YZ") {
+            oy = orbitRadius * Math.cos(theta);
+            oz = orbitRadius * Math.sin(theta);
+          } else {
+            const rawX = orbitRadius * Math.cos(theta);
+            const rawZ = orbitRadius * Math.sin(theta);
+            ox = rawX * Math.cos(0.5);
+            oy = rawX * Math.sin(0.5);
+            oz = rawZ;
+          }
+          const { px, py } = project(ox, oy, oz);
+          if (s === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "rgba(0, 241, 254, 0.04)";
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      };
+
+      drawOrbitPath(210, "XY");
+      drawOrbitPath(240, "YZ");
+      drawOrbitPath(270, "Tilted");
+
+      // 2. Project Sphere Points
+      const projectedSphere = points.map(p => project(p.x, p.y, p.z));
+
+      // 3. Draw Sphere Lines
       for (const [start, end] of lines) {
-        const p1 = projected[start];
-        const p2 = projected[end];
+        const p1 = projectedSphere[start];
+        const p2 = projectedSphere[end];
         const avgZ = (p1.zVal + p2.zVal) / 2;
-        const opacity = Math.max(0.02, Math.min(0.5, (radius - avgZ) / (2 * radius)));
+        const opacity = Math.max(0.01, Math.min(0.4, (radius - avgZ) / (2 * radius)));
 
         ctx.beginPath();
         ctx.moveTo(p1.px, p1.py);
         ctx.lineTo(p2.px, p2.py);
-        ctx.strokeStyle = `rgba(0, 241, 254, ${opacity * 0.5})`;
-        ctx.lineWidth = 0.6;
+        ctx.strokeStyle = `rgba(0, 241, 254, ${opacity * 0.45})`;
+        ctx.lineWidth = 0.5;
         ctx.stroke();
       }
 
-      // Draw point nodes
-      for (const p of projected) {
-        const opacity = Math.max(0.05, Math.min(0.7, (radius - p.zVal) / (2 * radius)));
+      // 4. Draw Sphere Point Nodes
+      for (const p of projectedSphere) {
+        const opacity = Math.max(0.02, Math.min(0.65, (radius - p.zVal) / (2 * radius)));
         ctx.beginPath();
-        ctx.arc(p.px, p.py, 1.5, 0, 2 * Math.PI);
-        ctx.fillStyle = `rgba(0, 255, 65, ${opacity * 0.8})`;
+        ctx.arc(p.px, p.py, 1.2, 0, 2 * Math.PI);
+        ctx.fillStyle = `rgba(0, 255, 65, ${opacity * 0.6})`;
         ctx.fill();
       }
+
+      // 5. Draw Saturn-like Concentric Rings
+      const drawRing = (ringRadius: number, color: string, dotsCount: number) => {
+        for (let s = 0; s < dotsCount; s++) {
+          const theta = (2 * Math.PI * s) / dotsCount;
+          const rx = ringRadius * Math.cos(theta);
+          const rz = ringRadius * Math.sin(theta);
+          const tiltAngle = 0.45;
+          const ry = rx * Math.sin(tiltAngle);
+          const tiltedRx = rx * Math.cos(tiltAngle);
+          
+          const { px, py, zVal } = project(tiltedRx, ry, rz);
+          const opacity = Math.max(0.02, Math.min(0.7, (ringRadius - zVal) / (2 * ringRadius)));
+          
+          ctx.beginPath();
+          ctx.arc(px, py, 1.0, 0, 2 * Math.PI);
+          ctx.fillStyle = color.replace("OP", String(opacity * 0.5));
+          ctx.fill();
+        }
+      };
+      
+      drawRing(220, "rgba(0, 241, 254, OP)", 60);
+      drawRing(250, "rgba(0, 255, 65, OP)", 45);
+
+      // 6. Draw Orbiting Satellites
+      const drawSatellite = (theta: number, orbitRadius: number, planeType: "XY" | "YZ" | "Tilted", color: string) => {
+        let ox = 0, oy = 0, oz = 0;
+        if (planeType === "XY") {
+          ox = orbitRadius * Math.cos(theta);
+          oy = orbitRadius * Math.sin(theta);
+        } else if (planeType === "YZ") {
+          oy = orbitRadius * Math.cos(theta);
+          oz = orbitRadius * Math.sin(theta);
+        } else {
+          const rawX = orbitRadius * Math.cos(theta);
+          const rawZ = orbitRadius * Math.sin(theta);
+          ox = rawX * Math.cos(0.5);
+          oy = rawX * Math.sin(0.5);
+          oz = rawZ;
+        }
+        
+        const { px, py, zVal } = project(ox, oy, oz);
+        if (zVal < 100) {
+          ctx.beginPath();
+          ctx.arc(px, py, 3.5, 0, 2 * Math.PI);
+          ctx.fillStyle = color;
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.arc(px, py, 7, 0, 2 * Math.PI);
+          ctx.strokeStyle = color.replace("1)", "0.35)");
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      };
+
+      drawSatellite(orbit1, 210, "XY", "rgba(0, 241, 254, 1)");
+      drawSatellite(orbit2, 240, "YZ", "rgba(0, 255, 65, 1)");
+      drawSatellite(orbit3, 270, "Tilted", "rgba(0, 241, 254, 1)");
 
       animationFrameId = requestAnimationFrame(render);
     };
@@ -261,8 +367,8 @@ export default function Home() {
             <div className="font-display-tech text-[24px] text-[#74f5ff]">840K</div>
           </div>
         </div>
-        {/* Interactive 3D Wireframe Sphere Background */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] max-w-[800px] h-[350px] z-0 pointer-events-auto opacity-70">
+        {/* Interactive 3D Wireframe Saturn Planet Background (Enlarged) */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[100%] max-w-[1000px] h-[450px] z-0 pointer-events-auto opacity-70">
           <WireframeSphere />
         </div>
       </section>
