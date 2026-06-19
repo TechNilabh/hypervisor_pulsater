@@ -74,13 +74,10 @@ func generateOTP() (string, error) {
 
 // SendMFAEmail dispatches a dark-obsidian HTML container template layout to the user.
 // It reads SMTP configs dynamically from the environment.
-// EMERGENCY BACKDOOR: If the dial fails or times out, it outputs the raw code directly
-// to stdout using the exact OPERATOR_EMERGENCY_BACKDOOR format.
 func SendMFAEmail(toEmail, otp string) (retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("\n====================================\n[OPERATOR_EMERGENCY_BACKDOOR] ACTIVE_OTP: %s\n====================================\n", otp)
-			retErr = nil
+			retErr = fmt.Errorf("SMTP dispatch panicked: %v", r)
 		}
 	}()
 
@@ -91,8 +88,7 @@ func SendMFAEmail(toEmail, otp string) (retErr error) {
 	smtpFrom := os.Getenv("SMTP_FROM")
 
 	if smtpHost == "" || smtpHost == "smtp.placeholder.net" {
-		log.Printf("\n====================================\n[OPERATOR_EMERGENCY_BACKDOOR] ACTIVE_OTP: %s\n====================================\n", otp)
-		return nil
+		return fmt.Errorf("SMTP host not configured")
 	}
 
 	smtpPort := 587
@@ -214,9 +210,8 @@ func SendMFAEmail(toEmail, otp string) (retErr error) {
 	}
 
 	if err := d.DialAndSend(m); err != nil {
-		log.Printf("[MFA_SMTP] gomail DialAndSend failed: %v — falling back to console log backdoor", err)
-		log.Printf("\n====================================\n[OPERATOR_EMERGENCY_BACKDOOR] ACTIVE_OTP: %s\n====================================\n", otp)
-		return nil
+		log.Printf("[MFA_SMTP] gomail DialAndSend failed: %v", err)
+		return fmt.Errorf("SMTP send failed: %w", err)
 	}
 
 	log.Printf("[MFA_SMTP] Email dispatched successfully to %s", toEmail)
@@ -473,6 +468,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := SendMFAEmail(email, otp); err != nil {
 		log.Printf("MFA email dispatch error for %s: %v", email, err)
+		WriteError(w, http.StatusInternalServerError, "Failed to send MFA email")
+		return
 	}
 
 	log.Printf("MFA initiated for operator %s (%s)", username, email)
@@ -588,6 +585,8 @@ func ResendOTPHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := SendMFAEmail(req.Email, otp); err != nil {
 		log.Printf("MFA email dispatch error for %s: %v", req.Email, err)
+		WriteError(w, http.StatusInternalServerError, "Failed to send MFA email")
+		return
 	}
 
 	log.Printf("MFA OTP resent for operator %s", req.Email)
