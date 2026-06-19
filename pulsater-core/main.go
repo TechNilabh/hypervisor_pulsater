@@ -5,35 +5,70 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	log.Println("Initializing HYPERVISOR_PULSATER core auth backend...")
 
-	// Attempt to load .env file if present
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: No .env file found, reading system environment instead.")
+	}
+
 	LoadEnv(".env")
 
-	// Connect to Database
+	initOAuth()
+
 	if err := InitDB(); err != nil {
 		log.Fatalf("Fatal: Database initialization failed: %v", err)
 	}
 	defer DB.Close()
 
-	// Run migration to auto-create user schema
 	if err := runMigrations(); err != nil {
 		log.Fatalf("Fatal: Database migrations failed: %v", err)
 	}
 
-	// Create request router multiplexer
+	go func() {
+		ticker := time.NewTicker(60 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			evicted := 0
+			OTPCache.Range(func(key, value any) bool {
+				entry, ok := value.(otpEntry)
+				if !ok || time.Since(entry.CreatedAt) > otpTTL {
+					OTPCache.Delete(key)
+					evicted++
+				}
+				return true
+			})
+			if evicted > 0 {
+				log.Printf("[OTP_GC] Evicted %d expired OTP cache entries", evicted)
+			}
+		}
+	}()
+
 	mux := http.NewServeMux()
 
-	// Bind endpoints
 	mux.HandleFunc("/api/v1/auth/signup", SignupHandler)
 	mux.HandleFunc("/api/v1/auth/login", LoginHandler)
-	mux.HandleFunc("/api/v1/users/avatar", UpdateAvatarHandler)
-	mux.HandleFunc("/api/v1/auth/oauth", OAuthHandler)
+	mux.HandleFunc("/api/v1/auth/verify-mfa", VerifyMFAHandler)
+	mux.HandleFunc("/api/v1/auth/resend-otp", ResendOTPHandler)
 
-	// Wrap multiplexer with CORS middleware
+	mux.HandleFunc("/api/v1/auth/oauth/google", HandleOAuthLogin("google"))
+	mux.HandleFunc("/api/v1/auth/oauth/google/callback", HandleOAuthCallback("google"))
+
+	mux.HandleFunc("/api/v1/auth/oauth/github", HandleOAuthLogin("github"))
+	mux.HandleFunc("/api/v1/auth/oauth/github/callback", HandleOAuthCallback("github"))
+
+	mux.HandleFunc("/api/v1/auth/oauth/facebook", HandleOAuthLogin("facebook"))
+	mux.HandleFunc("/api/v1/auth/oauth/facebook/callback", HandleOAuthCallback("facebook"))
+
+	mux.HandleFunc("/api/v1/users/avatar", UpdateAvatarHandler)
+
+	mux.HandleFunc("/api/v1/containers/provision", JWTAuthMiddleware(ProvisionContainerHandler))
+
 	handler := CORSMiddleware(mux)
 
 	port := os.Getenv("PORT")
@@ -47,9 +82,10 @@ func main() {
 	}
 }
 
-// runMigrations auto-creates tables if they do not exist
 func runMigrations() error {
 	migrationQuery := `
+	CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 	CREATE TABLE IF NOT EXISTS users (
 		id UUID PRIMARY KEY,
 		username VARCHAR(255) UNIQUE NOT NULL,
@@ -67,11 +103,23 @@ func runMigrations() error {
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 		UNIQUE(provider, provider_user_id)
 	);
+
+	CREATE TABLE IF NOT EXISTS containers (
+		id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+		user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		designation VARCHAR(255) NOT NULL,
+		ingestion_target_db VARCHAR(100) NOT NULL,
+		host_port_mapping VARCHAR(100) NOT NULL,
+		status VARCHAR(50) NOT NULL DEFAULT 'PROVISIONED',
+		provisioned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
 	`
+
 	_, err := DB.Exec(context.Background(), migrationQuery)
 	if err != nil {
 		return err
 	}
-	log.Println("Database schemas verified (tables 'users' and 'oauth_identities' are active).")
+
+	log.Println("Database schemas verified (users, oauth_identities, containers tables active).")
 	return nil
 }
