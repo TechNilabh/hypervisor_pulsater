@@ -13,13 +13,19 @@ import (
 func main() {
 	log.Println("Initializing HYPERVISOR_PULSATER core auth backend...")
 
-	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: No .env file found, reading system environment instead.")
+	// Load .env — try both locations, log which one worked
+	if err := godotenv.Load(".env"); err != nil {
+		if err2 := godotenv.Load("pulsater-core/.env"); err2 != nil {
+			log.Println("[WARN] No .env file found in either location — relying on system environment")
+		} else {
+			log.Println("[ENV] Loaded from pulsater-core/.env")
+		}
+	} else {
+		log.Println("[ENV] Loaded from .env")
 	}
 
-	LoadEnv(".env")
-
-	initOAuth()
+	// Validate OAuth credentials at startup so you catch this immediately
+	validateOAuthEnv()
 
 	if err := InitDB(); err != nil {
 		log.Fatalf("Fatal: Database initialization failed: %v", err)
@@ -122,4 +128,24 @@ func runMigrations() error {
 
 	log.Println("Database schemas verified (users, oauth_identities, containers tables active).")
 	return nil
+}
+
+func validateOAuthEnv() {
+	providers := map[string][2]string{
+		"google":   {os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET")},
+		"github":   {os.Getenv("GITHUB_CLIENT_ID"), os.Getenv("GITHUB_CLIENT_SECRET")},
+		"facebook": {os.Getenv("FACEBOOK_CLIENT_ID"), os.Getenv("FACEBOOK_CLIENT_SECRET")},
+	}
+	for name, creds := range providers {
+		if creds[0] == "" || creds[1] == "" {
+			log.Printf("[WARN] OAuth provider [%s] — credentials missing (CLIENT_ID empty: %v, CLIENT_SECRET empty: %v)",
+				name, creds[0] == "", creds[1] == "")
+		} else {
+			idSnippet := creds[0]
+			if len(idSnippet) > 6 {
+				idSnippet = idSnippet[:6]
+			}
+			log.Printf("[OK] OAuth provider [%s] — credentials loaded (ID: %s...)", name, idSnippet)
+		}
+	}
 }

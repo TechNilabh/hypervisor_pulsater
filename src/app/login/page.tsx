@@ -37,7 +37,7 @@ export default function Login() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  // 3D wireframe rotating globe canvas
+  // 3D wireframe rotating globe canvas with hardened projection logic
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -102,7 +102,11 @@ export default function Login() {
         const x1 = p.x * cosA - p.z * sinA;
         const z1 = p.x * sinA + p.z * cosA;
         const y1 = p.y * pulse;
-        const scale = fov / (fov + z1);
+        
+        // Safety guard for denominator clipping paths
+        const denominator = fov + z1;
+        const scale = fov / (denominator <= 0 ? 0.1 : denominator);
+        
         return {
           sx: cx + x1 * scale,
           sy: cy + y1 * scale,
@@ -141,15 +145,22 @@ export default function Login() {
         if (p.z < -fov) p.z = fov;
         const x1 = p.x * cosA - p.z * sinA;
         const z1 = p.x * sinA + p.z * cosA;
-        const scale = fov / (fov + z1);
+        
+        const zDenominator = fov + z1;
+        const scale = fov / (zDenominator <= 0 ? 0.1 : zDenominator);
+        
         const sx = cx + x1 * scale;
         const sy = cy + p.y * scale;
+        
         if (sx > 0 && sx < canvas.width && sy > 0 && sy < canvas.height) {
           const alpha = Math.max(0.1, 1 - (z1 + fov) / (2 * fov));
           ctx.fillStyle = `rgba(0, 242, 255, ${alpha * 0.7})`;
           ctx.beginPath();
+          
+          // HARDENED PERSPECTIVE MATRIX FIX: Ensure radius calculation cannot go negative
           const calculatedRadius = 1.5 * scale;
           const safeRadius = Math.max(0.1, calculatedRadius);
+          
           ctx.arc(sx, sy, safeRadius, 0, 2 * Math.PI);
           ctx.fill();
         }
@@ -165,15 +176,11 @@ export default function Login() {
     };
   }, []);
 
-  // ─── MFA redirect helper ──────────────────────────────────────────────────
-  // When the backend returns mfa_required: true, we stash the email in
-  // sessionStorage and redirect to the OTP verification screen.
   const redirectToMFA = (email: string) => {
     sessionStorage.setItem("mfa_pending_email", email);
     router.push("/verify-otp");
   };
 
-  // ─── Form submission ──────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -196,14 +203,11 @@ export default function Login() {
           throw new Error(data.error || "Authentication failed");
         }
 
-        // ── MFA gate: backend returns mfa_required instead of a token ──────
         if (data.mfa_required) {
           redirectToMFA(data.email);
           return;
         }
 
-        // Fallback: direct token (should not occur with MFA enabled, but kept
-        // for backwards compatibility during staged rollout)
         if (data.token || data.session_token) {
           const token = data.token || data.session_token;
           localStorage.setItem("session_token", token);
@@ -249,19 +253,18 @@ export default function Login() {
     }
   };
 
-  // ─── OAuth click handler ──────────────────────────────────────────────────
+  // ─── OAuth Click Handler (Fixed URL Serialization Vector) ──────────────────
   const handleOAuthClick = (provider: string) => {
     setError(null);
     setSuccessMsg(null);
     setLoading(true);
 
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || BACKEND_URL;
-    window.location.href = `${apiBaseUrl}/api/v1/auth/oauth/${provider}`;
+    // CRITICAL CORRECTION: Use BACKEND_URL variable to clear path routing errors
+    window.location.href = `${BACKEND_URL}/api/v1/auth/oauth/${provider}`;
   };
 
   return (
     <div className="font-body-mono bg-[#050505] text-[#e5e2e1] min-h-screen flex items-center justify-center p-4">
-      {/* Global Grid Texture Layer */}
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.03]"
         style={{
@@ -270,13 +273,11 @@ export default function Login() {
         }}
       />
 
-      {/* Main interface frame */}
       <div
         ref={mainRef}
         className="w-full max-w-[1200px] min-h-[700px] grid grid-cols-1 md:grid-cols-2 bg-[#0e0e0e] overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.9)] relative border border-[#3b4b37] rounded-lg mt-12 transition-transform duration-300 ease-out"
         id="main-interface"
       >
-        {/* LEFT PANEL: CYBERNETIC AVATAR WIREFRAME */}
         <section className="relative hidden md:flex flex-col items-center justify-center overflow-hidden bg-black scanlines">
           <div className="absolute inset-0 z-0 w-full h-full">
             <canvas ref={canvasRef} className="w-full h-full block" />
@@ -308,7 +309,6 @@ export default function Login() {
           </div>
         </section>
 
-        {/* RIGHT PANEL: AUTHENTICATION CONSOLE */}
         <section className="p-8 md:p-16 flex flex-col justify-center bg-[#131313] relative glass-card border-l border-[#3b4b37]/30">
           <div className="mb-12">
             <h1 className="font-display-tech text-[32px] text-[#74f5ff] tracking-tighter mb-2">
@@ -320,7 +320,6 @@ export default function Login() {
             </p>
           </div>
 
-          {/* TAB TOGGLE */}
           <div className="flex border-b border-[#3b4b37] mb-10 w-full" id="auth-tabs">
             <button
               onClick={() => setActiveTab("auth")}
@@ -344,7 +343,6 @@ export default function Login() {
             </button>
           </div>
 
-          {/* FORM CONTENT */}
           <div className="space-y-4">
             {error && (
               <div className="p-3 bg-red-950/40 border border-red-500/50 text-red-400 font-label-code text-[11px] uppercase tracking-wider flex items-center gap-2">
@@ -359,7 +357,6 @@ export default function Login() {
               </div>
             )}
 
-            {/* AUTH FORM (LOGIN) */}
             {activeTab === "auth" && (
               <form onSubmit={handleSubmit} className="space-y-6" id="form-auth">
                 <div className="space-y-2">
@@ -413,7 +410,6 @@ export default function Login() {
                   </a>
                 </div>
 
-                {/* MFA Notice */}
                 <div className="flex items-start gap-2 bg-[#00f0ff]/5 border border-[#00f0ff]/20 px-3 py-2">
                   <span className="material-symbols-outlined text-[#00f0ff] text-xs mt-0.5">info</span>
                   <p className="font-label-code text-[9px] text-[#4a9ead] leading-relaxed">
@@ -435,7 +431,6 @@ export default function Login() {
               </form>
             )}
 
-            {/* REGISTER FORM */}
             {activeTab === "register" && (
               <form onSubmit={handleSubmit} className="space-y-6" id="form-register">
                 <div className="space-y-2">
@@ -506,7 +501,6 @@ export default function Login() {
             )}
           </div>
 
-          {/* ALTERNATIVE AUTH */}
           <div className="mt-12 flex flex-col items-center">
             <div className="flex items-center gap-4 w-full mb-8">
               <div className="h-[1px] bg-[#3b4b37] flex-1" />
@@ -559,7 +553,6 @@ export default function Login() {
             </Link>
           </div>
 
-          {/* Absolute HUD elements */}
           <div className="absolute bottom-4 left-6 flex items-center gap-2 opacity-30">
             <div className="w-1.5 h-1.5 rounded-full bg-[#00dbe7] animate-ping" />
             <span className="font-label-code text-[8px] uppercase tracking-widest">

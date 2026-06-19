@@ -1,3 +1,4 @@
+// this is the true auth.go 
 package main
 
 import (
@@ -661,74 +662,90 @@ func UpdateAvatarHandler(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 var (
-	googleOauthConfig   *oauth2.Config
-	githubOauthConfig   *oauth2.Config
-	facebookOauthConfig *oauth2.Config
+	// Decoupled from static boot declarations to prevent empty client ID initialization order bug
 )
 
-func initOAuth() {
+// 1. DYNAMIC CONFIGURATION FACTORY
+func getOAuthConfig(provider string) *oauth2.Config {
 	backendURL := os.Getenv("BACKEND_URL")
 	if backendURL == "" {
 		backendURL = "http://localhost:8080"
 	}
 
-	googleOauthConfig = &oauth2.Config{
-		RedirectURL:  fmt.Sprintf("%s/api/v1/auth/oauth/google/callback", backendURL),
-		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
-		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		Scopes: []string{
-			"https://www.googleapis.com/auth/userinfo.profile",
-			"https://www.googleapis.com/auth/userinfo.email",
-		},
-		Endpoint: google.Endpoint,
-	}
+	// Add this block temporarily to diagnose
+	log.Printf("[DEBUG] getOAuthConfig(%s): GITHUB_CLIENT_ID=%q", provider, os.Getenv("GITHUB_CLIENT_ID"))
 
-	githubOauthConfig = &oauth2.Config{
-		RedirectURL:  fmt.Sprintf("%s/api/v1/auth/oauth/github/callback", backendURL),
-		ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
-		ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
-		Scopes:       []string{"user:email", "read:user"},
-		Endpoint:     github.Endpoint,
+	switch provider {
+	case "google":
+		return &oauth2.Config{
+			ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+			ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+			RedirectURL:  fmt.Sprintf("%s/api/v1/auth/oauth/google/callback", backendURL),
+			Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
+			Endpoint:     google.Endpoint,
+		}
+	case "github":
+		return &oauth2.Config{
+			ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
+			ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+			RedirectURL:  fmt.Sprintf("%s/api/v1/auth/oauth/github/callback", backendURL),
+			Scopes:       []string{"user:email", "read:user"},
+			Endpoint:     github.Endpoint,
+		}
+	case "facebook":
+		return &oauth2.Config{
+			ClientID:     os.Getenv("FACEBOOK_CLIENT_ID"),
+			ClientSecret: os.Getenv("FACEBOOK_CLIENT_SECRET"),
+			RedirectURL:  fmt.Sprintf("%s/api/v1/auth/oauth/facebook/callback", backendURL),
+			Scopes:       []string{"email", "public_profile"},
+			Endpoint:     facebook.Endpoint,
+		}
 	}
-
-	facebookOauthConfig = &oauth2.Config{
-		RedirectURL:  fmt.Sprintf("%s/api/v1/auth/oauth/facebook/callback", backendURL),
-		ClientID:     os.Getenv("FACEBOOK_CLIENT_ID"),
-		ClientSecret: os.Getenv("FACEBOOK_CLIENT_SECRET"),
-		Scopes:       []string{"email", "public_profile"},
-		Endpoint:     facebook.Endpoint,
-	}
+	return nil
 }
 
-// Initiate Redirection Handlers
+// 2. CENTRALIZED ROUTE ROUTING GATEWAYS
+func HandleOAuthLogin(provider string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		config := getOAuthConfig(provider)
+		if config == nil {
+			http.Error(w, "Unsupported OAuth provider vector", http.StatusBadRequest)
+			return
+		}
 
-func GoogleLoginHandler(w http.ResponseWriter, r *http.Request) {
-	url := googleOauthConfig.AuthCodeURL("state-google")
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
-}
+		// Fail-fast sanity safeguard log
+		if config.ClientID == "" || config.ClientSecret == "" {
+			log.Printf("🚨 CRITICAL ENV ERROR: Credentials for [%s] are empty strings! Ensure .env is loaded before routing.", provider)
+			http.Error(w, fmt.Sprintf("Backend configuration mismatch: missing %s client ID", provider), http.StatusInternalServerError)
+			return
+		}
 
-func GithubLoginHandler(w http.ResponseWriter, r *http.Request) {
-	url := githubOauthConfig.AuthCodeURL("state-github")
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
-}
-
-func FacebookLoginHandler(w http.ResponseWriter, r *http.Request) {
-	url := facebookOauthConfig.AuthCodeURL("state-facebook")
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+		stateToken := fmt.Sprintf("state-%s", provider)
+		url := config.AuthCodeURL(stateToken, oauth2.AccessTypeOffline)
+		
+		log.Printf("🛰️ Redirecting Matrix Handshake to [%s]: %s", provider, url)
+		http.Redirect(w, r, url, http.StatusSeeOther)
+	}
 }
 
 // Callback Processors
 
 func GoogleCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
-	token, err := googleOauthConfig.Exchange(context.Background(), code)
+	config := getOAuthConfig("google")
+	if config == nil {
+		log.Printf("Google OAuth callback: config is nil")
+		WriteError(w, http.StatusInternalServerError, "OAuth configuration not found")
+		return
+	}
+	token, err := config.Exchange(context.Background(), code)
 	if err != nil {
 		log.Printf("Google OAuth exchange failed: %v", err)
 		WriteError(w, http.StatusBadRequest, "OAuth code exchange failed")
 		return
 	}
 
-	client := googleOauthConfig.Client(context.Background(), token)
+	client := config.Client(context.Background(), token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
 		log.Printf("Failed to get Google user info: %v", err)
@@ -752,14 +769,20 @@ func GoogleCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 func GithubCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
-	token, err := githubOauthConfig.Exchange(context.Background(), code)
+	config := getOAuthConfig("github")
+	if config == nil {
+		log.Printf("GitHub OAuth callback: config is nil")
+		WriteError(w, http.StatusInternalServerError, "OAuth configuration not found")
+		return
+	}
+	token, err := config.Exchange(context.Background(), code)
 	if err != nil {
 		log.Printf("GitHub OAuth exchange failed: %v", err)
 		WriteError(w, http.StatusBadRequest, "OAuth code exchange failed")
 		return
 	}
 
-	client := githubOauthConfig.Client(context.Background(), token)
+	client := config.Client(context.Background(), token)
 	resp, err := client.Get("https://api.github.com/user")
 	if err != nil {
 		log.Printf("Failed to get GitHub user info: %v", err)
@@ -816,14 +839,20 @@ func GithubCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 func FacebookCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
-	token, err := facebookOauthConfig.Exchange(context.Background(), code)
+	config := getOAuthConfig("facebook")
+	if config == nil {
+		log.Printf("Facebook OAuth callback: config is nil")
+		WriteError(w, http.StatusInternalServerError, "OAuth configuration not found")
+		return
+	}
+	token, err := config.Exchange(context.Background(), code)
 	if err != nil {
 		log.Printf("Facebook OAuth exchange failed: %v", err)
 		WriteError(w, http.StatusBadRequest, "OAuth code exchange failed")
 		return
 	}
 
-	client := facebookOauthConfig.Client(context.Background(), token)
+	client := config.Client(context.Background(), token)
 	resp, err := client.Get("https://graph.facebook.com/me?fields=id,name,email")
 	if err != nil {
 		log.Printf("Failed to get Facebook user info: %v", err)
@@ -916,21 +945,6 @@ func handleOAuthSuccess(w http.ResponseWriter, r *http.Request, provider, provid
 
 	log.Printf("OAuth operator %s successfully authenticated via %s — Redirecting to frontend identity portal", username, provider)
 	http.Redirect(w, r, fmt.Sprintf("%s/identity?token=%s", frontendURL, token), http.StatusSeeOther)
-}
-
-func HandleOAuthLogin(provider string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		switch provider {
-		case "google":
-			GoogleLoginHandler(w, r)
-		case "github":
-			GithubLoginHandler(w, r)
-		case "facebook":
-			FacebookLoginHandler(w, r)
-		default:
-			WriteError(w, http.StatusBadRequest, "Unsupported OAuth provider")
-		}
-	}
 }
 
 func HandleOAuthCallback(provider string) http.HandlerFunc {

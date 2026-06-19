@@ -1,9 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 
 export default function NotFound() {
+  const [mounted, setMounted] = useState(false);
+  const [timestamp, setTimestamp] = useState("");
+
+  useEffect(() => {
+    setMounted(true);
+    setTimestamp(new Date().toISOString());
+  }, []);
+
   return (
     <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono min-h-screen flex items-center justify-center p-6 relative scanlines">
       {/* Grid Texture Layer */}
@@ -26,7 +34,7 @@ export default function NotFound() {
         <div className="space-y-6 text-left">
           <div className="p-4 bg-black border border-[#93000a]/50 text-error font-body-mono text-xs rounded-sm whitespace-pre-line leading-relaxed">
             FATAL: INVALID UNMAPPED NODE DIRECTION // DISCONNECTED
-            {"\n"}TIMESTAMP: {new Date().toISOString()}
+            {"\n"}TIMESTAMP: {mounted ? timestamp : "2026-06-19T00:00:00.000Z"}
             {"\n"}REQUEST_PATH: unmapped_routing_segment
             {"\n"}STATUS_CODE: ERR_CODE_404
           </div>
