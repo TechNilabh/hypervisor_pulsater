@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HyperVisor: Pulsater
+
+HyperVisor: Pulsater is a full-stack data streaming and synchronization platform designed to process, monitor, and visualize real-time ledger transactions. The platform leverages Change Data Capture (CDC) pipelines, concurrent Go microservices, and a modern Next.js dashboard to provide low-latency transaction monitoring and telemetry insights.
+
+## Features
+
+* Real-time Change Data Capture (CDC) pipeline for transaction ingestion and synchronization
+* Concurrent and thread-safe Go microservice architecture
+* PostgreSQL-backed persistence layer with optimized connection pooling
+* JWT-based authentication and authorization
+* OAuth 2.0 login support (Google, Facebook, GitHub)
+* Interactive Next.js dashboard for monitoring transaction streams
+* Telemetry and notification system for system events and diagnostics
+* Responsive UI with client-side state hydration and profile caching
+* Dockerized services for simplified deployment
+
+## Tech Stack
+
+### Backend
+
+* Go (Golang)
+* PostgreSQL
+* REST APIs
+* JWT Authentication
+* OAuth 2.0
+
+### Frontend
+
+* Next.js
+* TypeScript
+* React
+* Local Storage Caching
+
+### DevOps
+
+* Docker
+* Environment Configuration Management
+
+## Architecture
+
+The platform follows a microservice-oriented architecture where streaming transaction events are ingested through CDC pipelines and processed by Go services. Processed data is persisted in PostgreSQL and exposed through REST APIs. The Next.js frontend consumes these APIs to provide real-time monitoring, diagnostics, and telemetry visualization.
+
+## Future Enhancements
+
+* WebSocket-based live event streaming
+* Distributed event processing with Kafka
+* Advanced analytics and anomaly detection
+* Multi-tenant workspace support
+* Kubernetes deployment support
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Clone repository
+git clone <repository-url>
+
+# Configure environment variables
+cp .env.example .env
+
+# Start services
+docker-compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## License
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is developed for educational and portfolio purposes.
