@@ -1,4 +1,4 @@
-// this is the true auth.go 
+// this is the true auth.go
 package main
 
 import (
@@ -202,7 +202,7 @@ func SendMFAEmail(toEmail, otp string) (retErr error) {
 	m.SetBody("text/html", htmlBody)
 
 	d := gomail.NewDialer(smtpHost, smtpPort, smtpUser, smtpPass)
-	
+
 	// Support optional InsecureSkipVerify for localhost or test systems
 	smtpInsecure := os.Getenv("SMTP_INSECURE") == "true" || smtpHost == "localhost" || smtpHost == "127.0.0.1"
 	if smtpInsecure {
@@ -661,7 +661,7 @@ func UpdateAvatarHandler(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 var (
-	// Decoupled from static boot declarations to prevent empty client ID initialization order bug
+// Decoupled from static boot declarations to prevent empty client ID initialization order bug
 )
 
 // 1. DYNAMIC CONFIGURATION FACTORY
@@ -721,7 +721,7 @@ func HandleOAuthLogin(provider string) http.HandlerFunc {
 
 		stateToken := fmt.Sprintf("state-%s", provider)
 		url := config.AuthCodeURL(stateToken, oauth2.AccessTypeOffline)
-		
+
 		log.Printf("🛰️ Redirecting Matrix Handshake to [%s]: %s", provider, url)
 		http.Redirect(w, r, url, http.StatusSeeOther)
 	}
