@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function DeployContainer() {
   const router = useRouter();
@@ -100,7 +99,7 @@ export default function DeployContainer() {
     }
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/v1/containers/provision`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/containers/provision`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

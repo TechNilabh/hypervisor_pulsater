@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function Login() {
   const router = useRouter();
@@ -189,7 +188,7 @@ export default function Login() {
 
     try {
       if (activeTab === "auth") {
-        const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
+        const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -224,7 +223,7 @@ export default function Login() {
         if (regPassword !== regConfirmPassword) {
           throw new Error("Passwords do not match");
         }
-        const res = await fetch(`${BACKEND_URL}/api/v1/auth/signup`, {
+        const res = await fetch(`${API_BASE_URL}/api/v1/auth/signup`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -259,8 +258,8 @@ export default function Login() {
     setSuccessMsg(null);
     setLoading(true);
 
-    // CRITICAL CORRECTION: Use BACKEND_URL variable to clear path routing errors
-    window.location.href = `${BACKEND_URL}/api/v1/auth/oauth/${provider}`;
+    // Redirect to backend OAuth provider endpoint using central API_BASE_URL config
+    window.location.href = `${API_BASE_URL}/api/v1/auth/oauth/${provider}`;
   };
 
   return (

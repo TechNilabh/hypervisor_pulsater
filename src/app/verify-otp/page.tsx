@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function VerifyOTPPage() {
   const router = useRouter();
@@ -119,7 +118,7 @@ export default function VerifyOTPPage() {
     setResendStatus("sending");
     setError(null);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/v1/auth/resend-otp`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/resend-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -161,7 +160,7 @@ export default function VerifyOTPPage() {
     setError(null);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/v1/auth/verify-mfa`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/verify-mfa`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp }),
@@ -201,17 +200,13 @@ export default function VerifyOTPPage() {
   };
 
   return (
-    <div
-      className="font-body-mono text-[#e5e2e1] min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{ backgroundColor: "#0d0f12" }}
-    >
+    <div className="font-body-mono text-[#b9ccb2] min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#050505]">
       {/* Dot-grid texture */}
       <div
-        className="fixed inset-0 pointer-events-none"
+        className="fixed inset-0 pointer-events-none opacity-[0.03]"
         style={{
-          backgroundImage: "radial-gradient(rgba(0,240,255,0.12) 1px, transparent 1px)",
-          backgroundSize: "28px 28px",
-          opacity: 0.18,
+          backgroundImage: "radial-gradient(#00f1fe 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
         }}
       />
 
@@ -220,56 +215,53 @@ export default function VerifyOTPPage() {
         className="fixed inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 55% 45% at 50% 50%, rgba(0,240,255,0.05) 0%, transparent 70%)",
+            "radial-gradient(ellipse 55% 45% at 50% 50%, rgba(0,241,254,0.04) 0%, transparent 70%)",
         }}
       />
 
       {/* ── Main card ──────────────────────────────────────────────────────── */}
-      <div className="w-full max-w-[420px] relative z-10">
+      <div className="w-full max-w-[440px] relative z-10">
         {/* Corner brackets */}
-        <div className="absolute -top-2 -left-2 w-5 h-5 border-t border-l border-[#00f0ff] opacity-50" />
-        <div className="absolute -top-2 -right-2 w-5 h-5 border-t border-r border-[#00f0ff] opacity-50" />
-        <div className="absolute -bottom-2 -left-2 w-5 h-5 border-b border-l border-[#00f0ff] opacity-50" />
-        <div className="absolute -bottom-2 -right-2 w-5 h-5 border-b border-r border-[#00f0ff] opacity-50" />
+        <div className="absolute -top-2 -left-2 w-5 h-5 border-t border-l border-[#00f1fe]/40" />
+        <div className="absolute -top-2 -right-2 w-5 h-5 border-t border-r border-[#00f1fe]/40" />
+        <div className="absolute -bottom-2 -left-2 w-5 h-5 border-b border-l border-[#00f1fe]/40" />
+        <div className="absolute -bottom-2 -right-2 w-5 h-5 border-b border-r border-[#00f1fe]/40" />
 
-        <div
-          className="border border-[#00f0ff]/25 shadow-[0_0_48px_rgba(0,240,255,0.06)]"
-          style={{ backgroundColor: "#0d0f12" }}
-        >
+        <div className="glass-card border border-[#3b4b37]/30 bg-[#131313] shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden">
+          {/* Scanning line animation */}
+          <div className="absolute inset-x-0 z-10 scanning-line pointer-events-none" />
+
           {/* ── Header bar ──────────────────────────────────────────────── */}
-          <div
-            className="border-b border-[#00f0ff]/20 px-5 py-3 flex items-center justify-between"
-            style={{ backgroundColor: "#0a0c0f" }}
-          >
+          <div className="border-b border-[#3b4b37]/30 px-5 py-4 flex items-center justify-between bg-[#0e0e0e]/90">
             <div className="flex items-center gap-2.5">
               <div className="flex gap-[3px] items-center">
-                <div className="w-1 h-1 rounded-full bg-[#00f0ff] animate-ping" />
-                <div className="w-1 h-1 rounded-full bg-[#00f0ff] opacity-50" />
+                <div className="w-1 h-1 rounded-full bg-[#00f1fe] animate-ping" />
+                <div className="w-1 h-1 rounded-full bg-[#00f1fe]/60" />
               </div>
-              <span className="font-label-code text-[9px] text-[#00f0ff] uppercase tracking-[0.28em]">
-                IDENTITY_VERIFICATION_PROTOCOL // SECURE_NODE_ACCESS
+              <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
+                [ IDENTITY_VERIFICATION_PROTOCOL // SECURE_NODE_ACCESS ]
               </span>
             </div>
-            <span className="font-label-code text-[8px] text-[#2d3748] tracking-widest">
+            <span className="font-label-code text-[8px] text-[#84967e] tracking-widest">
               v2.0
             </span>
           </div>
 
-          <div className="px-7 py-8 flex flex-col gap-6">
+          <div className="px-7 py-8 flex flex-col gap-6 relative z-10">
             {/* ── Instruction block ──────────────────────────────────────── */}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span
-                  className="material-symbols-outlined text-[#00f0ff] text-base"
-                  style={{ filter: "drop-shadow(0 0 8px rgba(0,240,255,0.45))" }}
+                  className="material-symbols-outlined text-[#00f1fe] text-base"
+                  style={{ filter: "drop-shadow(0 0 8px rgba(0,241,254,0.45))" }}
                 >
                   shield_lock
                 </span>
-                <span className="font-label-code text-[10px] text-[#00f0ff] uppercase tracking-[0.2em]">
-                  MFA TOKEN REQUIRED
+                <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
+                  [ MFA_TOKEN_REQUIRED ]
                 </span>
               </div>
-              <p className="font-body-mono text-[10px] text-[#4a5568] leading-relaxed pl-[26px]">
+              <p className="font-body-mono text-[11px] text-[#b9ccb2] leading-relaxed pl-[26px]">
                 A 6-digit token was dispatched to your registered operator address.
                 Enter it below to complete access.
               </p>
@@ -277,35 +269,29 @@ export default function VerifyOTPPage() {
 
             {/* ── Error / Expired banners ──────────────────────────────── */}
             {error && (
-              <div
-                className="border border-red-500/30 px-4 py-2.5 flex items-center gap-2"
-                style={{ backgroundColor: "rgba(127,29,29,0.25)" }}
-              >
+              <div className="border border-red-500/30 px-4 py-2.5 flex items-center gap-2 bg-red-950/20">
                 <span className="material-symbols-outlined text-xs text-red-400">
                   warning
                 </span>
-                <span className="font-label-code text-[9px] text-red-400 uppercase tracking-wider">
-                  {error}
+                <span className="font-label-code text-[10px] text-red-400 uppercase tracking-widest">
+                  [ {error} ]
                 </span>
               </div>
             )}
 
             {expired && (
-              <div
-                className="border border-amber-500/30 px-4 py-2.5 text-center"
-                style={{ backgroundColor: "rgba(120,53,15,0.25)" }}
-              >
-                <span className="font-label-code text-[9px] text-amber-400 uppercase tracking-wider">
-                  TOKEN EXPIRED — Return to login and authenticate again.
+              <div className="border border-amber-500/30 px-4 py-2.5 text-center bg-amber-950/20">
+                <span className="font-label-code text-[10px] text-amber-400 uppercase tracking-widest">
+                  [ TOKEN EXPIRED — RE-AUTHENTICATE ]
                 </span>
               </div>
             )}
 
             {/* ── OTP form ─────────────────────────────────────────────── */}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               {/* Token label */}
-              <div className="flex flex-col gap-2.5">
-                <span className="font-label-code text-[8px] text-[#00f0ff]/70 uppercase tracking-[0.25em]">
+              <div className="flex flex-col gap-3">
+                <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
                   [ VERIFICATION_TOKEN ]
                 </span>
 
@@ -327,17 +313,7 @@ export default function VerifyOTPPage() {
                       onPaste={i === 0 ? handlePaste : undefined}
                       disabled={loading || expired}
                       autoFocus={i === 0}
-                      className="w-11 h-[52px] text-center text-xl font-bold font-display-tech transition-all duration-150 focus:outline-none disabled:opacity-35 disabled:cursor-not-allowed"
-                      style={{
-                        backgroundColor: "#090b0e",
-                        border: digit
-                          ? "1px solid #00f0ff"
-                          : "1px solid rgba(0,240,255,0.2)",
-                        color: digit ? "#00f0ff" : "#e2e8f0",
-                        boxShadow: digit
-                          ? "0 0 10px rgba(0,240,255,0.25), inset 0 0 6px rgba(0,240,255,0.05)"
-                          : "none",
-                      }}
+                      className="w-12 h-14 bg-[#1c1b1b] border-b-2 border-[#3b4b37] focus:border-[#00f1fe] text-center font-display-tech text-xl text-[#74f5ff] outline-none transition-all focus:ring-0 rounded-none disabled:opacity-35 disabled:cursor-not-allowed"
                     />
                   ))}
                 </div>
@@ -345,14 +321,14 @@ export default function VerifyOTPPage() {
 
               {/* Countdown */}
               <div className="flex items-center justify-center gap-1.5">
-                <span className="material-symbols-outlined text-xs text-[#2d3748]">
+                <span className="material-symbols-outlined text-xs text-[#84967e]">
                   timer
                 </span>
                 <span
                   className={`font-label-code text-[10px] tracking-widest transition-colors ${
                     countdown < 60
-                      ? "text-red-400 animate-pulse"
-                      : "text-[#2d3748]"
+                      ? "text-red-400 animate-pulse font-bold"
+                      : "text-[#84967e]"
                   }`}
                 >
                   TOKEN_TTL: {formatCountdown(countdown)}
@@ -364,28 +340,7 @@ export default function VerifyOTPPage() {
                 type="submit"
                 id="verify-otp-submit"
                 disabled={loading || expired || digits.join("").length < 6}
-                className="w-full py-3.5 font-label-code text-[11px] tracking-[0.25em] uppercase transition-all flex items-center justify-center gap-2.5 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
-                style={{
-                  backgroundColor:
-                    loading || expired || digits.join("").length < 6
-                      ? "rgba(0,240,255,0.04)"
-                      : "rgba(0,240,255,0.08)",
-                  border: "1px solid rgba(0,240,255,0.6)",
-                  color: "#00f0ff",
-                }}
-                onMouseEnter={(e) => {
-                  if (!loading && !expired && digits.join("").length === 6) {
-                    (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                      "rgba(0,240,255,0.14)";
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                      "0 0 18px rgba(0,240,255,0.22)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                    "rgba(0,240,255,0.08)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
-                }}
+                className="w-full bg-[#00f1fe]/10 border border-[#00f1fe] text-[#00f1fe] font-label-code py-4 hover:bg-[#00f1fe]/20 hover:shadow-[0_0_20px_rgba(0,241,254,0.4)] tracking-widest uppercase transition-all flex items-center justify-center gap-2.5 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -409,7 +364,7 @@ export default function VerifyOTPPage() {
                 type="button"
                 onClick={handleResendOTP}
                 disabled={loading || expired || resendCooldown > 0}
-                className="font-label-code text-[9px] text-[#b9ccb2] hover:text-[#00f0ff] disabled:opacity-35 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5 cursor-pointer bg-transparent border-none p-0"
+                className="font-label-code text-[10px] text-[#b9ccb2] hover:text-[#00f1fe] disabled:opacity-35 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5 cursor-pointer bg-transparent border-none p-0 tracking-wider"
               >
                 <span className="material-symbols-outlined text-xs">
                   {resendStatus === "sending" ? "sync" : "mail"}
@@ -428,7 +383,7 @@ export default function VerifyOTPPage() {
                   sessionStorage.removeItem("mfa_pending_email");
                   router.push("/login");
                 }}
-                className="font-label-code text-[9px] text-[#2d3748] hover:text-[#00f0ff] transition-colors flex items-center justify-center gap-1.5 cursor-pointer bg-transparent border-none p-0"
+                className="font-label-code text-[10px] text-[#84967e] hover:text-[#00f1fe] transition-colors flex items-center justify-center gap-1.5 cursor-pointer bg-transparent border-none p-0 tracking-wider"
               >
                 <span className="material-symbols-outlined text-xs">
                   arrow_back
@@ -440,12 +395,12 @@ export default function VerifyOTPPage() {
         </div>
 
         {/* Footer signature */}
-        <div className="mt-3 flex items-center justify-center gap-2 opacity-20">
-          <div className="h-[1px] flex-1" style={{ backgroundColor: "#00f0ff" }} />
-          <span className="font-label-code text-[7px] uppercase tracking-[0.35em] text-[#00f0ff]">
+        <div className="mt-4 flex items-center justify-center gap-2 opacity-25">
+          <div className="h-[1px] flex-1 bg-[#3b4b37]" />
+          <span className="font-label-code text-[8px] uppercase tracking-[0.35em] text-[#00f1fe]">
             PULSATER_SECURE_HANDSHAKE
           </span>
-          <div className="h-[1px] flex-1" style={{ backgroundColor: "#00f0ff" }} />
+          <div className="h-[1px] flex-1 bg-[#3b4b37]" />
         </div>
       </div>
     </div>

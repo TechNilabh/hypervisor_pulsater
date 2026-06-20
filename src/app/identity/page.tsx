@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+import { API_BASE_URL } from "@/lib/api";
 
 const REFRESH_SPEEDS = [500, 1000, 2000, 5000];
 
@@ -269,7 +268,7 @@ export default function IdentityAuth() {
     }
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/v1/users/avatar`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/users/avatar`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -314,8 +313,8 @@ export default function IdentityAuth() {
   };
 
   return (
-    <div className="bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] h-[calc(100vh-64px)] flex flex-col overflow-hidden">
-      <main className="flex-grow p-4 md:p-6 overflow-y-auto h-[calc(100vh-64px)]">
+    <div className="bg-[#0d0f12] text-[#adbac7] font-body-mono p-8 border border-[#1f242c] selection:bg-[#00f1fe]/20 selection:text-[#00f1fe] h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      <main className="flex-grow overflow-y-auto custom-scrollbar">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
 
           {/* ─── Left Pane: Identity Grid Scanner ────────────────────────── */}
@@ -323,9 +322,9 @@ export default function IdentityAuth() {
 
             {/* Identity Grid Scanner panel */}
             <div className="flex flex-col relative min-h-[400px]">
-              <div className="flex items-center justify-between bg-[#353534] px-3 py-1 border border-[#3b4b37]">
-                <span className="text-[10px] font-label-code text-[#72ff70] uppercase tracking-widest">
-                  Identity Grid Scanner // {activeSlot.id}
+              <div className="flex items-center justify-between bg-[#0e0e0e] px-3 py-1 border border-[#3b4b37]">
+                <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
+                  [ IDENTITY_GRID_SCANNER // {activeSlot.id} ]
                 </span>
                 <span className="material-symbols-outlined text-sm text-[#84967e] cursor-pointer hover:text-white">
                   close
@@ -337,24 +336,24 @@ export default function IdentityAuth() {
                 <div className="absolute bracket-bl" />
                 <div className="absolute bracket-br" />
                 <div className="absolute inset-x-0 z-10 scanning-line pointer-events-none" />
-                <div className="w-full h-full relative bg-[#201f1f] overflow-hidden border border-[#3b4b37]/30 flex-1 flex items-center justify-center min-h-[300px]">
+                <div className="w-full h-full relative bg-[#050505] overflow-hidden border border-[#3b4b37]/30 flex-1 flex items-center justify-center min-h-[300px]">
                   <img
                     className="w-full h-full object-cover grayscale brightness-75 contrast-125 opacity-80"
                     alt="Cybernetic operator identity scan."
                     src={activeSlot.img}
                   />
                   <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/90 to-transparent">
-                    <div className="font-label-code text-[#72ff70] text-[10px] mb-1">
+                    <div className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest mb-1">
                       {overrideState === "success"
                         ? "BYPASS SUCCESSFUL: CORE UNLOCKED"
                         : "NODE ACCESS DEPLOYMENT: SCANNING ID..."}
                     </div>
                     {overrideState === "success" ? (
                       <div className="flex items-end justify-between">
-                        <div className="text-[20px] font-display-tech text-[#00ff41] tracking-widest uppercase font-bold animate-pulse">
+                        <div className="text-[20px] font-display-tech text-[#00e639] tracking-widest uppercase font-bold animate-pulse">
                           ACCESS GRANTED
                         </div>
-                        <div className="text-[10px] font-label-code text-[#72ff70]">
+                        <div className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
                           AUTH_KEY: OK-200
                         </div>
                       </div>
@@ -363,16 +362,16 @@ export default function IdentityAuth() {
                         <div className="text-[20px] font-display-tech text-[#00f1fe] tracking-widest uppercase font-bold animate-pulse">
                           BYPASSING...
                         </div>
-                        <div className="text-[10px] font-label-code text-[#b9ccb2]">
+                        <div className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
                           OVERRIDE SEQUENCE ACTIVE
                         </div>
                       </div>
                     ) : (
                       <div className="flex items-end justify-between">
-                        <div className="text-[20px] font-display-tech text-error tracking-widest uppercase font-bold flicker">
+                        <div className="text-[20px] font-display-tech text-red-500 tracking-widest uppercase font-bold flicker">
                           {activeSlot.status}
                         </div>
-                        <div className="text-[10px] font-label-code text-[#84967e]">
+                        <div className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
                           ERR_CODE: {activeSlot.code}
                         </div>
                       </div>
@@ -390,26 +389,26 @@ export default function IdentityAuth() {
               <div className="absolute bracket-br" />
 
               <div className="flex items-center gap-2 border-b border-[#3b4b37]/30 pb-2">
-                <span className="material-symbols-outlined text-[#00ff41] text-md animate-pulse">
+                <span className="material-symbols-outlined text-[#00e639] text-md animate-pulse">
                   analytics
                 </span>
-                <span className="font-label-code text-[10px] text-white uppercase tracking-widest">
-                  Operator Core Status Panel
+                <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
+                  [ OPERATOR_CORE_STATUS_PANEL ]
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-4 bg-black/60 p-3 border border-[#3b4b37]/30 font-body-mono text-xs">
                 <div>
-                  <span className="text-[#84967e] block text-[8px] uppercase tracking-widest">
-                    AUTHENTICATED_OPERATOR
+                  <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest block">
+                    [ AUTHENTICATED_OPERATOR ]
                   </span>
-                  <span className="text-[#00ff41] font-bold truncate block">
+                  <span className="text-[#00e639] font-bold truncate block">
                     {callsign || sessionMetadata?.username || "GHOST_IN_THE_SHELL"}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[#84967e] block text-[8px] uppercase tracking-widest">
-                    OAUTH_EMAIL_PROTOCOL
+                  <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest block">
+                    [ OAUTH_EMAIL_PROTOCOL ]
                   </span>
                   <span className="text-[#00f1fe] break-all block truncate">
                     {sessionMetadata?.email || "unknown@pulsater.net"}
@@ -418,7 +417,7 @@ export default function IdentityAuth() {
               </div>
 
               <div className="space-y-2">
-                <div className="font-label-code text-[9px] text-[#00f1fe] uppercase tracking-wider">
+                <div className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
                   [ ACTIVE_CONTAINER_TELEMETRY ]
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-[10px] font-body-mono bg-[#131313] p-2 border border-[#3b4b37]/20">
@@ -428,7 +427,7 @@ export default function IdentityAuth() {
                   </div>
                   <div className="border-r border-[#3b4b37]/20 px-2">
                     <span className="text-[#84967e] block text-[7px]">ACTIVE_PORTS</span>
-                    <span className="text-[#00ff41] block">5432:5432</span>
+                    <span className="text-[#00e639] block">5432:5432</span>
                   </div>
                   <div className="pl-2">
                     <span className="text-[#84967e] block text-[7px]">UPTIME</span>
@@ -438,21 +437,21 @@ export default function IdentityAuth() {
               </div>
 
               <div className="space-y-2">
-                <div className="font-label-code text-[9px] text-[#00ff41] uppercase tracking-wider">
+                <div className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
                   [ PROTOCOL_INGESTION_LOGS ]
                 </div>
                 <div className="bg-black/80 border border-[#3b4b37]/30 p-3 font-mono text-[9px] text-[#b9ccb2] space-y-1.5 max-h-28 overflow-y-auto custom-scrollbar">
-                  <div>[16:01:04] <span className="text-[#00ff41]">SYS_INIT:</span> Neural socket loaded successfully.</div>
+                  <div>[16:01:04] <span className="text-[#00e639]">SYS_INIT:</span> Neural socket loaded successfully.</div>
                   <div>[16:01:05] <span className="text-[#00f1fe]">OAUTH_LINK:</span> Secure gateway handshake authenticated.</div>
-                  <div>[16:01:08] <span className="text-[#00ff41]">DB_MIGRATE:</span> Verification ledger active on shard.</div>
-                  <div>[16:02:11] <span className="text-error">BYPASS_SEC:</span> Protocol bypass standing by for Operator lock.</div>
+                  <div>[16:01:08] <span className="text-[#00e639]">DB_MIGRATE:</span> Verification ledger active on shard.</div>
+                  <div>[16:02:11] <span className="text-red-500">BYPASS_SEC:</span> Protocol bypass standing by for Operator lock.</div>
                   {overrideState === "running" && (
-                    <div className="text-[#00ff41] animate-pulse">
+                    <div className="text-[#00e639] animate-pulse">
                       &gt; [16:02:50] OVERRIDE: Deploying secure avatar bypass core...
                     </div>
                   )}
                   {overrideState === "success" && (
-                    <div className="text-[#00ff41] font-bold">
+                    <div className="text-[#00e639] font-bold">
                       &gt; [16:02:52] SECURE: Bypass complete. Session fully authorized.
                     </div>
                   )}
@@ -460,7 +459,7 @@ export default function IdentityAuth() {
               </div>
 
               <div className="border-t border-[#3b4b37]/30 pt-4 flex justify-between items-center">
-                <span className="font-label-code text-[8px] text-[#84967e] uppercase tracking-widest">
+                <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
                   [ SECURITY_PROTOCOL: LEVEL_01 ]
                 </span>
                 <button
@@ -479,9 +478,9 @@ export default function IdentityAuth() {
 
             {/* Node Avatar Selector */}
             <div className="flex flex-col">
-              <div className="flex items-center justify-between bg-[#353534] px-3 py-1 border border-[#3b4b37] mb-4">
-                <span className="text-[10px] font-label-code text-[#00dbe7] uppercase tracking-widest">
-                  Node Avatar Selector // CLUSTER_POOL
+              <div className="flex items-center justify-between bg-[#0e0e0e] px-3 py-1 border border-[#3b4b37] mb-4">
+                <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
+                  [ NODE_AVATAR_SELECTOR // CLUSTER_POOL ]
                 </span>
                 <div className="flex gap-2">
                   <span className="material-symbols-outlined text-sm text-[#00dbe7] cursor-pointer">filter_list</span>
@@ -509,19 +508,19 @@ export default function IdentityAuth() {
                     )}
                     <div className="flex justify-between items-start mb-3">
                       <div className={`w-8 h-8 flex items-center justify-center rounded ${
-                        slot.active ? "bg-[#00f1fe]/20 text-[#00f1fe]" : "bg-[#353534]/50 text-[#84967e]"
+                        slot.active ? "bg-[#00f1fe]/20 text-[#00f1fe]" : "bg-[#1c1b1b]/50 text-[#84967e]"
                       }`}>
                         <span className="material-symbols-outlined text-lg">
                           {slot.locked ? "lock" : slot.id === "Node_02" ? "psychology" : slot.id === "Node_03" ? "memory" : "person_search"}
                         </span>
                       </div>
-                      <div className="text-[10px] font-label-code text-[#84967e] uppercase">{slot.id}</div>
+                      <div className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">{slot.id}</div>
                     </div>
                     <div className={`font-body-mono-sm text-[12px] truncate ${slot.active ? "text-[#00f1fe] font-bold" : "text-[#b9ccb2]"}`}>
                       {slot.name}
                     </div>
                     {!slot.locked && (
-                      <div className="mt-2 h-1 bg-[#201f1f] overflow-hidden">
+                      <div className="mt-2 h-1 bg-[#050505] overflow-hidden">
                         <div
                           className={`h-full ${slot.active ? "bg-[#00f1fe]" : "bg-[#84967e]"} transition-all duration-300`}
                           style={{ width: `${slot.progress}%` }}
@@ -541,44 +540,41 @@ export default function IdentityAuth() {
                   onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 bg-[#0e0e0e] ${
                     dragActive
-                      ? "border-[#00ff41] bg-[#00ff41]/5 shadow-[0_0_15px_rgba(0,255,65,0.2)]"
+                      ? "border-[#00e639] bg-[#00e639]/5 shadow-[0_0_15px_rgba(0,230,57,0.2)]"
                       : "border-[#3b4b37] hover:border-[#00f1fe] hover:bg-[#00f1fe]/5"
                   }`}
                 >
                   <input type="file" id="file-upload-input" className="hidden" accept="image/*" onChange={handleFileChange} />
                   <label htmlFor="file-upload-input" className="cursor-pointer flex flex-col items-center gap-2 w-full">
                     <span className="material-symbols-outlined text-3xl text-[#00f1fe] animate-pulse">cloud_upload</span>
-                    <div className="font-label-code text-[11px] text-white">DRAG & DROP PORTRAIT OR CLICK TO BROWSE</div>
-                    <div className="font-body-mono text-[9px] text-[#b9ccb2]">Supports JPEG, PNG, WEBP (Max 2MB)</div>
+                    <div className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">DRAG & DROP PORTRAIT OR CLICK TO BROWSE</div>
+                    <div className="font-body-mono text-[10px] text-[#b9ccb2]">[ Supports JPEG, PNG, WEBP (Max 2MB) ]</div>
                   </label>
                 </div>
               </div>
             </div>
 
             {/* OPERATOR_CONFIGURATION_MATRIX */}
-            <div
-              className="border border-[#00f0ff]/30 p-6 relative overflow-hidden flex flex-col gap-5 rounded-sm"
-              style={{ backgroundColor: "#0d0f12" }}
-            >
+            <div className="border border-[#00f1fe]/30 p-6 relative overflow-hidden flex flex-col gap-5 rounded-sm bg-[#0e0e0e]">
               {/* Corner HUD brackets */}
-              <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-[#00f0ff] opacity-40" />
-              <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-[#00f0ff] opacity-40" />
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-[#00f0ff] opacity-40" />
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-[#00f0ff] opacity-40" />
+              <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-[#00f1fe] opacity-40" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-[#00f1fe] opacity-40" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-[#00f1fe] opacity-40" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-[#00f1fe] opacity-40" />
 
               {/* Panel header */}
-              <div className="flex items-center justify-between border-b border-[#00f0ff]/20 pb-3">
+              <div className="flex items-center justify-between border-b border-[#00f1fe]/20 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-[3px] items-center">
-                    <div className="w-1 h-1 rounded-full bg-[#00f0ff] animate-ping" />
-                    <div className="w-1 h-1 rounded-full bg-[#00f0ff]/40" />
+                    <div className="w-1 h-1 rounded-full bg-[#00f1fe] animate-ping" />
+                    <div className="w-1 h-1 rounded-full bg-[#00f1fe]/40" />
                   </div>
-                  <span className="font-label-code text-[9px] text-[#00f0ff] uppercase tracking-[0.25em]">
-                    OPERATOR_CONFIGURATION_MATRIX
+                  <span className="font-display-tech text-[#74f5ff] tracking-tighter text-sm md:text-base uppercase">
+                    OPERATOR_CONFIGURATION_MATRIX // CRITICAL_SYSTEM_NODE
                   </span>
                 </div>
-                <span className="font-label-code text-[8px] text-[#2d3748] tracking-widest">
-                  RUNTIME_PROFILE
+                <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
+                  [ RUNTIME_PROFILE ]
                 </span>
               </div>
 
@@ -586,38 +582,26 @@ export default function IdentityAuth() {
               <div className="flex flex-col gap-2">
                 <label
                   htmlFor="callsign-input"
-                  className="font-label-code text-[9px] text-[#00f0ff]/80 uppercase tracking-[0.2em]"
+                  className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest"
                 >
                   [ OPERATOR_CALLSIGN_ALIAS ]
                 </label>
-                <div className="relative">
+                <div className="relative w-full sm:w-80">
                   <input
                     id="callsign-input"
                     type="text"
                     value={callsign}
                     onChange={(e) => handleCallsignChange(e.target.value)}
                     placeholder="GHOST_OPERATOR_01"
-                    className="w-full font-body-mono p-3 text-[11px] text-white focus:outline-none transition-all placeholder:opacity-20 pr-8"
-                    style={{
-                      backgroundColor: "#0a0c0f",
-                      border: "1px solid rgba(0,240,255,0.25)",
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.border = "1px solid rgba(0,240,255,0.7)";
-                      e.currentTarget.style.boxShadow = "0 0 10px rgba(0,240,255,0.12)";
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.border = "1px solid rgba(0,240,255,0.25)";
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
+                    className="w-full bg-[#12161a] border border-[#00f0ff]/40 text-[#74f5ff] placeholder:opacity-20 p-3 font-body-mono focus:border-[#00f1fe] focus:outline-none focus:shadow-[0_0_10px_rgba(0,241,254,0.2)] pr-8"
                   />
-                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#00f0ff]/50 text-sm pointer-events-none">
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#00f1fe]/50 text-sm pointer-events-none">
                     edit
                   </span>
                 </div>
-                <p className="font-label-code text-[8px] text-[#2d3748] leading-relaxed">
+                <p className="font-label-code text-[8px] text-[#84967e] leading-relaxed">
                   Updates HUD navbar display name in real-time. Commits instantly to localStorage["operator_callsign"]
-                  and fires the <span className="text-[#00f0ff]/50">operatorChanged</span> event.
+                  and fires the <span className="text-[#00f1fe]/50">operatorChanged</span> event.
                 </p>
               </div>
 
@@ -626,12 +610,12 @@ export default function IdentityAuth() {
                 <div className="flex items-center justify-between">
                   <label
                     htmlFor="refresh-speed-slider"
-                    className="font-label-code text-[9px] text-[#00f0ff]/80 uppercase tracking-[0.2em]"
+                    className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest"
                   >
                     [ TELEMETRY_REFRESH_SPEED ]
                   </label>
                   <div className="flex items-baseline gap-0.5">
-                    <span className="font-display-tech text-[#00f0ff] text-base font-bold">
+                    <span className="font-display-tech text-[#00f1fe] text-base font-bold">
                       {refreshSpeed}
                     </span>
                     <span className="font-label-code text-[8px] text-[#4a9ead]">ms</span>
@@ -665,7 +649,7 @@ export default function IdentityAuth() {
                       type="button"
                       onClick={() => handleRefreshSpeedChange(REFRESH_SPEEDS.indexOf(ms))}
                       className={`font-label-code text-[8px] transition-colors ${
-                        refreshSpeed === ms ? "text-[#00f0ff] font-bold" : "text-[#2d3748] hover:text-[#00f0ff]"
+                        refreshSpeed === ms ? "text-[#00f1fe] font-bold" : "text-[#84967e] hover:text-[#00f1fe]"
                       }`}
                     >
                       {ms}ms
@@ -673,7 +657,7 @@ export default function IdentityAuth() {
                   ))}
                 </div>
 
-                <p className="font-label-code text-[8px] text-[#2d3748] leading-relaxed">
+                <p className="font-label-code text-[8px] text-[#84967e] leading-relaxed">
                   Controls data polling loop interval for live telemetry streams.
                   Persists to localStorage["telemetry_refresh_ms"] across reloads.
                 </p>
@@ -684,15 +668,15 @@ export default function IdentityAuth() {
             <div className="bg-[#0e0e0e] border border-[#3b4b37] p-6 flex flex-col gap-6">
               <div className="flex items-center gap-2 mb-2">
                 <span className="material-symbols-outlined text-[#00e639] text-sm">security</span>
-                <h3 className="font-label-code text-[10px] text-white uppercase tracking-widest">
-                  Validation Progress Tier // DEC_SEQ
+                <h3 className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
+                  [ VALIDATION_PROGRESS_TIER // DEC_SEQ ]
                 </h3>
               </div>
 
               {/* Track 1 */}
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between text-[10px] font-label-code uppercase text-[#84967e]">
-                  <span>Core_Hash_Verification</span>
+                  <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">[ CORE_HASH_VERIFICATION ]</span>
                   <span className="text-[#00e639]">84%</span>
                 </div>
                 <div className="segment-bar h-3 flex w-full">
@@ -705,7 +689,7 @@ export default function IdentityAuth() {
               {/* Track 2 */}
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between text-[10px] font-label-code uppercase text-[#84967e]">
-                  <span>Sub-millisecond_Sync</span>
+                  <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">[ SUB_MILLISECOND_SYNC ]</span>
                   <span className="text-[#00e639]">42%</span>
                 </div>
                 <div className="segment-bar h-3 flex w-full">
@@ -718,8 +702,8 @@ export default function IdentityAuth() {
               {/* Track 3 — Neural Handshake (animated) */}
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between text-[10px] font-label-code uppercase text-[#84967e]">
-                  <span>Neural_Handshake</span>
-                  <span>{overrideState === "success" ? "SYNC COMPLETED" : "COMPUTING..."}</span>
+                  <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">[ NEURAL_HANDSHAKE ]</span>
+                  <span className="text-[#00e639]">{overrideState === "success" ? "SYNC COMPLETED" : "COMPUTING..."}</span>
                 </div>
                 <div className="segment-bar h-3 flex w-full">
                   {Array.from({ length: 20 }).map((_, i) => {
@@ -739,12 +723,12 @@ export default function IdentityAuth() {
               <button
                 onClick={handleOverride}
                 disabled={overrideState !== "idle"}
-                className={`w-full font-label-code py-3 text-[12px] uppercase tracking-widest transition-all border-b-4 ${
+                className={`w-full font-label-code py-4 tracking-widest uppercase transition-all flex items-center justify-center gap-2.5 ${
                   overrideState === "success"
-                    ? "bg-[#00e639] text-[#002203] border-[#00530e]"
+                    ? "bg-[#00e639]/10 border border-[#00e639] text-[#00e639] hover:bg-[#00e639]/20 hover:shadow-[0_0_20px_rgba(0,230,57,0.4)]"
                     : overrideState === "running"
-                    ? "bg-[#00f1fe]/20 text-[#00f1fe] border-[#004f54] cursor-not-allowed"
-                    : "bg-[#00e639] text-[#002203] hover:brightness-110 active:opacity-90 border-[#00530e]"
+                    ? "bg-[#00f1fe]/5 border border-[#00f1fe]/30 text-[#00f1fe]/50 cursor-not-allowed"
+                    : "bg-[#00f1fe]/10 border border-[#00f1fe] text-[#00f1fe] hover:bg-[#00f1fe]/20 hover:shadow-[0_0_20px_rgba(0,241,254,0.4)]"
                 }`}
               >
                 {overrideState === "success"
