@@ -150,6 +150,8 @@ func main() {
 }
 
 func runMigrations() error {
+	ctx := context.Background()
+
 	// ── Phase 1 baseline ────────────────────────────────────────────────────
 	phase1Query := `
 	CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -183,87 +185,253 @@ func runMigrations() error {
 		provisioned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 	);
 	`
-	if _, err := DB.Exec(context.Background(), phase1Query); err != nil {
+	if _, err := DB.Exec(ctx, phase1Query); err != nil {
 		return fmt.Errorf("phase 1 migration failed: %w", err)
 	}
 	log.Println("[MIGRATION] Phase 1 schemas verified.")
 
-	// ── Phase 2 — additive columns on containers, new tables ────────────────
-	// Each ALTER is idempotent via IF NOT EXISTS; the Phase 1 columns remain intact.
-	phase2ContainerCols := []string{
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS operator_id UUID REFERENCES users(id)`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS callsign_alias TEXT`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS target_vector_type TEXT CHECK (target_vector_type IN ('PHARMA_R3','IOT_GRID','QUANT_ALPHA'))`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS status_state TEXT NOT NULL DEFAULT 'INITIALIZED' CHECK (status_state IN ('INITIALIZED','PROCESSING','SYNCED','FAILED'))`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS storage_payload_url TEXT`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS storage_backend TEXT NOT NULL DEFAULT 'local'`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS file_size_bytes BIGINT`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS checksum_sha256 TEXT`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS idempotency_key TEXT`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS retry_count INT NOT NULL DEFAULT 0`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS error_message TEXT`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`,
-		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`,
+	// ── Phase 2 — single transaction, strict dependency order ────────────────
+	//
+	// Ordering contract (enforced by code structure, not comments):
+	//   STEP 1 — ALTER TABLE containers ADD COLUMN IF NOT EXISTS  (all columns)
+	//   STEP 2 — CREATE TABLE IF NOT EXISTS container_events / processing_jobs
+	//   STEP 3 — Assertion: verify every column referenced by an index exists
+	//   STEP 4 — CREATE INDEX IF NOT EXISTS  (only after steps 1-3 pass)
+	//
+	// The entire block runs inside one explicit transaction. Any failure rolls
+	// back cleanly, preventing the "different error on every restart" behaviour
+	// caused by partial schema application.
+
+	tx, err := DB.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("phase 2 migration: begin transaction: %w", err)
 	}
-	for _, q := range phase2ContainerCols {
-		if _, err := DB.Exec(context.Background(), q); err != nil {
-			return fmt.Errorf("phase 2 containers column migration failed (%s): %w", q, err)
+	defer func() { _ = tx.Rollback(ctx) }() // no-op after Commit
+
+	// execStep logs and executes a single DDL statement via the transaction.
+	// Logging the statement means any future 42703 names the exact failing line.
+	execStep := func(label, sql string) error {
+		log.Printf("[MIGRATION][P2] %s", label)
+		if _, err := tx.Exec(ctx, sql); err != nil {
+			return fmt.Errorf("phase 2 migration — %s: %w", label, err)
+		}
+		return nil
+	}
+
+	// ── STEP 1: ALTER TABLE containers — add every Phase 2 column ─────────────
+	// Columns are added with DEFAULT now() / DEFAULT 0 / DEFAULT 'local' so that
+	// existing Phase-1 rows receive a valid non-NULL value immediately on ALTER,
+	// without requiring a backfill UPDATE. Each ALTER is independently idempotent
+	// via IF NOT EXISTS.
+	//
+	// IMPORTANT — created_at is NOT in the Phase 1 containers DDL (that table
+	// only has provisioned_at). We add it here so that idx_containers_created_desc
+	// has a column to reference. DEFAULT now() ensures existing rows are covered.
+	phase2AlterCols := []struct{ label, sql string }{
+		{
+			"ALTER containers ADD operator_id",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS operator_id UUID REFERENCES users(id)`,
+		},
+		{
+			"ALTER containers ADD callsign_alias",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS callsign_alias TEXT`,
+		},
+		{
+			"ALTER containers ADD target_vector_type",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS target_vector_type TEXT CHECK (target_vector_type IN ('PHARMA_R3','IOT_GRID','QUANT_ALPHA'))`,
+		},
+		{
+			"ALTER containers ADD status_state",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS status_state TEXT NOT NULL DEFAULT 'INITIALIZED' CHECK (status_state IN ('INITIALIZED','PROCESSING','SYNCED','FAILED'))`,
+		},
+		{
+			"ALTER containers ADD storage_payload_url",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS storage_payload_url TEXT`,
+		},
+		{
+			"ALTER containers ADD storage_backend",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS storage_backend TEXT NOT NULL DEFAULT 'local'`,
+		},
+		{
+			"ALTER containers ADD file_size_bytes",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS file_size_bytes BIGINT`,
+		},
+		{
+			"ALTER containers ADD checksum_sha256",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS checksum_sha256 TEXT`,
+		},
+		{
+			"ALTER containers ADD idempotency_key",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS idempotency_key TEXT`,
+		},
+		{
+			"ALTER containers ADD retry_count",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS retry_count INT NOT NULL DEFAULT 0`,
+		},
+		{
+			"ALTER containers ADD error_message",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS error_message TEXT`,
+		},
+		{
+			// created_at is absent from the Phase 1 containers DDL — add it now.
+			// idx_containers_created_desc depends on this column; without it the
+			// index CREATE fails with SQLSTATE 42703 (column does not exist).
+			// DEFAULT now() gives existing provisioned rows a valid timestamp.
+			"ALTER containers ADD created_at (missing from Phase 1 containers — required by idx_containers_created_desc)",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now()`,
+		},
+		{
+			"ALTER containers ADD updated_at",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`,
+		},
+		{
+			"ALTER containers ADD deleted_at",
+			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`,
+		},
+	}
+
+	for _, col := range phase2AlterCols {
+		if err := execStep(col.label, col.sql); err != nil {
+			return err
 		}
 	}
+	log.Println("[MIGRATION][P2] STEP 1 complete — all containers columns applied.")
 
-	phase2TablesQuery := `
-	CREATE TABLE IF NOT EXISTS container_events (
-		event_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-		container_id UUID NOT NULL REFERENCES containers(id) ON DELETE CASCADE,
-		from_state TEXT,
-		to_state   TEXT,
-		occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-		detail JSONB
-	);
+	// ── STEP 2: CREATE TABLE container_events and processing_jobs ─────────────
+	// These must come after the ALTER statements so that the FK reference to
+	// containers(id) sees the complete column set, and so that the index
+	// statements in STEP 4 can reference their columns.
 
-	CREATE TABLE IF NOT EXISTS processing_jobs (
-		job_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-		container_id UUID NOT NULL REFERENCES containers(id) ON DELETE CASCADE,
-		job_status   TEXT NOT NULL DEFAULT 'QUEUED' CHECK (job_status IN ('QUEUED','RUNNING','DONE','FAILED')),
-		attempts     INT  NOT NULL DEFAULT 0,
-		locked_by    TEXT,
-		locked_at    TIMESTAMPTZ,
-		next_retry_at TIMESTAMPTZ,
-		created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-		updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
-	);
-
-	-- Phase 2 indexes
-	CREATE INDEX IF NOT EXISTS idx_containers_operator_status
-		ON containers (operator_id, status_state);
-
-	CREATE INDEX IF NOT EXISTS idx_containers_created_desc
-		ON containers (created_at DESC);
-
-	CREATE INDEX IF NOT EXISTS idx_containers_active
-		ON containers (status_state)
-		WHERE status_state != 'SYNCED';
-
-	CREATE UNIQUE INDEX IF NOT EXISTS idx_containers_idempotency
-		ON containers (operator_id, idempotency_key)
-		WHERE idempotency_key IS NOT NULL;
-
-	CREATE INDEX IF NOT EXISTS idx_processing_jobs_queue
-		ON processing_jobs (job_status, next_retry_at);
-
-	CREATE INDEX IF NOT EXISTS idx_container_events_container
-		ON container_events (container_id, occurred_at DESC);
-	`
-	if _, err := DB.Exec(context.Background(), phase2TablesQuery); err != nil {
-		return fmt.Errorf("phase 2 tables/indexes migration failed: %w", err)
+	newTables := []struct{ label, sql string }{
+		{
+			"CREATE TABLE container_events",
+			`CREATE TABLE IF NOT EXISTS container_events (
+				event_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				container_id UUID NOT NULL REFERENCES containers(id) ON DELETE CASCADE,
+				from_state   TEXT,
+				to_state     TEXT,
+				occurred_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+				detail       JSONB
+			)`,
+		},
+		{
+			"CREATE TABLE processing_jobs",
+			`CREATE TABLE IF NOT EXISTS processing_jobs (
+				job_id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				container_id  UUID NOT NULL REFERENCES containers(id) ON DELETE CASCADE,
+				job_status    TEXT NOT NULL DEFAULT 'QUEUED' CHECK (job_status IN ('QUEUED','RUNNING','DONE','FAILED')),
+				attempts      INT  NOT NULL DEFAULT 0,
+				locked_by     TEXT,
+				locked_at     TIMESTAMPTZ,
+				next_retry_at TIMESTAMPTZ,
+				created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+				updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
 	}
 
-	log.Println("[MIGRATION] Phase 2 schemas verified (container_events, processing_jobs, indexes active).")
+	for _, tbl := range newTables {
+		if err := execStep(tbl.label, tbl.sql); err != nil {
+			return err
+		}
+	}
+	log.Println("[MIGRATION][P2] STEP 2 complete — container_events and processing_jobs created.")
+
+	// ── STEP 3: Assertion — verify all index-referenced columns exist ──────────
+	// This runs inside the same transaction, after STEP 1 and STEP 2, so any
+	// column that was successfully added will be visible here.
+	// If a column is still missing at this point (e.g. the ALTER silently no-
+	// op'd against a schema that already has a conflicting definition), we fail
+	// fast with a clear diagnostic instead of getting a raw 42703 from Postgres.
+
+	requiredColumns := []string{
+		"created_at",   // idx_containers_created_desc
+		"updated_at",   // idx_containers_operator_status (implicit via operator_id)
+		"status_state", // idx_containers_operator_status, idx_containers_active
+		"operator_id",  // idx_containers_operator_status, idx_containers_idempotency
+		"idempotency_key", // idx_containers_idempotency
+	}
+
+	log.Println("[MIGRATION][P2] STEP 3 — asserting required columns exist before index creation...")
+	for _, col := range requiredColumns {
+		var found bool
+		assertSQL := `
+			SELECT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_schema = 'public'
+				  AND table_name   = 'containers'
+				  AND column_name  = $1
+			)`
+		// Use the transaction so we see our own uncommitted ALTERs.
+		if err := tx.QueryRow(ctx, assertSQL, col).Scan(&found); err != nil {
+			return fmt.Errorf("phase 2 migration — column assertion query failed for %q: %w", col, err)
+		}
+		if !found {
+			return fmt.Errorf(
+				"phase 2 migration — assertion failed: column %q does not exist on containers "+
+					"after ALTER TABLE step; cannot proceed to index creation (SQLSTATE 42703 would follow)",
+				col,
+			)
+		}
+		log.Printf("[MIGRATION][P2] assertion OK: containers.%s exists", col)
+	}
+	log.Println("[MIGRATION][P2] STEP 3 complete — all required columns confirmed present.")
+
+	// ── STEP 4: CREATE INDEX — after every column and table is guaranteed ──────
+	// Each index statement is executed individually so a failure names the exact
+	// index that broke, not a generic "phase 2 migration failed" message.
+
+	indexes := []struct{ label, sql string }{
+		{
+			"CREATE INDEX idx_containers_operator_status",
+			`CREATE INDEX IF NOT EXISTS idx_containers_operator_status
+				ON containers (operator_id, status_state)`,
+		},
+		{
+			"CREATE INDEX idx_containers_created_desc",
+			// created_at was added in STEP 1 and verified in STEP 3.
+			`CREATE INDEX IF NOT EXISTS idx_containers_created_desc
+				ON containers (created_at DESC)`,
+		},
+		{
+			"CREATE INDEX idx_containers_active (partial)",
+			`CREATE INDEX IF NOT EXISTS idx_containers_active
+				ON containers (status_state)
+				WHERE status_state != 'SYNCED'`,
+		},
+		{
+			"CREATE UNIQUE INDEX idx_containers_idempotency (partial)",
+			`CREATE UNIQUE INDEX IF NOT EXISTS idx_containers_idempotency
+				ON containers (operator_id, idempotency_key)
+				WHERE idempotency_key IS NOT NULL`,
+		},
+		{
+			"CREATE INDEX idx_processing_jobs_queue",
+			`CREATE INDEX IF NOT EXISTS idx_processing_jobs_queue
+				ON processing_jobs (job_status, next_retry_at)`,
+		},
+		{
+			"CREATE INDEX idx_container_events_container",
+			`CREATE INDEX IF NOT EXISTS idx_container_events_container
+				ON container_events (container_id, occurred_at DESC)`,
+		},
+	}
+
+	for _, idx := range indexes {
+		if err := execStep(idx.label, idx.sql); err != nil {
+			return err
+		}
+	}
+	log.Println("[MIGRATION][P2] STEP 4 complete — all indexes created.")
+
+	// ── Commit the Phase 2 transaction ────────────────────────────────────────
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("phase 2 migration — commit failed: %w", err)
+	}
+
+	log.Println("[MIGRATION] Phase 2 schemas verified (container_events, processing_jobs, all indexes active).")
 	return nil
 }
-
-// fmtSprintf is a package-level alias kept so the fmt import is used across all files.
-var _ = fmt.Sprintf
 
 func validateOAuthEnv() {
 	providers := map[string][2]string{
