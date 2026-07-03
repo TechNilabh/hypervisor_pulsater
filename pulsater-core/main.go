@@ -2,13 +2,40 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/joho/godotenv"
+
+	"github.com/nilabh/pulsater-core/worker"
 )
+
+
+// StorageInstance is the process-wide storage backend (local or S3).
+// Initialised in main() before any handler is invoked.
+var StorageInstance StorageBackend
+
+// hubAdapter wraps *SSEHub so it satisfies worker.HubPublisher.
+// worker.Event and ContainerEvent carry identical fields; this adapter
+// converts between them without coupling the two packages (Fix #5).
+type hubAdapter struct{ hub *SSEHub }
+
+func (a *hubAdapter) Publish(operatorID string, e worker.Event) {
+	a.hub.Publish(operatorID, ContainerEvent{
+		ContainerID:   e.ContainerID,
+		OperatorID:    e.OperatorID,
+		CallsignAlias: e.CallsignAlias,
+		FromState:     e.FromState,
+		ToState:       e.ToState,
+		OccurredAt:    e.OccurredAt,
+		Detail:        e.Detail,
+	})
+}
+
 
 func main() {
 	log.Println("Initializing HYPERVISOR_PULSATER core auth backend...")
@@ -27,6 +54,21 @@ func main() {
 	// Validate OAuth credentials at startup so you catch this immediately
 	validateOAuthEnv()
 
+	// Initialise slog as the structured logger for Phase 2 components.
+	slogger := slog.Default()
+
+	// Initialise storage backend (local or S3, driven by STORAGE_BACKEND env var).
+	var storageErr error
+	StorageInstance, storageErr = NewStorageBackend(context.Background(), slogger)
+	if storageErr != nil {
+		log.Fatalf("Fatal: Storage backend init failed: %v", storageErr)
+	}
+	log.Printf("[STORAGE] Backend initialised: %s", os.Getenv("STORAGE_BACKEND"))
+
+	// Initialise the SSE hub and start ticket GC.
+	GlobalHub = NewSSEHub(slogger)
+	startTicketGC()
+
 	if err := InitDB(); err != nil {
 		log.Fatalf("Fatal: Database initialization failed: %v", err)
 	}
@@ -35,6 +77,12 @@ func main() {
 	if err := runMigrations(); err != nil {
 		log.Fatalf("Fatal: Database migrations failed: %v", err)
 	}
+
+	// Start async processing worker (hub is wrapped in adapter to satisfy worker.HubPublisher).
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
+	proc := worker.NewProcessor(DB, &hubAdapter{hub: GlobalHub}, slog.Default())
+	go proc.Run(workerCtx)
 
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
@@ -57,6 +105,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	// ── Phase 1 routes (unchanged) ───────────────────────────────────────────
 	mux.HandleFunc("/api/v1/auth/signup", SignupHandler)
 	mux.HandleFunc("/api/v1/auth/login", LoginHandler)
 	mux.HandleFunc("/api/v1/auth/verify-mfa", VerifyMFAHandler)
@@ -75,6 +124,18 @@ func main() {
 
 	mux.HandleFunc("/api/v1/containers/provision", JWTAuthMiddleware(ProvisionContainerHandler))
 
+	// ── Phase 2 routes ───────────────────────────────────────────────────────
+	// SSE ticket (must come before /stream so the mux matches it first)
+	mux.HandleFunc("/api/v1/containers/stream/token", JWTAuthMiddleware(HandleIssueSSETicket))
+	// SSE stream — authenticated via one-time ticket in ?ticket= (Fix #1)
+	mux.HandleFunc("/api/v1/containers/stream", HandleContainerStream)
+	// Upload endpoint
+	mux.HandleFunc("/api/v1/containers/upload", JWTAuthMiddleware(HandleContainerUpload))
+	// Paginated list
+	mux.HandleFunc("/api/v1/containers/active", JWTAuthMiddleware(HandleListContainers))
+	// Detail + event history — catches /api/v1/containers/{id}
+	mux.HandleFunc("/api/v1/containers/", JWTAuthMiddleware(HandleGetContainer))
+
 	handler := CORSMiddleware(mux)
 
 	port := os.Getenv("PORT")
@@ -89,8 +150,10 @@ func main() {
 }
 
 func runMigrations() error {
-	migrationQuery := `
+	// ── Phase 1 baseline ────────────────────────────────────────────────────
+	phase1Query := `
 	CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+	CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 	CREATE TABLE IF NOT EXISTS users (
 		id UUID PRIMARY KEY,
@@ -120,15 +183,87 @@ func runMigrations() error {
 		provisioned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 	);
 	`
+	if _, err := DB.Exec(context.Background(), phase1Query); err != nil {
+		return fmt.Errorf("phase 1 migration failed: %w", err)
+	}
+	log.Println("[MIGRATION] Phase 1 schemas verified.")
 
-	_, err := DB.Exec(context.Background(), migrationQuery)
-	if err != nil {
-		return err
+	// ── Phase 2 — additive columns on containers, new tables ────────────────
+	// Each ALTER is idempotent via IF NOT EXISTS; the Phase 1 columns remain intact.
+	phase2ContainerCols := []string{
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS operator_id UUID REFERENCES users(id)`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS callsign_alias TEXT`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS target_vector_type TEXT CHECK (target_vector_type IN ('PHARMA_R3','IOT_GRID','QUANT_ALPHA'))`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS status_state TEXT NOT NULL DEFAULT 'INITIALIZED' CHECK (status_state IN ('INITIALIZED','PROCESSING','SYNCED','FAILED'))`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS storage_payload_url TEXT`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS storage_backend TEXT NOT NULL DEFAULT 'local'`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS file_size_bytes BIGINT`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS checksum_sha256 TEXT`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS idempotency_key TEXT`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS retry_count INT NOT NULL DEFAULT 0`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS error_message TEXT`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`,
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`,
+	}
+	for _, q := range phase2ContainerCols {
+		if _, err := DB.Exec(context.Background(), q); err != nil {
+			return fmt.Errorf("phase 2 containers column migration failed (%s): %w", q, err)
+		}
 	}
 
-	log.Println("Database schemas verified (users, oauth_identities, containers tables active).")
+	phase2TablesQuery := `
+	CREATE TABLE IF NOT EXISTS container_events (
+		event_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		container_id UUID NOT NULL REFERENCES containers(id) ON DELETE CASCADE,
+		from_state TEXT,
+		to_state   TEXT,
+		occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+		detail JSONB
+	);
+
+	CREATE TABLE IF NOT EXISTS processing_jobs (
+		job_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		container_id UUID NOT NULL REFERENCES containers(id) ON DELETE CASCADE,
+		job_status   TEXT NOT NULL DEFAULT 'QUEUED' CHECK (job_status IN ('QUEUED','RUNNING','DONE','FAILED')),
+		attempts     INT  NOT NULL DEFAULT 0,
+		locked_by    TEXT,
+		locked_at    TIMESTAMPTZ,
+		next_retry_at TIMESTAMPTZ,
+		created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+		updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+	);
+
+	-- Phase 2 indexes
+	CREATE INDEX IF NOT EXISTS idx_containers_operator_status
+		ON containers (operator_id, status_state);
+
+	CREATE INDEX IF NOT EXISTS idx_containers_created_desc
+		ON containers (created_at DESC);
+
+	CREATE INDEX IF NOT EXISTS idx_containers_active
+		ON containers (status_state)
+		WHERE status_state != 'SYNCED';
+
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_containers_idempotency
+		ON containers (operator_id, idempotency_key)
+		WHERE idempotency_key IS NOT NULL;
+
+	CREATE INDEX IF NOT EXISTS idx_processing_jobs_queue
+		ON processing_jobs (job_status, next_retry_at);
+
+	CREATE INDEX IF NOT EXISTS idx_container_events_container
+		ON container_events (container_id, occurred_at DESC);
+	`
+	if _, err := DB.Exec(context.Background(), phase2TablesQuery); err != nil {
+		return fmt.Errorf("phase 2 tables/indexes migration failed: %w", err)
+	}
+
+	log.Println("[MIGRATION] Phase 2 schemas verified (container_events, processing_jobs, indexes active).")
 	return nil
 }
+
+// fmtSprintf is a package-level alias kept so the fmt import is used across all files.
+var _ = fmt.Sprintf
 
 func validateOAuthEnv() {
 	providers := map[string][2]string{

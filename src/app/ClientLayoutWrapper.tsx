@@ -126,6 +126,7 @@ export default function ClientLayoutWrapper({
 
   const navLinks = [
     { name: "LIVE_CDC",       path: "/live-cdc",    icon: "sensors" },
+    { name: "INGESTION",      path: "/ingestion",   icon: "upload_file" },
     { name: "CLUSTER_HEALTH", path: "/cluster",      icon: "dns" },
     { name: "GLOBAL_ROUTING", path: "/routing",      icon: "hub" },
     { name: "CONNECTIONS",    path: "/connections",  icon: "settings_ethernet" },
