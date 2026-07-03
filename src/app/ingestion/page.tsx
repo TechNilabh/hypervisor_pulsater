@@ -169,25 +169,27 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
   };
 
   return (
-    <div className="bg-[#0e0e0e] border border-[#3b4b37] rounded-lg p-6 flex flex-col gap-4">
-      <div className="flex items-center gap-2 border-b border-[#3b4b37]/40 pb-3">
-        <span className="material-symbols-outlined text-[#00f1fe] text-xl">upload_file</span>
-        <span className="font-label-code text-[11px] text-[#00f1fe] tracking-widest uppercase">
-          Payload Upload Terminal
-        </span>
+    <div className="bg-[#1c1b1b]/80 backdrop-blur-md border border-[#3b4b37] rounded-sm p-5 flex flex-col gap-4 relative chamfer-br shadow-2xl overflow-hidden">
+      <div className="scanline-overlay absolute inset-0 z-0 pointer-events-none opacity-10"></div>
+      
+      <div className="flex justify-between items-center border-b border-[#3b4b37] pb-2 z-10">
+        <h2 className="font-label-code text-[10px] text-[#00e639] flex items-center gap-2 font-bold uppercase">
+          <span className="material-symbols-outlined text-sm">upload_file</span>
+          [MODULE: UPLOAD_TERMINAL]
+        </h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 z-10">
         {/* Drop zone */}
         <div
           ref={dropRef}
           onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop}
           onClick={() => fileRef.current?.click()}
-          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
+          className={`border border-dashed rounded-none p-6 text-center cursor-pointer transition-all relative ${
             file
-              ? "border-[#00ff41]/60 bg-[#00ff41]/5"
-              : "border-[#3b4b37] hover:border-[#00f1fe]/50 hover:bg-[#131313]"
+              ? "border-[#00ff41]/60 bg-[#00ff41]/5 shadow-[0_0_15px_rgba(0,255,65,0.05)]"
+              : "border-[#3b4b37] hover:border-[#00f1fe]/50 hover:bg-[#1c1b1b]/40"
           }`}
         >
           <input
@@ -201,20 +203,20 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
               <span className="material-symbols-outlined text-[#00ff41] text-3xl">
                 check_circle
               </span>
-              <span className="font-body-mono text-sm text-[#00ff41]">{file.name}</span>
+              <span className="font-body-mono text-xs text-[#00ff41]">{file.name}</span>
               <span className="font-label-code text-[9px] text-[#b9ccb2]">
                 {fmtBytes(file.size)}
               </span>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-2 py-2">
               <span className="material-symbols-outlined text-[#b9ccb2] text-3xl opacity-50">
                 cloud_upload
               </span>
-              <span className="font-body-mono text-sm text-[#b9ccb2]">
-                Drop CDC payload file here or click to browse
+              <span className="font-body-mono text-xs text-[#b9ccb2]">
+                Drop CDC payload or click to browse
               </span>
-              <span className="font-label-code text-[9px] text-[#84967e]">
+              <span className="font-label-code text-[8px] text-[#84967e] mt-1">
                 .json .csv .parquet .avro .bin — max 5 GiB
               </span>
             </div>
@@ -222,8 +224,8 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
         </div>
 
         {/* Form fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
             <label className="font-label-code text-[9px] text-[#84967e] uppercase tracking-wider">
               Callsign Alias *
             </label>
@@ -232,52 +234,51 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
               value={callsign}
               onChange={(e) => setCallsign(e.target.value)}
               placeholder="e.g. ALPHA-BATCH-001"
-              className="bg-[#131313] border border-[#3b4b37] rounded px-3 py-2 font-body-mono text-xs text-[#e5e2e1] placeholder-[#84967e]/50 focus:outline-none focus:border-[#00f1fe]/60 transition-colors"
+              className="bg-[#0e0e0e] border border-[#3b4b37] rounded-none px-3 py-2 font-body-mono text-xs text-[#e5e2e1] placeholder-[#84967e]/30 focus:outline-none focus:border-[#00f1fe] transition-colors"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1">
             <label className="font-label-code text-[9px] text-[#84967e] uppercase tracking-wider">
               Target Vector Type *
             </label>
             <select
               value={vectorType}
               onChange={(e) => setVectorType(e.target.value as VectorType)}
-              className="bg-[#131313] border border-[#3b4b37] rounded px-3 py-2 font-body-mono text-xs text-[#e5e2e1] focus:outline-none focus:border-[#00f1fe]/60 transition-colors cursor-pointer"
+              className="bg-[#0e0e0e] border border-[#3b4b37] rounded-none px-3 py-2 font-body-mono text-xs text-[#e5e2e1] focus:outline-none focus:border-[#00f1fe] transition-colors cursor-pointer"
             >
               <option value="PHARMA_R3">PHARMA_R3</option>
               <option value="IOT_GRID">IOT_GRID</option>
               <option value="QUANT_ALPHA">QUANT_ALPHA</option>
             </select>
           </div>
-        </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="font-label-code text-[9px] text-[#84967e] uppercase tracking-wider">
-            Idempotency Key{" "}
-            <span className="text-[#84967e]/60">(optional — prevents duplicate uploads)</span>
-          </label>
-          <input
-            type="text"
-            value={idempotencyKey}
-            onChange={(e) => setIdempotencyKey(e.target.value)}
-            placeholder="e.g. run-2026-07-03-batch-001"
-            className="bg-[#131313] border border-[#3b4b37] rounded px-3 py-2 font-body-mono text-xs text-[#e5e2e1] placeholder-[#84967e]/50 focus:outline-none focus:border-[#00f1fe]/60 transition-colors"
-          />
+          <div className="flex flex-col gap-1">
+            <label className="font-label-code text-[9px] text-[#84967e] uppercase tracking-wider">
+              Idempotency Key (optional)
+            </label>
+            <input
+              type="text"
+              value={idempotencyKey}
+              onChange={(e) => setIdempotencyKey(e.target.value)}
+              placeholder="e.g. run-2026-07-03-batch-001"
+              className="bg-[#0e0e0e] border border-[#3b4b37] rounded-none px-3 py-2 font-body-mono text-xs text-[#e5e2e1] placeholder-[#84967e]/30 focus:outline-none focus:border-[#00f1fe] transition-colors"
+            />
+          </div>
         </div>
 
         {/* Upload progress */}
         {uploading && (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1">
             <div className="flex justify-between items-center">
-              <span className="font-label-code text-[9px] text-[#00f1fe] tracking-wider">
-                TRANSMITTING PAYLOAD...
+              <span className="font-label-code text-[8px] text-[#00f1fe] tracking-wider">
+                TRANSMITTING...
               </span>
-              <span className="font-display-tech text-[11px] text-[#00f1fe]">{progress}%</span>
+              <span className="font-display-tech text-[10px] text-[#00f1fe]">{progress}%</span>
             </div>
-            <div className="w-full h-1 bg-[#1c1b1b] rounded-full overflow-hidden">
+            <div className="w-full h-1 bg-[#0e0e0e] overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-[#00f1fe] to-[#00ff41] transition-all duration-200 shadow-[0_0_8px_rgba(0,241,254,0.6)]"
+                className="h-full bg-[#00f1fe] shadow-[0_0_5px_#00f1fe] transition-all duration-200"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -287,10 +288,10 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
         {/* Result message */}
         {result && (
           <div
-            className={`p-3 border rounded-sm font-body-mono text-xs ${
+            className={`p-2.5 border rounded-none font-body-mono text-[11px] ${
               result.type === "ok"
-                ? "bg-[#0a1f0a] border-[#00ff41]/30 text-[#00ff41]"
-                : "bg-[#1f0a0a] border-red-500/30 text-red-400"
+                ? "bg-[#00ff41]/5 border-[#00e639]/40 text-[#00e639]"
+                : "bg-error-container/20 border-error/40 text-error"
             }`}
           >
             {result.type === "ok" ? "✓ " : "✗ "}
@@ -301,9 +302,19 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
         <button
           type="submit"
           disabled={uploading || !file}
-          className="px-6 py-3 bg-transparent border border-[#00f1fe]/60 text-[#00f1fe] font-label-code text-[10px] tracking-widest uppercase rounded hover:bg-[#00f1fe]/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+          className="w-full bg-[#00f1fe]/10 border border-[#00f1fe] text-[#00f1fe] font-label-code py-2.5 hover:bg-[#00f1fe]/20 hover:shadow-[0_0_15px_rgba(0,241,254,0.3)] tracking-widest uppercase transition-all flex items-center justify-center gap-2 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer rounded-none"
         >
-          {uploading ? "TRANSMITTING..." : "INITIATE UPLOAD"}
+          {uploading ? (
+            <>
+              <span className="material-symbols-outlined animate-spin text-xs">autorenew</span>
+              TRANSMITTING...
+            </>
+          ) : (
+            <>
+              <span className="material-symbols-outlined text-sm">publish</span>
+              INITIATE UPLOAD
+            </>
+          )}
         </button>
       </form>
     </div>
@@ -334,39 +345,43 @@ function ContainerGridRow({
   }, [effectiveStatus]);
 
   return (
-    <div
-      className={`grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center px-4 py-3 border-b border-[#3b4b37]/30 hover:bg-[#131313]/60 transition-all ${
-        flash ? "bg-[#00f1fe]/5" : ""
+    <tr
+      className={`hover:bg-[#353534]/20 transition-all duration-300 ${
+        flash ? "bg-[#00f1fe]/10" : ""
       }`}
     >
       {/* Callsign + ID */}
-      <div className="flex flex-col gap-0.5 min-w-0">
-        <span className="font-body-mono text-sm text-[#e5e2e1] truncate">
-          {container.callsign_alias}
-        </span>
-        <span className="font-label-code text-[8px] text-[#84967e] truncate">
-          {container.container_id}
-        </span>
-      </div>
+      <td className="py-2.5 px-4 pr-4">
+        <div className="flex flex-col">
+          <span className="font-body-mono text-sm text-[#e5e2e1] truncate font-bold">
+            {container.callsign_alias}
+          </span>
+          <span className="font-label-code text-[8px] text-[#84967e] truncate">
+            {container.container_id}
+          </span>
+        </div>
+      </td>
 
       {/* Vector type */}
-      <span className="font-label-code text-[9px] text-[#b9ccb2] whitespace-nowrap hidden md:block">
+      <td className="py-2.5 px-4 pr-4 font-label-code text-[10px] text-[#00dbe7] hidden md:table-cell">
         {container.target_vector_type}
-      </span>
+      </td>
 
       {/* Size */}
-      <span className="font-body-mono text-[10px] text-[#84967e] whitespace-nowrap hidden lg:block">
+      <td className="py-2.5 px-4 pr-4 font-body-mono-sm text-[11px] text-[#b9ccb2] hidden lg:table-cell">
         {fmtBytes(container.file_size_bytes)}
-      </span>
+      </td>
 
       {/* Status */}
-      <StatusBadge status={effectiveStatus} />
+      <td className="py-2.5 px-4 pr-4 text-center">
+        <StatusBadge status={effectiveStatus} />
+      </td>
 
       {/* Date */}
-      <span className="font-label-code text-[8px] text-[#84967e]/70 whitespace-nowrap hidden xl:block">
+      <td className="py-2.5 px-4 pr-4 font-label-code text-[9px] text-[#84967e] hidden xl:table-cell">
         {fmtDate(container.created_at)}
-      </span>
-    </div>
+      </td>
+    </tr>
   );
 }
 
@@ -429,46 +444,66 @@ export default function IngestionPage() {
   );
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-[#0A0A0A] text-[#e5e2e1] font-body-mono">
+    <div className="min-h-[calc(100vh-64px)] bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] flex flex-col">
       {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <div className="border-b border-[#3b4b37]/50 px-6 py-5 flex flex-col md:flex-row md:items-center gap-4 justify-between">
+      <div className="border-b border-[#3b4b37]/30 px-6 py-4 flex flex-col md:flex-row md:items-center gap-4 justify-between bg-[#131313]/40">
         <div>
-          <div className="font-label-code text-[9px] text-[#00e639] tracking-widest mb-1">
+          <div className="font-label-code text-[9px] text-[#00e639] tracking-widest mb-0.5">
             [MODULE: INGESTION_PIPELINE]
           </div>
-          <h1 className="font-display-tech text-2xl text-[#00f1fe] tracking-tight">
+          <h1 className="font-display-tech text-xl text-white tracking-wider uppercase font-bold">
             CONTAINER INGESTION MONITOR
           </h1>
         </div>
 
         {/* SSE connection indicator */}
-        <div className="flex items-center gap-2">
-          <span
-            className={`w-2 h-2 rounded-full ${
-              connected ? "bg-[#00ff41] shadow-[0_0_6px_#00ff41]" : "bg-red-500 animate-pulse"
-            }`}
-          />
-          <span className="font-label-code text-[9px] text-[#b9ccb2]">
-            {connected
-              ? "LIVE_STREAM: ACTIVE"
-              : sseError
-              ? `STREAM: ${sseError.toUpperCase()}`
-              : "STREAM: CONNECTING..."}
-          </span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                connected ? "bg-[#00ff41] shadow-[0_0_8px_#00ff41]" : "bg-red-500 animate-pulse"
+              }`}
+            />
+            <span className="font-label-code text-[10px] text-[#b9ccb2]">
+              {connected
+                ? "LIVE_STREAM: ACTIVE"
+                : sseError
+                ? `STREAM: ${sseError.toUpperCase()}`
+                : "STREAM: CONNECTING..."}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="p-6 flex flex-col gap-6">
-        {/* ── Upload Panel ───────────────────────────────────────────────────── */}
-        {token && <UploadPanel token={token} onUploaded={handleUploaded} />}
+      {/* Top Telemetry Strip */}
+      <div className="px-6 py-2 bg-[#1c1b1b] border-b border-[#3b4b37]/30 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-[#00e639] rounded-full animate-ping"></span>
+            <span className="font-label-code text-[#00e639] text-[10px]">INGESTION: ACTIVE</span>
+          </div>
+          <div className="font-label-code text-[10px] text-[#b9ccb2]">
+            BACKEND: <span className="text-white">LOCAL_DISK / S3</span>
+          </div>
+          <div className="font-label-code text-[10px] text-[#b9ccb2] hidden sm:block">
+            STAGING: <span className="text-white">INFRA/STAGING</span>
+          </div>
+        </div>
+        <div className="font-label-code text-[10px] text-[#00dbe7] animate-pulse">
+          {connected ? "STREAMING TELEMETRY..." : "TELEMETRY PAUSED"}
+        </div>
+      </div>
 
-        {/* ── Live Status Grid ────────────────────────────────────────────────── */}
-        <div className="bg-[#0e0e0e] border border-[#3b4b37] rounded-lg overflow-hidden">
-          {/* Grid header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-[#131313] border-b border-[#3b4b37]/50">
+      <div className="px-6 py-6 max-w-[1600px] w-full mx-auto flex flex-col lg:flex-row gap-6">
+        {/* Left Side: Active Containers */}
+        <div className="flex-[7] bg-[#1c1b1b]/40 border border-[#3b4b37] relative rounded-sm flex flex-col shadow-2xl min-h-[520px]">
+          <div className="scanline-overlay absolute inset-0 z-0 pointer-events-none opacity-10"></div>
+          
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#3b4b37] bg-[#2a2a2a]/50 z-10">
             <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-[#00f1fe] text-base">table_rows</span>
-              <span className="font-label-code text-[10px] text-[#00f1fe] tracking-wider uppercase">
+              <span className="material-symbols-outlined text-[16px] text-[#00e639]">terminal</span>
+              <span className="font-label-code text-[10px] text-[#00e639] uppercase font-bold">
                 Active Containers
               </span>
               <span className="font-display-tech text-[10px] text-[#84967e]">
@@ -481,7 +516,7 @@ export default function IngestionPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="bg-[#0e0e0e] border border-[#3b4b37] rounded px-2 py-1 font-label-code text-[9px] text-[#b9ccb2] focus:outline-none focus:border-[#00f1fe]/50 cursor-pointer"
+                className="bg-[#0e0e0e] border border-[#3b4b37] rounded-none px-2 py-1 font-label-code text-[9px] text-[#b9ccb2] focus:outline-none focus:border-[#00f1fe] cursor-pointer"
               >
                 <option value="">ALL_STATES</option>
                 <option value="INITIALIZED">INITIALIZED</option>
@@ -492,7 +527,7 @@ export default function IngestionPage() {
               <select
                 value={filterVector}
                 onChange={(e) => setFilterVector(e.target.value)}
-                className="bg-[#0e0e0e] border border-[#3b4b37] rounded px-2 py-1 font-label-code text-[9px] text-[#b9ccb2] focus:outline-none focus:border-[#00f1fe]/50 cursor-pointer"
+                className="bg-[#0e0e0e] border border-[#3b4b37] rounded-none px-2 py-1 font-label-code text-[9px] text-[#b9ccb2] focus:outline-none focus:border-[#00f1fe] cursor-pointer"
               >
                 <option value="">ALL_VECTORS</option>
                 <option value="PHARMA_R3">PHARMA_R3</option>
@@ -501,11 +536,11 @@ export default function IngestionPage() {
               </select>
               <button
                 onClick={() => fetchContainers()}
-                className="p-1.5 rounded border border-[#3b4b37] text-[#b9ccb2] hover:text-[#00f1fe] hover:border-[#00f1fe]/50 transition-all"
+                className="p-1 rounded border border-[#3b4b37] text-[#b9ccb2] hover:text-[#00f1fe] hover:border-[#00f1fe]/50 transition-all cursor-pointer bg-[#0e0e0e]"
                 title="Refresh"
               >
                 <span
-                  className={`material-symbols-outlined text-sm ${loadingList ? "animate-spin" : ""}`}
+                  className={`material-symbols-outlined text-[14px] ${loadingList ? "animate-spin" : ""}`}
                 >
                   refresh
                 </span>
@@ -513,106 +548,117 @@ export default function IngestionPage() {
             </div>
           </div>
 
-          {/* Column headers */}
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center px-4 py-2 bg-[#0a0a0a] border-b border-[#3b4b37]/30">
-            <span className="font-label-code text-[8px] text-[#84967e] uppercase tracking-wider">
-              Callsign / ID
-            </span>
-            <span className="font-label-code text-[8px] text-[#84967e] uppercase tracking-wider hidden md:block">
-              Vector
-            </span>
-            <span className="font-label-code text-[8px] text-[#84967e] uppercase tracking-wider hidden lg:block">
-              Size
-            </span>
-            <span className="font-label-code text-[8px] text-[#84967e] uppercase tracking-wider">
-              Status
-            </span>
-            <span className="font-label-code text-[8px] text-[#84967e] uppercase tracking-wider hidden xl:block">
-              Created
-            </span>
+          {/* Table Area */}
+          <div className="flex-1 overflow-auto z-10 custom-scrollbar">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 bg-[#0e0e0e] border-b border-[#3b4b37]/30 z-20">
+                <tr>
+                  <th className="py-2.5 px-4 font-label-code text-[10px] text-[#b9ccb2] tracking-wider">CALLSIGN_ALIAS / ID</th>
+                  <th className="py-2.5 px-4 font-label-code text-[10px] text-[#b9ccb2] tracking-wider hidden md:table-cell text-left">VECTOR_TYPE</th>
+                  <th className="py-2.5 px-4 font-label-code text-[10px] text-[#b9ccb2] tracking-wider hidden lg:table-cell text-left">FILE_SIZE</th>
+                  <th className="py-2.5 px-4 font-label-code text-[10px] text-[#b9ccb2] tracking-wider text-center">STATUS</th>
+                  <th className="py-2.5 px-4 font-label-code text-[10px] text-[#b9ccb2] tracking-wider hidden xl:table-cell text-left">CREATED_AT</th>
+                </tr>
+              </thead>
+              <tbody className="font-body-mono-sm text-[12px] text-[#e5e2e1]/80 divide-y divide-[#3b4b37]/10">
+                {loadingList ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center">
+                      <div className="inline-flex items-center gap-3 text-[#84967e]">
+                        <span className="material-symbols-outlined animate-spin text-[#00f1fe]">
+                          autorenew
+                        </span>
+                        <span className="font-label-code text-[10px]">LOADING CONTAINERS...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : containers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-24 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <span className="material-symbols-outlined text-[48px] text-[#3b4b37]">
+                          inbox
+                        </span>
+                        <span className="font-label-code text-[10px] text-[#84967e]">
+                          NO CONTAINERS FOUND — UPLOAD A PAYLOAD TO BEGIN
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  containers.map((c) => (
+                    <ContainerGridRow
+                      key={c.container_id}
+                      container={c}
+                      liveUpdate={liveMap.get(c.container_id)}
+                    />
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
+        </div>
 
-          {/* Rows */}
-          {loadingList ? (
-            <div className="p-8 text-center">
-              <div className="inline-flex items-center gap-3 text-[#84967e]">
-                <span className="material-symbols-outlined animate-spin text-[#00f1fe]">
-                  autorenew
-                </span>
-                <span className="font-label-code text-[10px]">LOADING CONTAINERS...</span>
+        {/* Right Side: Upload Panel & Live event ticker */}
+        <div className="flex-[3] flex flex-col gap-6">
+          {token && <UploadPanel token={token} onUploaded={handleUploaded} />}
+
+          {/* Live event ticker */}
+          {liveMap.size > 0 && (
+            <div className="bg-[#1c1b1b]/80 backdrop-blur-md border border-[#3b4b37] rounded-sm p-4 relative chamfer-tl shadow-2xl overflow-hidden flex flex-col gap-3">
+              <div className="scanline-overlay absolute inset-0 z-0 pointer-events-none opacity-10"></div>
+              
+              <div className="flex justify-between items-center border-b border-[#3b4b37] pb-1.5 z-10">
+                <h2 className="font-label-code text-[10px] text-[#00dbe7] flex items-center gap-2 font-bold uppercase">
+                  <span className="material-symbols-outlined text-sm">history</span>
+                  [LIVE_EVENT_STREAM]
+                </h2>
               </div>
-            </div>
-          ) : containers.length === 0 ? (
-            <div className="p-12 text-center flex flex-col items-center gap-3">
-              <span className="material-symbols-outlined text-[48px] text-[#3b4b37]">
-                inbox
-              </span>
-              <span className="font-label-code text-[10px] text-[#84967e]">
-                NO CONTAINERS FOUND — UPLOAD A PAYLOAD TO BEGIN
-              </span>
-            </div>
-          ) : (
-            <div className="divide-y-0">
-              {containers.map((c) => (
-                <ContainerGridRow
-                  key={c.container_id}
-                  container={c}
-                  liveUpdate={liveMap.get(c.container_id)}
-                />
-              ))}
+              
+              <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar z-10 pr-1">
+                {[...liveMap.values()]
+                  .sort(
+                    (a, b) =>
+                      new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
+                  )
+                  .slice(0, 20)
+                  .map((e) => (
+                    <div
+                      key={e.container_id + e.occurred_at}
+                      className="flex items-center gap-2.5 font-body-mono-sm text-[11px] leading-tight border-b border-[#3b4b37]/10 pb-1"
+                    >
+                      <span className="text-[#00e639] whitespace-nowrap">
+                        {new Date(e.occurred_at).toLocaleTimeString()}
+                      </span>
+                      <span className="text-[#e5e2e1] font-bold truncate max-w-[100px]">{e.callsign_alias}</span>
+                      {e.from_state && (
+                        <>
+                          <span className="text-[#84967e]/60">{e.from_state}</span>
+                          <span className="material-symbols-outlined text-[10px] text-[#84967e]/60">
+                            arrow_forward
+                          </span>
+                        </>
+                      )}
+                      <span
+                        className={`px-1 py-0.5 text-[8px] font-bold ${
+                          e.to_state === "SYNCED"
+                            ? "bg-primary-container/20 text-[#00ff41]"
+                            : e.to_state === "FAILED"
+                            ? "bg-error-container/20 text-error"
+                            : "bg-secondary-container/20 text-[#00f1fe]"
+                        }`}
+                      >
+                        {e.to_state}
+                      </span>
+                      {e.detail && (
+                        <span className="text-[#b9ccb2]/60 truncate flex-1">{e.detail}</span>
+                      )}
+                    </div>
+                  ))}
+              </div>
             </div>
           )}
         </div>
-
-        {/* ── Live event ticker ──────────────────────────────────────────────── */}
-        {liveMap.size > 0 && (
-          <div className="bg-[#0e0e0e] border border-[#3b4b37] rounded-lg p-4">
-            <div className="font-label-code text-[9px] text-[#00e639] mb-3 tracking-wider">
-              [LIVE_EVENT_STREAM] RECENT TRANSITIONS
-            </div>
-            <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
-              {[...liveMap.values()]
-                .sort(
-                  (a, b) =>
-                    new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
-                )
-                .slice(0, 20)
-                .map((e) => (
-                  <div
-                    key={e.container_id + e.occurred_at}
-                    className="flex items-center gap-3 font-body-mono-sm text-[10px]"
-                  >
-                    <span className="text-[#84967e]/60 whitespace-nowrap">
-                      {new Date(e.occurred_at).toLocaleTimeString()}
-                    </span>
-                    <span className="text-[#b9ccb2] truncate">{e.callsign_alias}</span>
-                    {e.from_state && (
-                      <>
-                        <span className="text-[#84967e]">{e.from_state}</span>
-                        <span className="material-symbols-outlined text-[10px] text-[#84967e]">
-                          arrow_forward
-                        </span>
-                      </>
-                    )}
-                    <span
-                      className={
-                        e.to_state === "SYNCED"
-                          ? "text-[#72ff70]"
-                          : e.to_state === "FAILED"
-                          ? "text-red-400"
-                          : "text-[#00f1fe]"
-                      }
-                    >
-                      {e.to_state}
-                    </span>
-                    {e.detail && (
-                      <span className="text-[#84967e]/60 truncate flex-1">{e.detail}</span>
-                    )}
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

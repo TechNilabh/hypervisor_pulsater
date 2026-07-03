@@ -342,10 +342,6 @@ export default function Home() {
         {/* Starry Coordinates Background */}
         <div className="absolute inset-0 z-0 opacity-40 pointer-events-none" style={{ backgroundImage: "radial-gradient(rgba(0, 241, 254, 0.15) 1px, transparent 1px)", backgroundSize: "48px 48px" }}></div>
         <div className="relative z-10 text-center px-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#1c1b1b] border border-[#3b4b37] rounded mb-8">
-            <span className="w-2 h-2 bg-[#72ff70] rounded-full animate-pulse"></span>
-            <span className="font-label-code text-[10px] text-[#b9ccb2] tracking-widest uppercase">Sub-Millisecond CDC Logic</span>
-          </div>
           <h1 className="font-display-tech text-[48px] md:text-[84px] text-[#72ff70] mb-4 tracking-tighter leading-none">
             HYPERVISOR PULSATER
           </h1>
