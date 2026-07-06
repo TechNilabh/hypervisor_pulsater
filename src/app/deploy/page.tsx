@@ -11,6 +11,7 @@ export default function DeployContainer() {
   // ─── Form field state ────────────────────────────────────────────────────
   const [containerName, setContainerName] = useState("tracker-node-beta");
   const [dbType, setDbType] = useState("PostgreSQL");
+  const [vectorType, setVectorType] = useState("PHARMA_R3");
   const [portMapping, setPortMapping] = useState("5432:5432");
   const [operatorKey, setOperatorKey] = useState("");
 
@@ -71,7 +72,7 @@ export default function DeployContainer() {
 
       // Navigate to live tracking dashboard after 1.2 second cinematic pause
       setTimeout(() => {
-        router.push("/connections");
+        router.push("/ingestion");
       }, 1200);
     }
   }, [deploying, deployStep]);
@@ -99,7 +100,7 @@ export default function DeployContainer() {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/containers/provision`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/nodes/deploy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -108,14 +109,19 @@ export default function DeployContainer() {
         body: JSON.stringify({
           container_designation: containerName,
           ingestion_target_db: dbType,
+          target_vector_type: vectorType,
           host_port_mapping: portMapping,
+          operator_signature_key: operatorKey,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Container provisioning failed");
+        if (res.status === 401 && (data.error === "invalid_deployment_key" || data.error_code === "invalid_deployment_key")) {
+          throw new Error("INVALID_DEPLOYMENT_KEY: The operator signature key provided is invalid or has been rotated.");
+        }
+        throw new Error(data.error || "Container deployment failed");
       }
 
       // Backend confirmed — kick off the cinematic log animation
@@ -124,7 +130,7 @@ export default function DeployContainer() {
       const msg = err.message || "An unexpected error occurred";
       setDeployError(msg);
       if ((window as any).toast) {
-        (window as any).toast.error("Container Provision Failed", {
+        (window as any).toast.error("Container Deployment Failed", {
           error: msg,
           status: "ABORTED",
         });
@@ -204,6 +210,23 @@ export default function DeployContainer() {
                 </div>
                 <div className="space-y-2">
                   <label className="font-label-code text-[9px] text-[#00f1fe] block">
+                    [ TARGET_VECTOR_TYPE ]
+                  </label>
+                  <select
+                    value={vectorType}
+                    onChange={(e) => setVectorType(e.target.value)}
+                    className="w-full bg-[#1c1b1b] border border-[#3b4b37] focus:border-[#00ff41] text-white font-body-mono p-3 text-xs focus:ring-0 focus:outline-none transition-all"
+                  >
+                    <option value="PHARMA_R3">Pharma R3 Ledger (PHARMA_R3)</option>
+                    <option value="IOT_GRID">IoT Smart Grid (IOT_GRID)</option>
+                    <option value="QUANT_ALPHA">Quant Alpha Stream (QUANT_ALPHA)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="font-label-code text-[9px] text-[#00f1fe] block">
                     [ INGESTION_TARGET_DB ]
                   </label>
                   <select
@@ -217,9 +240,6 @@ export default function DeployContainer() {
                     <option value="Cassandra">Cassandra (CommitLog Capture)</option>
                   </select>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="font-label-code text-[9px] text-[#00f1fe] block">
                     [ HOST_PORT_MAPPING ]
@@ -233,19 +253,20 @@ export default function DeployContainer() {
                     type="text"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="font-label-code text-[9px] text-[#00f1fe] block">
-                    [ OPERATOR_SIGNATURE_KEY ]
-                  </label>
-                  <input
-                    required
-                    value={operatorKey}
-                    onChange={(e) => setOperatorKey(e.target.value)}
-                    className="w-full bg-[#1c1b1b] border border-[#3b4b37] focus:border-[#00ff41] text-white font-body-mono p-3 text-xs focus:ring-0 focus:outline-none transition-all placeholder:opacity-30"
-                    placeholder="SHA256-OPERATOR-KEY-HEX"
-                    type="password"
-                  />
-                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-label-code text-[9px] text-[#00f1fe] block">
+                  [ OPERATOR_SIGNATURE_KEY ]
+                </label>
+                <input
+                  required
+                  value={operatorKey}
+                  onChange={(e) => setOperatorKey(e.target.value)}
+                  className="w-full bg-[#1c1b1b] border border-[#3b4b37] focus:border-[#00ff41] text-white font-body-mono p-3 text-xs focus:ring-0 focus:outline-none transition-all placeholder:opacity-30"
+                  placeholder="SHA256-OPERATOR-KEY-HEX"
+                  type="password"
+                />
               </div>
 
               <button

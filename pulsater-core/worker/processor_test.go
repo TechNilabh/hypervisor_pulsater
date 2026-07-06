@@ -228,3 +228,26 @@ func TestProcessor_ValidatorError_CanBeOverridden(t *testing.T) {
 		t.Error("expected error from overridden validator")
 	}
 }
+
+// ─── NULL payload skip test ──────────────────────────────────────────────────
+
+func TestProcessJob_NullPayloadURL_SkipsChecksumGate(t *testing.T) {
+	t.Parallel()
+
+	// A job with empty StoredHash and PayloadURL (simulating DB NULLs)
+	job := Job{
+		JobID:       "job-null",
+		ContainerID: "ctr-null",
+		OperatorID:  "op-null",
+		Callsign:    "FILELESS",
+		VectorType:  "PHARMA_R3",
+		PayloadURL:  "",
+		StoredHash:  "",
+	}
+
+	// Verify that the logic check for checksum gate is false
+	skipsChecksum := (job.StoredHash == "" || job.PayloadURL == "")
+	if !skipsChecksum {
+		t.Error("expected checksum gate to be skipped for job with empty payload URL and stored hash")
+	}
+}

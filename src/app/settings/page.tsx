@@ -2,8 +2,64 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function SystemConfiguration() {
+  // Key generator states
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [generatedKey, setGeneratedKey] = useState<string | null>(null);
+  const [keyHint, setKeyHint] = useState<string | null>(null);
+  const [keyGenError, setKeyGenError] = useState<string | null>(null);
+
+  const handleGenerateKey = async () => {
+    if (generatingKey) return;
+    setGeneratingKey(true);
+    setKeyGenError(null);
+    setGeneratedKey(null);
+
+    const token = localStorage.getItem("session_token");
+    if (!token) {
+      setKeyGenError("Authentication token not found. Please log in.");
+      setGeneratingKey(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/operator/signature-key/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate signature key");
+      }
+
+      setGeneratedKey(data.signature_key);
+      setKeyHint(data.key_hint);
+      if ((window as any).toast) {
+        (window as any).toast.success("DEPLOYMENT KEY GENERATED", {
+          hint: data.key_hint,
+          status: "ACTIVE",
+        });
+      }
+    } catch (err: any) {
+      const msg = err.message || "An unexpected error occurred";
+      setKeyGenError(msg);
+      if ((window as any).toast) {
+        (window as any).toast.error("Key Generation Failed", {
+          error: msg,
+        });
+      }
+    } finally {
+      setGeneratingKey(false);
+    }
+  };
+
   // Worker pool states
   const [goroutineThreshold, setGoroutineThreshold] = useState(16384);
   const [ingestChanBuffer, setIngestChanBuffer] = useState(512); // out of 1024
@@ -210,6 +266,58 @@ export default function SystemConfiguration() {
                     <p className="font-display-tech text-[20px] text-[#00dbe7] leading-none font-bold">4.2ms</p>
                     <p className="font-label-code text-[8px] text-[#b9ccb2]">LAT_P99</p>
                   </div>
+                </div>
+              </div>
+
+              {/* Operator Signature Key subsection */}
+              <div className="border-t border-[#3b4b37]/30 pt-4 space-y-3">
+                <p className="font-label-code text-[10px] text-[#b9ccb2] uppercase opacity-60">OPERATOR_DEPLOYMENT_KEY</p>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleGenerateKey}
+                    disabled={generatingKey}
+                    className="w-full py-2 bg-[#00ff41]/10 border border-[#00ff41] hover:bg-[#00ff41]/20 disabled:opacity-50 text-[#00ff41] font-label-code text-[10px] tracking-widest text-center cursor-pointer transition-colors font-bold rounded-sm"
+                  >
+                    {generatingKey ? "GENERATING..." : "GENERATE DEPLOYMENT KEY"}
+                  </button>
+
+                  {keyGenError && (
+                    <p className="font-label-code text-[9px] text-[#ffb4ab] uppercase tracking-wider">
+                      Error: {keyGenError}
+                    </p>
+                  )}
+
+                  {generatedKey && (
+                    <div className="p-3 border border-[#3b4b37]/50 bg-[#0e0e0e] space-y-2 relative rounded-sm">
+                      <div className="absolute top-0 right-0 w-2 h-2 bg-[#ffb4ab]/20"></div>
+                      <p className="font-label-code text-[8px] text-[#ffb4ab] uppercase font-bold tracking-widest">
+                        ⚠️ COPY KEY NOW — WILL NOT BE SHOWN AGAIN
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          readOnly
+                          type="text"
+                          value={generatedKey}
+                          className="flex-1 bg-[#1c1b1b] border border-[#3b4b37] text-white font-body-mono p-1 text-[10px] focus:outline-none focus:border-[#00ff41]"
+                          onClick={(e) => e.target.select()}
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedKey);
+                            if (window.toast) {
+                              window.toast.success("KEY COPIED TO CLIPBOARD");
+                            }
+                          }}
+                          className="px-3 bg-[#00f1fe]/10 border border-[#00f1fe] text-[#00f1fe] hover:bg-[#00f1fe]/20 text-[9px] font-label-code font-bold uppercase transition-colors rounded-sm cursor-pointer"
+                        >
+                          COPY
+                        </button>
+                      </div>
+                      <p className="font-label-code text-[8px] text-[#b9ccb2]/60">
+                        Key Hint: ...{keyHint} (Active)
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

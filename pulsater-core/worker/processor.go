@@ -233,6 +233,11 @@ func (p *Processor) processJob(ctx context.Context, job Job) error {
 			"container_id", job.ContainerID, "error", err)
 	}
 
+	// Node-deploy-originated containers have no file payload and therefore no
+	// checksum to re-verify. The guard below (StoredHash != "" && PayloadURL != "")
+	// is already correct: both fields are empty strings for file-less containers
+	// (NULLs scanned from DB become "" in the Job struct), so this block is a
+	// no-op for node-deploy jobs. This is intentional — do not remove the guard.
 	if job.StoredHash != "" && job.PayloadURL != "" {
 		recomputedHash, integrityErr := p.recomputeChecksum(ctx, job)
 		if integrityErr != nil {

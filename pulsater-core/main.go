@@ -136,6 +136,14 @@ func main() {
 	// Detail + event history — catches /api/v1/containers/{id}
 	mux.HandleFunc("/api/v1/containers/", JWTAuthMiddleware(HandleGetContainer))
 
+	// ── Phase 3 routes ───────────────────────────────────────────────────────────────────────
+	// Signature key generation (deployment authorization, not identity auth)
+	mux.HandleFunc("/api/v1/operator/signature-key/generate",
+		JWTAuthMiddleware(HandleGenerateSignatureKey))
+	// Node deployment without file payload
+	mux.HandleFunc("/api/v1/nodes/deploy",
+		JWTAuthMiddleware(HandleNodeDeploy))
+
 	handler := CORSMiddleware(mux)
 
 	port := os.Getenv("PORT")
@@ -430,6 +438,123 @@ func runMigrations() error {
 	}
 
 	log.Println("[MIGRATION] Phase 2 schemas verified (container_events, processing_jobs, all indexes active).")
+
+	// ── Phase 3 — single transaction, same dependency-order discipline ────────
+	//
+	// Ordering contract:
+	//   STEP 0 — ALTER TABLE containers: relax storage_backend CHECK to allow 'none'
+	//   STEP 1 — CREATE TABLE operator_signature_keys (depends only on users.id)
+	//   STEP 2 — CREATE TABLE node_deployments (depends on containers.id + users.id)
+	//   STEP 3 — Assertion: verify node_deployments.operator_id exists
+	//   STEP 4 — CREATE INDEX idx_node_deployments_operator
+	//
+	// NOTE: DROP CONSTRAINT IF EXISTS is the correct Postgres syntax.
+	// "IF NOT EXISTS" is not valid on DROP CONSTRAINT and will fail to parse.
+
+	tx3, err := DB.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("phase 3 migration: begin transaction: %w", err)
+	}
+	defer func() { _ = tx3.Rollback(ctx) }()
+
+	execStep3 := func(label, sql string) error {
+		log.Printf("[MIGRATION][P3] %s", label)
+		if _, err := tx3.Exec(ctx, sql); err != nil {
+			return fmt.Errorf("phase 3 migration — %s: %w", label, err)
+		}
+		return nil
+	}
+
+	// ── STEP 0: Relax containers.storage_backend CHECK ────────────────────────
+	// The Phase 2 column definition uses DEFAULT 'local'. Node-deploy rows carry
+	// no file backend, so we need 'none' as a valid value.
+	// Correct Postgres syntax: DROP CONSTRAINT IF EXISTS (not "IF NOT EXISTS").
+	p3Step0 := []struct{ label, sql string }{
+		{
+			"DROP old storage_backend check constraint (IF EXISTS — valid Postgres syntax)",
+			`ALTER TABLE containers DROP CONSTRAINT IF EXISTS containers_storage_backend_check`,
+		},
+		{
+			"ADD storage_backend check constraint with 'none' included",
+			`ALTER TABLE containers ADD CONSTRAINT containers_storage_backend_check
+				CHECK (storage_backend IN ('local', 's3', 'none'))`,
+		},
+	}
+	for _, s := range p3Step0 {
+		if err := execStep3(s.label, s.sql); err != nil {
+			return err
+		}
+	}
+	log.Println("[MIGRATION][P3] STEP 0 complete — storage_backend constraint updated.")
+
+	// ── STEP 1: CREATE TABLE operator_signature_keys ───────────────────────────
+	if err := execStep3("CREATE TABLE operator_signature_keys", `
+		CREATE TABLE IF NOT EXISTS operator_signature_keys (
+			operator_id  UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+			key_hash     TEXT NOT NULL,
+			key_hint     TEXT,
+			created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+			rotated_at   TIMESTAMPTZ,
+			revoked_at   TIMESTAMPTZ
+		)`); err != nil {
+		return err
+	}
+	log.Println("[MIGRATION][P3] STEP 1 complete — operator_signature_keys created.")
+
+	// ── STEP 2: CREATE TABLE node_deployments ─────────────────────────────────
+	// container_id is one-to-one with containers.id (NOT containers.container_id —
+	// the PK column is named 'id' in the containers table).
+	if err := execStep3("CREATE TABLE node_deployments", `
+		CREATE TABLE IF NOT EXISTS node_deployments (
+			deployment_id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			container_id           UUID NOT NULL REFERENCES containers(id) ON DELETE CASCADE,
+			operator_id            UUID NOT NULL REFERENCES users(id),
+			container_designation  TEXT NOT NULL,
+			ingestion_target_db    TEXT NOT NULL,
+			host_port_mapping      TEXT NOT NULL,
+			created_at             TIMESTAMPTZ NOT NULL DEFAULT now()
+		)`); err != nil {
+		return err
+	}
+	log.Println("[MIGRATION][P3] STEP 2 complete — node_deployments created.")
+
+	// ── STEP 3: Assertion — verify node_deployments.operator_id exists ─────────
+	log.Println("[MIGRATION][P3] STEP 3 — asserting node_deployments.operator_id exists...")
+	var ndColFound bool
+	assertND := `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_schema = 'public'
+			  AND table_name   = 'node_deployments'
+			  AND column_name  = 'operator_id'
+		)`
+	if err := tx3.QueryRow(ctx, assertND).Scan(&ndColFound); err != nil {
+		return fmt.Errorf("phase 3 migration — column assertion query failed for node_deployments.operator_id: %w", err)
+	}
+	if !ndColFound {
+		return fmt.Errorf(
+			"phase 3 migration — assertion failed: column %q does not exist on node_deployments "+
+				"after CREATE TABLE step; cannot proceed to index creation (SQLSTATE 42703 would follow)",
+			"operator_id",
+		)
+	}
+	log.Println("[MIGRATION][P3] assertion OK: node_deployments.operator_id exists")
+	log.Println("[MIGRATION][P3] STEP 3 complete.")
+
+	// ── STEP 4: CREATE INDEX ───────────────────────────────────────────────────
+	if err := execStep3(
+		"CREATE INDEX idx_node_deployments_operator",
+		`CREATE INDEX IF NOT EXISTS idx_node_deployments_operator
+			ON node_deployments (operator_id)`,
+	); err != nil {
+		return err
+	}
+	log.Println("[MIGRATION][P3] STEP 4 complete — idx_node_deployments_operator created.")
+
+	if err := tx3.Commit(ctx); err != nil {
+		return fmt.Errorf("phase 3 migration — commit failed: %w", err)
+	}
+	log.Println("[MIGRATION] Phase 3 schemas verified (operator_signature_keys, node_deployments, index active).")
 	return nil
 }
 
