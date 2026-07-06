@@ -465,7 +465,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	OTPCache.Store(email, otpEntry{OTP: otp, CreatedAt: time.Now()})
-	log.Printf("DEBUG: MFA OTP for %s is %s", email, otp)
 
 	if err := SendMFAEmail(email, otp); err != nil {
 		log.Printf("MFA email dispatch error for %s: %v", email, err)
