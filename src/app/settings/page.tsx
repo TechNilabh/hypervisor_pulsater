@@ -299,13 +299,13 @@ export default function SystemConfiguration() {
                           type="text"
                           value={generatedKey}
                           className="flex-1 bg-[#1c1b1b] border border-[#3b4b37] text-white font-body-mono p-1 text-[10px] focus:outline-none focus:border-[#00ff41]"
-                          onClick={(e) => e.target.select()}
+                          onClick={(e) => e.currentTarget.select()}
                         />
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(generatedKey);
-                            if (window.toast) {
-                              window.toast.success("KEY COPIED TO CLIPBOARD");
+                            if ((window as any).toast) {
+                              (window as any).toast.success("KEY COPIED TO CLIPBOARD");
                             }
                           }}
                           className="px-3 bg-[#00f1fe]/10 border border-[#00f1fe] text-[#00f1fe] hover:bg-[#00f1fe]/20 text-[9px] font-label-code font-bold uppercase transition-colors rounded-sm cursor-pointer"
