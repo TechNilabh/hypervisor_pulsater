@@ -10,12 +10,14 @@ export default function SystemConfiguration() {
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [keyHint, setKeyHint] = useState<string | null>(null);
   const [keyGenError, setKeyGenError] = useState<string | null>(null);
+  const [keyRotated, setKeyRotated] = useState(false);
 
   const handleGenerateKey = async () => {
     if (generatingKey) return;
     setGeneratingKey(true);
     setKeyGenError(null);
     setGeneratedKey(null);
+    setKeyRotated(false);
 
     const token = localStorage.getItem("session_token");
     if (!token) {
@@ -41,6 +43,7 @@ export default function SystemConfiguration() {
 
       setGeneratedKey(data.signature_key);
       setKeyHint(data.key_hint);
+      setKeyRotated(!!data.rotated);
       if ((window as any).toast) {
         (window as any).toast.success("DEPLOYMENT KEY GENERATED", {
           hint: data.key_hint,
@@ -291,7 +294,7 @@ export default function SystemConfiguration() {
                     <div className="p-3 border border-[#3b4b37]/50 bg-[#0e0e0e] space-y-2 relative rounded-sm">
                       <div className="absolute top-0 right-0 w-2 h-2 bg-[#ffb4ab]/20"></div>
                       <p className="font-label-code text-[8px] text-[#ffb4ab] uppercase font-bold tracking-widest">
-                        ⚠️ COPY KEY NOW — WILL NOT BE SHOWN AGAIN
+                        ⚠️ This key will not be shown again
                       </p>
                       <div className="flex gap-2">
                         <input
@@ -313,8 +316,13 @@ export default function SystemConfiguration() {
                           COPY
                         </button>
                       </div>
-                      <p className="font-label-code text-[8px] text-[#b9ccb2]/60">
-                        Key Hint: ...{keyHint} (Active)
+                      <p className="font-label-code text-[8px] text-[#b9ccb2]/60 flex flex-col gap-1">
+                        <span>Key Hint: ...{keyHint} (Active)</span>
+                        {keyRotated && (
+                          <span className="text-[#ffb4ab] font-bold">
+                            ⚠️ Previous key is now invalid.
+                          </span>
+                        )}
                       </p>
                     </div>
                   )}

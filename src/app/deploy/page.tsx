@@ -95,7 +95,7 @@ export default function DeployContainer() {
 
     const token = localStorage.getItem("session_token");
     if (!token) {
-      router.push("/login");
+      setDeployError("Authentication required — please log in again.");
       return;
     }
 
@@ -115,19 +115,36 @@ export default function DeployContainer() {
         }),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        data = {};
+      }
 
       if (!res.ok) {
-        if (res.status === 401 && (data.error === "invalid_deployment_key" || data.error_code === "invalid_deployment_key")) {
-          throw new Error("INVALID_DEPLOYMENT_KEY: The operator signature key provided is invalid or has been rotated.");
+        if (res.status === 401) {
+          if (data.error === "invalid_deployment_key" || data.error_code === "invalid_deployment_key") {
+            throw new Error("Invalid deployment key — generate one from Settings");
+          }
+          throw new Error("Authentication required — please log in again.");
         }
-        throw new Error(data.error || "Container deployment failed");
+        if (res.status === 400) {
+          if (data.field) {
+            throw new Error(`Field validation error [${data.field}]: ${data.error}`);
+          }
+          throw new Error(data.error || "Deployment failed — try again.");
+        }
+        throw new Error("Deployment failed — try again.");
       }
 
       // Backend confirmed — kick off the cinematic log animation
       setDeploying(true);
     } catch (err: any) {
-      const msg = err.message || "An unexpected error occurred";
+      let msg = err.message || "Deployment failed — try again.";
+      if (err.message && err.message.includes("Failed to fetch")) {
+        msg = "Deployment failed — try again.";
+      }
       setDeployError(msg);
       if ((window as any).toast) {
         (window as any).toast.error("Container Deployment Failed", {
