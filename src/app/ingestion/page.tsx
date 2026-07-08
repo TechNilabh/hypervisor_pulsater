@@ -5,6 +5,34 @@ import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api";
 import { useContainerStream, ContainerState } from "@/hooks/useContainerStream";
 
+function getEventDescription(e: ContainerState) {
+  if (!e.detail) {
+    return `Transitioned to ${e.to_state}`;
+  }
+  try {
+    const parsed = typeof e.detail === "string" ? JSON.parse(e.detail) : e.detail;
+    if (e.to_state === "INITIALIZED") {
+      if (parsed.source === "upload_handler") return "payload upload initialized";
+      if (parsed.source === "node_deploy_handler") return "node deployment initialized";
+      return "initialized";
+    }
+    if (e.to_state === "PROCESSING") {
+      if (parsed.step === "begin") return "ingestion processing started";
+      if (parsed.step === "integrity_check") return "verifying storage integrity";
+      return "processing";
+    }
+    if (e.to_state === "SYNCED") {
+      return "ingestion synced successfully";
+    }
+    if (e.to_state === "FAILED") {
+      return `ingestion failed: ${parsed.error || parsed.message || "unknown error"}`;
+    }
+  } catch {
+    return typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail);
+  }
+  return `Transitioned to ${e.to_state}`;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type VectorType = "PHARMA_R3" | "IOT_GRID" | "QUANT_ALPHA";
@@ -145,11 +173,15 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
             setProgress(0);
             resolve();
           } else {
-            try {
-              const err = JSON.parse(xhr.responseText);
-              reject(new Error(err.error || `HTTP ${xhr.status}`));
-            } catch {
-              reject(new Error(`HTTP ${xhr.status}`));
+            if (xhr.status === 409) {
+              reject(new Error("A different file was already submitted with this key"));
+            } else {
+              try {
+                const err = JSON.parse(xhr.responseText);
+                reject(new Error(err.error || `HTTP ${xhr.status}`));
+              } catch {
+                reject(new Error(`HTTP ${xhr.status}`));
+              }
             }
           }
         };
@@ -408,6 +440,32 @@ export default function IngestionPage() {
   // SSE live updates.
   const { containers: liveMap, connected, error: sseError } = useContainerStream(token);
 
+  const [eventsLog, setEventsLog] = useState<ContainerState[]>([]);
+
+  // Accumulate events in eventsLog as they arrive from the SSE event listener
+  useEffect(() => {
+    const handleEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<ContainerState>;
+      const update = customEvent.detail;
+      setEventsLog((prev) => {
+        const exists = prev.some(
+          (evt) =>
+            evt.container_id === update.container_id &&
+            evt.to_state === update.to_state &&
+            evt.occurred_at === update.occurred_at
+        );
+        if (exists) return prev;
+        return [update, ...prev].slice(0, 100);
+      });
+    };
+
+    window.addEventListener("containerStatusUpdated", handleEvent);
+    return () => window.removeEventListener("containerStatusUpdated", handleEvent);
+  }, []);
+
+
+
+
   // ── Fetch initial container list ──────────────────────────────────────────
   const fetchContainers = useCallback(async () => {
     if (!token) return;
@@ -438,10 +496,44 @@ export default function IngestionPage() {
   // Refresh list when a new upload completes.
   const handleUploaded = useCallback(
     (_id: string) => {
-      setTimeout(() => fetchContainers(), 600);
+      // No separate refresh logic needed — handled automatically via the SSE event stream.
     },
-    [fetchContainers]
+    []
   );
+
+  // Synchronize liveMap status updates into the containers list.
+  useEffect(() => {
+    if (liveMap.size === 0) return;
+
+    setContainers((prev) => {
+      let changed = false;
+      let hasNew = false;
+
+      const next = prev.map((c) => {
+        const live = liveMap.get(c.container_id);
+        if (live && live.to_state !== c.status_state) {
+          changed = true;
+          return { ...c, status_state: live.to_state as StatusState };
+        }
+        return c;
+      });
+
+      // Check if there is a new container in the liveMap not present in the list
+      for (const id of liveMap.keys()) {
+        if (!prev.some((c) => c.container_id === id)) {
+          hasNew = true;
+          break;
+        }
+      }
+
+      if (hasNew) {
+        // Trigger fetch in background to load full container metadata
+        fetchContainers();
+      }
+
+      return changed ? next : prev;
+    });
+  }, [liveMap, fetchContainers]);
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[#0A0A0A] text-[#e5e2e1] font-body-mono selection:bg-[#00ff41]/20 selection:text-[#00ff41] flex flex-col">
@@ -579,8 +671,8 @@ export default function IngestionPage() {
                         <span className="material-symbols-outlined text-[48px] text-[#3b4b37]">
                           inbox
                         </span>
-                        <span className="font-label-code text-[10px] text-[#84967e]">
-                          NO CONTAINERS FOUND — UPLOAD A PAYLOAD TO BEGIN
+                        <span className="font-label-code text-[10px] text-[#84967e] uppercase">
+                          NO ACTIVE CONTAINERS — deploy a node or upload a payload to begin
                         </span>
                       </div>
                     </td>
@@ -604,60 +696,57 @@ export default function IngestionPage() {
           {token && <UploadPanel token={token} onUploaded={handleUploaded} />}
 
           {/* Live event ticker */}
-          {liveMap.size > 0 && (
-            <div className="bg-[#1c1b1b]/80 backdrop-blur-md border border-[#3b4b37] rounded-sm p-4 relative chamfer-tl shadow-2xl overflow-hidden flex flex-col gap-3">
-              <div className="scanline-overlay absolute inset-0 z-0 pointer-events-none opacity-10"></div>
-              
-              <div className="flex justify-between items-center border-b border-[#3b4b37] pb-1.5 z-10">
-                <h2 className="font-label-code text-[10px] text-[#00dbe7] flex items-center gap-2 font-bold uppercase">
-                  <span className="material-symbols-outlined text-sm">history</span>
-                  [LIVE_EVENT_STREAM]
-                </h2>
-              </div>
-              
-              <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar z-10 pr-1">
-                {[...liveMap.values()]
-                  .sort(
-                    (a, b) =>
-                      new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
-                  )
-                  .slice(0, 20)
-                  .map((e) => (
-                    <div
-                      key={e.container_id + e.occurred_at}
-                      className="flex items-center gap-2.5 font-body-mono-sm text-[11px] leading-tight border-b border-[#3b4b37]/10 pb-1"
-                    >
-                      <span className="text-[#00e639] whitespace-nowrap">
-                        {new Date(e.occurred_at).toLocaleTimeString()}
-                      </span>
-                      <span className="text-[#e5e2e1] font-bold truncate max-w-[100px]">{e.callsign_alias}</span>
-                      {e.from_state && (
-                        <>
-                          <span className="text-[#84967e]/60">{e.from_state}</span>
-                          <span className="material-symbols-outlined text-[10px] text-[#84967e]/60">
-                            arrow_forward
-                          </span>
-                        </>
-                      )}
-                      <span
-                        className={`px-1 py-0.5 text-[8px] font-bold ${
-                          e.to_state === "SYNCED"
-                            ? "bg-primary-container/20 text-[#00ff41]"
-                            : e.to_state === "FAILED"
-                            ? "bg-error-container/20 text-error"
-                            : "bg-secondary-container/20 text-[#00f1fe]"
-                        }`}
-                      >
-                        {e.to_state}
-                      </span>
-                      {e.detail && (
-                        <span className="text-[#b9ccb2]/60 truncate flex-1">{e.detail}</span>
-                      )}
-                    </div>
-                  ))}
-              </div>
+          <div className="bg-[#1c1b1b]/80 backdrop-blur-md border border-[#3b4b37] rounded-sm p-4 relative chamfer-tl shadow-2xl overflow-hidden flex flex-col gap-3">
+            <div className="scanline-overlay absolute inset-0 z-0 pointer-events-none opacity-10"></div>
+            
+            <div className="flex justify-between items-center border-b border-[#3b4b37] pb-1.5 z-10">
+              <h2 className="font-label-code text-[10px] text-[#00dbe7] flex items-center gap-2 font-bold uppercase">
+                <span className="material-symbols-outlined text-sm">history</span>
+                [LIVE_EVENT_STREAM]
+              </h2>
             </div>
-          )}
+            
+            <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar z-10 pr-1 min-h-[120px] flex flex-col">
+              {eventsLog.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center py-8">
+                  <span className="font-label-code text-[9px] text-[#84967e] animate-pulse">
+                    {connected ? "STREAM: ACTIVE // AWAITING EVENTS..." : "STREAM: CONNECTING..."}
+                  </span>
+                </div>
+              ) : (
+                eventsLog.map((e, idx) => (
+                  <div
+                    key={`${e.container_id}-${e.to_state}-${e.occurred_at}-${idx}`}
+                    className="flex items-center gap-2.5 font-body-mono-sm text-[11px] leading-tight border-b border-[#3b4b37]/10 pb-1"
+                  >
+                    <span className="text-[#00e639] whitespace-nowrap">
+                      {new Date(e.occurred_at).toLocaleTimeString()}
+                    </span>
+                    <span className="text-[#e5e2e1] font-bold truncate max-w-[80px]">
+                      {e.callsign_alias || e.container_id.slice(0, 8)}
+                    </span>
+                    <span className="text-[#84967e]/60 hidden sm:inline">
+                      [{e.container_id.slice(0, 8)}]
+                    </span>
+                    <span
+                      className={`px-1 py-0.5 text-[8px] font-bold shrink-0 ${
+                        e.to_state === "SYNCED"
+                          ? "bg-[#0a1f0a] border border-[#72ff70]/30 text-[#72ff70]"
+                          : e.to_state === "FAILED"
+                          ? "bg-[#2a0a0a] border border-red-500/30 text-red-400"
+                          : "bg-[#0d2a38] border border-[#00f1fe]/30 text-[#00f1fe]"
+                      }`}
+                    >
+                      {e.to_state}
+                    </span>
+                    <span className="text-[#b9ccb2] truncate flex-1 text-left">
+                      {getEventDescription(e)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
