@@ -485,17 +485,25 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := SendMFAEmail(email, otp); err != nil {
 		log.Printf("MFA email dispatch error for %s: %v", email, err)
-		// Dev-mode fallback: if SMTP is not configured, log the OTP to stdout
-		// so local developers can still exercise the auth flow.
-		// In production SMTP_HOST must be properly configured.
+		// Stdout OTP fallback is ONLY permitted when:
+		//   1. APP_ENV == "development"  (explicitly set, never defaulted)
+		//   2. SMTP_HOST is empty or a known placeholder
+		//
+		// validateConfig() guarantees this combination is only reachable in dev.
+		// In production (APP_ENV unset or != "development") this branch returns
+		// 500 regardless of SMTP configuration, because validateConfig() would
+		// have already aborted startup if SMTP was missing in production.
+		appEnv := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
 		smtpHost := strings.TrimSpace(os.Getenv("SMTP_HOST"))
-		if smtpHost == "" || smtpHost == "smtp.placeholder.net" {
-			log.Printf("[DEV_OTP] MFA token for %s: %s (not emailed — SMTP not configured)", email, otp)
+		smtpUnconfigured := smtpHost == "" || smtpHost == "smtp.placeholder.net"
+		if appEnv == "development" && smtpUnconfigured {
+			log.Printf("[DEV_OTP] MFA token for %s: %s (DEV STDOUT FALLBACK — APP_ENV=development, SMTP not configured)", email, otp)
 		} else {
 			WriteError(w, http.StatusInternalServerError, "Failed to send MFA email")
 			return
 		}
 	}
+
 
 	log.Printf("MFA initiated for operator %s (%s)", username, email)
 	WriteJSON(w, http.StatusOK, map[string]interface{}{

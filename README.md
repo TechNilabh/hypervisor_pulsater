@@ -330,10 +330,17 @@ For Kubernetes, set `terminationGracePeriodSeconds: 30` (≥ HTTP drain + worker
 
 ## Security Notes
 
-- **JWT secret**: `JWT_SECRET` must be set. The server refuses to start with an empty or short secret. In production, use `openssl rand -hex 32` and store in your secrets manager.
+- **JWT secret**: `JWT_SECRET` must be set. The server refuses to start with an empty or short (<32 char) secret. In production, use `openssl rand -hex 32` and store in your secrets manager.
 - **No credential logging**: DB passwords, SMTP passwords, AWS credentials, and OAuth secrets are never written to logs.
 - **SQL injection**: all queries use parameterized placeholders (`$1`, `$2`, ...) — never string concatenation.
 - **Error responses**: internal details (SQL errors, file paths, stack traces) are logged server-side only. Clients receive generic error codes.
 - **CORS**: only the `ALLOWED_ORIGIN` (and any `*.vercel.app` origin) is reflected. Set this explicitly in production.
 - **Rate limiting**: upload endpoint is rate-limited per operator per minute (`UPLOAD_RATE_LIMIT_PER_MINUTE`).
 - **Idempotency**: upload endpoint supports `Idempotency-Key` header for safe retries.
+- **MFA stdout fallback is fatal-blocked in production**:
+  - The server accepts a `APP_ENV` environment variable (default: `"production"` when unset — fail-safe, not fail-open).
+  - The stdout OTP fallback (`[DEV_OTP]` in logs) is **only permitted** when `APP_ENV=development` AND `SMTP_HOST` is empty/placeholder.
+  - If `APP_ENV` is unset or set to any value other than `"development"`, and `SMTP_HOST` is missing, `validateConfig()` calls `log.Fatalf` and the process exits before accepting any connections.
+  - Startup logs always announce which mode is active: `[AUTH] MFA delivery: SMTP (host=...)` or `[AUTH] MFA delivery: DEV STDOUT FALLBACK (APP_ENV=development only)` — this is never ambiguous from logs alone.
+  - **Never set `APP_ENV=development` on a production host.** On cloud platforms (Render, Railway, Fly.io), this variable should not be set at all, which causes the server to default to production-safe behaviour.
+

@@ -241,13 +241,34 @@ func validateConfig() {
 		}
 	}
 
-	// ── SMTP ───────────────────────────────────────────────────────────────
-	// SMTP misconfiguration doesn't prevent startup (MFA falls back to console
-	// log in dev) but we warn clearly so operators know.
+	// ── SMTP — fail-fast in production, dev-gated fallback only ─────────────
+	// Default to "production" if APP_ENV is unset — fail-safe, not fail-open.
+	// The stdout OTP fallback is only permitted when APP_ENV=="development"
+	// AND SMTP is explicitly not configured.  Any other combination is fatal
+	// so the production deploy never silently enables an MFA bypass.
+	appEnv := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
+	if appEnv == "" {
+		appEnv = "production" // conservative default
+	}
 	smtpHost := strings.TrimSpace(os.Getenv("SMTP_HOST"))
-	if smtpHost == "" || smtpHost == "smtp.placeholder.net" {
-		log.Println("[CONFIG][WARN] SMTP_HOST is not configured — MFA emails will fail. OTP will be logged to stdout for debugging.")
-	} else {
+	smtpUnconfigured := smtpHost == "" || smtpHost == "smtp.placeholder.net"
+	switch {
+	case smtpUnconfigured && appEnv == "development":
+		// Permitted: explicit dev environment, no SMTP configured.
+		// LoginHandler will print the OTP to stdout instead of emailing.
+		log.Println("[CONFIG][WARN] SMTP not configured; OTP fallback to stdout is ENABLED (APP_ENV=development)")
+	case smtpUnconfigured:
+		// APP_ENV is 'production' (or unset — defaults to production).
+		// Missing SMTP means MFA is broken and users cannot authenticate.
+		errs = append(errs,
+			fmt.Sprintf(
+				"SMTP_HOST is not configured (APP_ENV=%q) — "+
+					"the server must have a working SMTP relay in production. "+
+					"Set APP_ENV=development to enable the stdout OTP fallback for local dev.",
+				appEnv,
+			))
+	default:
+		// SMTP host is set — validate companion vars.
 		if strings.TrimSpace(os.Getenv("SMTP_USER")) == "" {
 			log.Println("[CONFIG][WARN] SMTP_HOST is set but SMTP_USER is empty")
 		}
@@ -293,6 +314,20 @@ func validateConfig() {
 	}
 
 	log.Println("[CONFIG] All required environment variables validated.")
+
+	// Announce MFA delivery mode unambiguously in startup logs.
+	appEnvFinal := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
+	if appEnvFinal == "" {
+		appEnvFinal = "production"
+	}
+	smtpHostFinal := strings.TrimSpace(os.Getenv("SMTP_HOST"))
+	smtpActive := smtpHostFinal != "" && smtpHostFinal != "smtp.placeholder.net"
+	if smtpActive {
+		log.Printf("[AUTH] MFA delivery: SMTP (host=%s)", smtpHostFinal)
+	} else {
+		// Only reachable when APP_ENV=development (production case was fatal above).
+		log.Printf("[AUTH] MFA delivery: DEV STDOUT FALLBACK (APP_ENV=development only)")
+	}
 }
 
 func runMigrations() error {
