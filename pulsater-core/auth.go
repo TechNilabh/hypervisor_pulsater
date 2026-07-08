@@ -760,6 +760,10 @@ func HandleOAuthLogin(provider string) http.HandlerFunc {
 
 func GoogleCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
+	if strings.HasPrefix(code, "mock_code_google_") && os.Getenv("APP_ENV") == "development" {
+		handleOAuthSuccess(w, r, "google", strings.TrimPrefix(code, "mock_code_google_"), "Mock Google User", "mock_google@pulsater.test")
+		return
+	}
 	config := getOAuthConfig("google")
 	if config == nil {
 		log.Printf("Google OAuth callback: config is nil")
@@ -797,6 +801,10 @@ func GoogleCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 func GithubCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
+	if strings.HasPrefix(code, "mock_code_github_") && os.Getenv("APP_ENV") == "development" {
+		handleOAuthSuccess(w, r, "github", strings.TrimPrefix(code, "mock_code_github_"), "Mock Github User", "mock_github@pulsater.test")
+		return
+	}
 	config := getOAuthConfig("github")
 	if config == nil {
 		log.Printf("GitHub OAuth callback: config is nil")
@@ -867,6 +875,10 @@ func GithubCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 func FacebookCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
+	if strings.HasPrefix(code, "mock_code_facebook_") && os.Getenv("APP_ENV") == "development" {
+		handleOAuthSuccess(w, r, "facebook", strings.TrimPrefix(code, "mock_code_facebook_"), "Mock Facebook User", "mock_facebook@pulsater.test")
+		return
+	}
 	config := getOAuthConfig("facebook")
 	if config == nil {
 		log.Printf("Facebook OAuth callback: config is nil")
