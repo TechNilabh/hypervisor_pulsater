@@ -102,11 +102,15 @@ func NewProcessor(db *pgxpool.Pool, hub HubPublisher, log *slog.Logger) *Process
 }
 
 // Run starts the processor loop. It exits when ctx is cancelled.
+// On exit, it requeues any RUNNING jobs it had locked so they can be
+// claimed by another worker instance (or on next restart).
 func (p *Processor) Run(ctx context.Context) {
 	p.Log.Info("worker: processor started",
 		"poll_interval", p.PollInterval,
 		"max_attempts", p.MaxAttempts,
 	)
+	defer p.requeueOrphanedJobs()
+
 	ticker := time.NewTicker(p.PollInterval)
 	defer ticker.Stop()
 
@@ -121,6 +125,34 @@ func (p *Processor) Run(ctx context.Context) {
 			}
 		}
 	}
+}
+
+// requeueOrphanedJobs resets any RUNNING jobs locked by this worker process
+// back to QUEUED so they can be retried. Called on shutdown via defer in Run().
+func (p *Processor) requeueOrphanedJobs() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	wid := workerID()
+	tag, err := p.DB.Exec(ctx, `
+		UPDATE processing_jobs
+		SET
+			job_status   = 'QUEUED',
+			locked_by    = NULL,
+			locked_at    = NULL,
+			next_retry_at = NULL,
+			updated_at   = now()
+		WHERE job_status = 'RUNNING'
+		  AND locked_by  = $1
+	`, wid)
+	if err != nil {
+		p.Log.Error("worker: requeueOrphanedJobs failed", "worker_id", wid, "error", err)
+		return
+	}
+	p.Log.Info("worker: orphaned jobs requeued on shutdown",
+		"worker_id", wid,
+		"rows_requeued", tag.RowsAffected(),
+	)
 }
 
 // poll claims and processes up to 10 jobs per tick.

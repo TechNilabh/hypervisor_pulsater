@@ -29,7 +29,24 @@ import (
 // JWT Configuration
 // ---------------------------------------------------------------------------
 
-var jwtKey = []byte("pulsater-secret-key-neon-cyan")
+// jwtKey holds the HMAC signing key loaded from JWT_SECRET at startup.
+// Never set directly — always loaded via LoadJWTSecret() in main().
+// The fallback value is intentionally weak and will fail validateConfig().
+var jwtKey = []byte("UNSET_REPLACE_WITH_JWT_SECRET")
+
+// LoadJWTSecret reads JWT_SECRET from the environment and populates jwtKey.
+// Must be called after LoadEnv (or equivalent) and after validateConfig confirms
+// the var is present and long enough. This is called exactly once from main().
+func LoadJWTSecret() {
+	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if secret == "" {
+		// validateConfig should have caught this — panic here to make the
+		// programmer error obvious instead of silently using a weak key.
+		panic("LoadJWTSecret: JWT_SECRET is empty — validateConfig must be called first")
+	}
+	jwtKey = []byte(secret)
+	log.Printf("[AUTH] JWT signing key loaded (%d bytes)", len(jwtKey))
+}
 
 // Claims is the JWT payload structure used for all signed session tokens.
 type Claims struct {
@@ -468,8 +485,16 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := SendMFAEmail(email, otp); err != nil {
 		log.Printf("MFA email dispatch error for %s: %v", email, err)
-		WriteError(w, http.StatusInternalServerError, "Failed to send MFA email")
-		return
+		// Dev-mode fallback: if SMTP is not configured, log the OTP to stdout
+		// so local developers can still exercise the auth flow.
+		// In production SMTP_HOST must be properly configured.
+		smtpHost := strings.TrimSpace(os.Getenv("SMTP_HOST"))
+		if smtpHost == "" || smtpHost == "smtp.placeholder.net" {
+			log.Printf("[DEV_OTP] MFA token for %s: %s (not emailed — SMTP not configured)", email, otp)
+		} else {
+			WriteError(w, http.StatusInternalServerError, "Failed to send MFA email")
+			return
+		}
 	}
 
 	log.Printf("MFA initiated for operator %s (%s)", username, email)
@@ -671,9 +696,6 @@ func getOAuthConfig(provider string) *oauth2.Config {
 		backendURL = "http://localhost:8080"
 	}
 
-	// Add this block temporarily to diagnose
-	log.Printf("[DEBUG] getOAuthConfig(%s): GITHUB_CLIENT_ID=%q", provider, os.Getenv("GITHUB_CLIENT_ID"))
-
 	switch provider {
 	case "google":
 		return &oauth2.Config{
@@ -708,21 +730,20 @@ func HandleOAuthLogin(provider string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		config := getOAuthConfig(provider)
 		if config == nil {
-			http.Error(w, "Unsupported OAuth provider vector", http.StatusBadRequest)
+			WriteError(w, http.StatusBadRequest, "Unsupported OAuth provider")
 			return
 		}
 
-		// Fail-fast sanity safeguard log
 		if config.ClientID == "" || config.ClientSecret == "" {
-			log.Printf("🚨 CRITICAL ENV ERROR: Credentials for [%s] are empty strings! Ensure .env is loaded before routing.", provider)
-			http.Error(w, fmt.Sprintf("Backend configuration mismatch: missing %s client ID", provider), http.StatusInternalServerError)
+			log.Printf("[AUTH][ERROR] OAuth provider [%s] credentials not configured", provider)
+			WriteError(w, http.StatusInternalServerError, fmt.Sprintf("OAuth provider %q is not configured on this server", provider))
 			return
 		}
 
 		stateToken := fmt.Sprintf("state-%s", provider)
 		url := config.AuthCodeURL(stateToken, oauth2.AccessTypeOffline)
 
-		log.Printf("🛰️ Redirecting Matrix Handshake to [%s]: %s", provider, url)
+		log.Printf("[AUTH] Redirecting OAuth handshake to [%s]", provider)
 		http.Redirect(w, r, url, http.StatusSeeOther)
 	}
 }

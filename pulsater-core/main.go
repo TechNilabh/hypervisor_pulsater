@@ -7,6 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -40,7 +43,7 @@ func (a *hubAdapter) Publish(operatorID string, e worker.Event) {
 func main() {
 	log.Println("Initializing HYPERVISOR_PULSATER core auth backend...")
 
-	// Load .env — try both locations, log which one worked
+	// ── Step 1: Load environment ───────────────────────────────────────────
 	if err := godotenv.Load(".env"); err != nil {
 		if err2 := godotenv.Load("pulsater-core/.env"); err2 != nil {
 			log.Println("[WARN] No .env file found in either location — relying on system environment")
@@ -51,39 +54,46 @@ func main() {
 		log.Println("[ENV] Loaded from .env")
 	}
 
-	// Validate OAuth credentials at startup so you catch this immediately
-	validateOAuthEnv()
+	// ── Step 2: Fail-fast config validation ───────────────────────────────
+	// Any missing required variable exits with a clear message naming the var.
+	validateConfig()
 
-	// Initialise slog as the structured logger for Phase 2 components.
+	// ── Step 3: Load JWT secret from environment ───────────────────────────
+	// validateConfig already confirmed JWT_SECRET is non-empty.
+	LoadJWTSecret()
+
+	// ── Step 4: Initialise subsystems ─────────────────────────────────────
 	slogger := slog.Default()
 
-	// Initialise storage backend (local or S3, driven by STORAGE_BACKEND env var).
 	var storageErr error
 	StorageInstance, storageErr = NewStorageBackend(context.Background(), slogger)
 	if storageErr != nil {
 		log.Fatalf("Fatal: Storage backend init failed: %v", storageErr)
 	}
-	log.Printf("[STORAGE] Backend initialised: %s", os.Getenv("STORAGE_BACKEND"))
+	log.Printf("[STORAGE] Backend initialised: %T (env=%s)", StorageInstance, os.Getenv("STORAGE_BACKEND"))
 
-	// Initialise the SSE hub and start ticket GC.
 	GlobalHub = NewSSEHub(slogger)
 	startTicketGC()
 
 	if err := InitDB(); err != nil {
 		log.Fatalf("Fatal: Database initialization failed: %v", err)
 	}
-	defer DB.Close()
 
 	if err := runMigrations(); err != nil {
+		DB.Close()
 		log.Fatalf("Fatal: Database migrations failed: %v", err)
 	}
 
-	// Start async processing worker (hub is wrapped in adapter to satisfy worker.HubPublisher).
+	// ── Step 5: Start background worker ───────────────────────────────────
 	workerCtx, workerCancel := context.WithCancel(context.Background())
-	defer workerCancel()
 	proc := worker.NewProcessor(DB, &hubAdapter{hub: GlobalHub}, slog.Default())
-	go proc.Run(workerCtx)
+	workerDone := make(chan struct{})
+	go func() {
+		defer close(workerDone)
+		proc.Run(workerCtx)
+	}()
 
+	// ── Step 6: OTP garbage collector ─────────────────────────────────────
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
@@ -103,9 +113,14 @@ func main() {
 		}
 	}()
 
+	// ── Step 7: Register routes ────────────────────────────────────────────
 	mux := http.NewServeMux()
 
-	// ── Phase 1 routes (unchanged) ───────────────────────────────────────────
+	// Health / readiness (unauthenticated — used by load balancers)
+	mux.HandleFunc("/healthz", HandleHealthz)
+	mux.HandleFunc("/readyz", HandleReadyz)
+
+	// Phase 1 — Auth
 	mux.HandleFunc("/api/v1/auth/signup", SignupHandler)
 	mux.HandleFunc("/api/v1/auth/login", LoginHandler)
 	mux.HandleFunc("/api/v1/auth/verify-mfa", VerifyMFAHandler)
@@ -113,36 +128,24 @@ func main() {
 
 	mux.HandleFunc("/api/v1/auth/oauth/google", HandleOAuthLogin("google"))
 	mux.HandleFunc("/api/v1/auth/oauth/google/callback", HandleOAuthCallback("google"))
-
 	mux.HandleFunc("/api/v1/auth/oauth/github", HandleOAuthLogin("github"))
 	mux.HandleFunc("/api/v1/auth/oauth/github/callback", HandleOAuthCallback("github"))
-
 	mux.HandleFunc("/api/v1/auth/oauth/facebook", HandleOAuthLogin("facebook"))
 	mux.HandleFunc("/api/v1/auth/oauth/facebook/callback", HandleOAuthCallback("facebook"))
 
 	mux.HandleFunc("/api/v1/users/avatar", UpdateAvatarHandler)
 
+	// Phase 2 — Containers & Streaming
 	mux.HandleFunc("/api/v1/containers/provision", JWTAuthMiddleware(ProvisionContainerHandler))
-
-	// ── Phase 2 routes ───────────────────────────────────────────────────────
-	// SSE ticket (must come before /stream so the mux matches it first)
 	mux.HandleFunc("/api/v1/containers/stream/token", JWTAuthMiddleware(HandleIssueSSETicket))
-	// SSE stream — authenticated via one-time ticket in ?ticket= (Fix #1)
 	mux.HandleFunc("/api/v1/containers/stream", HandleContainerStream)
-	// Upload endpoint
 	mux.HandleFunc("/api/v1/containers/upload", JWTAuthMiddleware(HandleContainerUpload))
-	// Paginated list
 	mux.HandleFunc("/api/v1/containers/active", JWTAuthMiddleware(HandleListContainers))
-	// Detail + event history — catches /api/v1/containers/{id}
 	mux.HandleFunc("/api/v1/containers/", JWTAuthMiddleware(HandleGetContainer))
 
-	// ── Phase 3 routes ───────────────────────────────────────────────────────────────────────
-	// Signature key generation (deployment authorization, not identity auth)
-	mux.HandleFunc("/api/v1/operator/signature-key/generate",
-		JWTAuthMiddleware(HandleGenerateSignatureKey))
-	// Node deployment without file payload
-	mux.HandleFunc("/api/v1/nodes/deploy",
-		JWTAuthMiddleware(HandleNodeDeploy))
+	// Phase 3 — Operator Nodes
+	mux.HandleFunc("/api/v1/operator/signature-key/generate", JWTAuthMiddleware(HandleGenerateSignatureKey))
+	mux.HandleFunc("/api/v1/nodes/deploy", JWTAuthMiddleware(HandleNodeDeploy))
 
 	handler := CORSMiddleware(mux)
 
@@ -151,10 +154,145 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Authentication service listening on http://localhost:%s", port)
-	if err := http.ListenAndServe(":"+port, handler); err != nil {
-		log.Fatalf("Fatal: HTTP server failed to start: %v", err)
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      handler,
+		ReadTimeout:  60 * time.Second,
+		WriteTimeout: 0, // 0 = no timeout (SSE streams must not be cut)
+		IdleTimeout:  120 * time.Second,
 	}
+
+	// ── Step 8: Start server in goroutine so we can listen for signals ─────
+	serverErr := make(chan error, 1)
+	go func() {
+		log.Printf("[SERVER] Listening on http://0.0.0.0:%s", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			serverErr <- err
+		}
+	}()
+
+	// ── Step 9: Block until SIGTERM / SIGINT or server error ──────────────
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case sig := <-quit:
+		log.Printf("[SHUTDOWN] Received signal %s — beginning graceful shutdown", sig)
+	case err := <-serverErr:
+		log.Fatalf("[SHUTDOWN] HTTP server error: %v", err)
+	}
+
+	// ── Step 10: Graceful drain ───────────────────────────────────────────
+	// Order: stop accepting → drain HTTP → stop worker → close DB.
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer shutdownCancel()
+
+	log.Println("[SHUTDOWN] Stopping HTTP server (15s drain)...")
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("[SHUTDOWN] HTTP drain exceeded timeout: %v", err)
+	} else {
+		log.Println("[SHUTDOWN] HTTP server stopped cleanly.")
+	}
+
+	// Cancel worker context and wait for the worker goroutine to finish
+	// (the worker's deferred requeueOrphanedJobs will requeue RUNNING rows).
+	log.Println("[SHUTDOWN] Stopping worker...")
+	workerCancel()
+	select {
+	case <-workerDone:
+		log.Println("[SHUTDOWN] Worker stopped.")
+	case <-time.After(10 * time.Second):
+		log.Println("[SHUTDOWN] Worker did not stop within 10s — orphaned jobs will be requeued on next start.")
+	}
+
+	log.Println("[SHUTDOWN] Closing DB pool...")
+	DB.Close()
+	log.Println("[SHUTDOWN] Shutdown complete.")
+}
+
+// validateConfig checks that all required environment variables are present and
+// well-formed. Any failure calls log.Fatalf, naming the specific missing var.
+// Must be called before InitDB, storage init, or any request handling.
+func validateConfig() {
+	var errs []string
+
+	requireEnv := func(key string) {
+		if strings.TrimSpace(os.Getenv(key)) == "" {
+			errs = append(errs, fmt.Sprintf("required env var %q is not set or empty", key))
+		}
+	}
+
+	// ── JWT ────────────────────────────────────────────────────────────────
+	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if jwtSecret == "" {
+		errs = append(errs, "required env var \"JWT_SECRET\" is not set or empty — generate with: openssl rand -hex 32")
+	} else if len(jwtSecret) < 32 {
+		errs = append(errs, fmt.Sprintf("JWT_SECRET must be at least 32 characters (got %d) — use a strong random secret", len(jwtSecret)))
+	}
+
+	// ── Database ───────────────────────────────────────────────────────────
+	// Accept either DATABASE_URL or the individual DB_* vars.
+	if strings.TrimSpace(os.Getenv("DATABASE_URL")) == "" {
+		// Fall back to component vars — at minimum DB_PASSWORD must be set
+		// (host/port/user/name all have defaults in db.go).
+		// We warn rather than hard-fail because local dev uses defaults.
+		if strings.TrimSpace(os.Getenv("DB_PASSWORD")) == "" {
+			log.Println("[CONFIG][WARN] Neither DATABASE_URL nor DB_PASSWORD is set — using default 'postgres' password")
+		}
+	}
+
+	// ── SMTP ───────────────────────────────────────────────────────────────
+	// SMTP misconfiguration doesn't prevent startup (MFA falls back to console
+	// log in dev) but we warn clearly so operators know.
+	smtpHost := strings.TrimSpace(os.Getenv("SMTP_HOST"))
+	if smtpHost == "" || smtpHost == "smtp.placeholder.net" {
+		log.Println("[CONFIG][WARN] SMTP_HOST is not configured — MFA emails will fail. OTP will be logged to stdout for debugging.")
+	} else {
+		if strings.TrimSpace(os.Getenv("SMTP_USER")) == "" {
+			log.Println("[CONFIG][WARN] SMTP_HOST is set but SMTP_USER is empty")
+		}
+		if strings.TrimSpace(os.Getenv("SMTP_PASS")) == "" {
+			log.Println("[CONFIG][WARN] SMTP_HOST is set but SMTP_PASS is empty")
+		}
+	}
+
+	// ── Storage backend ────────────────────────────────────────────────────
+	storageBackend := strings.ToLower(strings.TrimSpace(os.Getenv("STORAGE_BACKEND")))
+	if storageBackend == "" {
+		storageBackend = "local"
+	}
+	if storageBackend == "s3" {
+		requireEnv("S3_BUCKET_NAME")
+		requireEnv("AWS_REGION")
+		// AWS credentials come from the SDK chain (env/shared file/instance role) — not validated here.
+	} else if storageBackend != "local" {
+		errs = append(errs, fmt.Sprintf("STORAGE_BACKEND=%q is not valid — must be 'local' or 's3'", storageBackend))
+	}
+
+	// ── OAuth provider pairs ───────────────────────────────────────────────
+	// Each provider is optional (we just warn if one has ID but not secret).
+	for _, prov := range []struct{ id, secret string }{
+		{"GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"},
+		{"GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"},
+		{"FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"},
+	} {
+		hasID := strings.TrimSpace(os.Getenv(prov.id)) != ""
+		hasSecret := strings.TrimSpace(os.Getenv(prov.secret)) != ""
+		if hasID && !hasSecret {
+			errs = append(errs, fmt.Sprintf("%s is set but %s is empty — OAuth for this provider will fail", prov.id, prov.secret))
+		} else if !hasID && hasSecret {
+			errs = append(errs, fmt.Sprintf("%s is set but %s is empty — OAuth for this provider will fail", prov.secret, prov.id))
+		}
+	}
+
+	if len(errs) > 0 {
+		for _, e := range errs {
+			log.Printf("[CONFIG][FATAL] %s", e)
+		}
+		log.Fatalf("[CONFIG] %d configuration error(s) found — fix them before starting the server", len(errs))
+	}
+
+	log.Println("[CONFIG] All required environment variables validated.")
 }
 
 func runMigrations() error {
@@ -558,22 +696,5 @@ func runMigrations() error {
 	return nil
 }
 
-func validateOAuthEnv() {
-	providers := map[string][2]string{
-		"google":   {os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET")},
-		"github":   {os.Getenv("GITHUB_CLIENT_ID"), os.Getenv("GITHUB_CLIENT_SECRET")},
-		"facebook": {os.Getenv("FACEBOOK_CLIENT_ID"), os.Getenv("FACEBOOK_CLIENT_SECRET")},
-	}
-	for name, creds := range providers {
-		if creds[0] == "" || creds[1] == "" {
-			log.Printf("[WARN] OAuth provider [%s] — credentials missing (CLIENT_ID empty: %v, CLIENT_SECRET empty: %v)",
-				name, creds[0] == "", creds[1] == "")
-		} else {
-			idSnippet := creds[0]
-			if len(idSnippet) > 6 {
-				idSnippet = idSnippet[:6]
-			}
-			log.Printf("[OK] OAuth provider [%s] — credentials loaded (ID: %s...)", name, idSnippet)
-		}
-	}
-}
+
+
