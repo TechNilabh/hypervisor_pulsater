@@ -241,39 +241,39 @@ func validateConfig() {
 		}
 	}
 
-	// ── SMTP — fail-fast in production, dev-gated fallback only ─────────────
+	// ── Email delivery (Brevo HTTPS API) — fail-fast in production ───────────
 	// Default to "production" if APP_ENV is unset — fail-safe, not fail-open.
 	// The stdout OTP fallback is only permitted when APP_ENV=="development"
-	// AND SMTP is explicitly not configured.  Any other combination is fatal
-	// so the production deploy never silently enables an MFA bypass.
+	// AND EMAIL_API_KEY is not set.  Any other combination is fatal so the
+	// production deploy never silently enables an MFA bypass.
+	//
+	// SMTP vars (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS) are deprecated:
+	// Render free tier blocks outbound ports 25/465/587. Use Brevo API vars instead.
 	appEnv := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
 	if appEnv == "" {
 		appEnv = "production" // conservative default
 	}
-	smtpHost := strings.TrimSpace(os.Getenv("SMTP_HOST"))
-	smtpUnconfigured := smtpHost == "" || smtpHost == "smtp.placeholder.net"
+	emailAPIKey := strings.TrimSpace(os.Getenv("EMAIL_API_KEY"))
+	emailFrom := strings.TrimSpace(os.Getenv("EMAIL_FROM_ADDRESS"))
 	switch {
-	case smtpUnconfigured && appEnv == "development":
-		// Permitted: explicit dev environment, no SMTP configured.
+	case emailAPIKey == "" && appEnv == "development":
+		// Permitted: explicit dev environment, no email API configured.
 		// LoginHandler will print the OTP to stdout instead of emailing.
-		log.Println("[CONFIG][WARN] SMTP not configured; OTP fallback to stdout is ENABLED (APP_ENV=development)")
-	case smtpUnconfigured:
+		log.Println("[CONFIG][WARN] EMAIL_API_KEY not configured; OTP fallback to stdout is ENABLED (APP_ENV=development)")
+	case emailAPIKey == "":
 		// APP_ENV is 'production' (or unset — defaults to production).
-		// Missing SMTP means MFA is broken and users cannot authenticate.
+		// Missing EMAIL_API_KEY means MFA is broken and users cannot authenticate.
 		errs = append(errs,
 			fmt.Sprintf(
-				"SMTP_HOST is not configured (APP_ENV=%q) — "+
-					"the server must have a working SMTP relay in production. "+
+				"EMAIL_API_KEY is not set (APP_ENV=%q) — "+
+					"Brevo API key is required for MFA email delivery in production. "+
 					"Set APP_ENV=development to enable the stdout OTP fallback for local dev.",
 				appEnv,
 			))
 	default:
-		// SMTP host is set — validate companion vars.
-		if strings.TrimSpace(os.Getenv("SMTP_USER")) == "" {
-			log.Println("[CONFIG][WARN] SMTP_HOST is set but SMTP_USER is empty")
-		}
-		if strings.TrimSpace(os.Getenv("SMTP_PASS")) == "" {
-			log.Println("[CONFIG][WARN] SMTP_HOST is set but SMTP_PASS is empty")
+		// EMAIL_API_KEY is set — also require EMAIL_FROM_ADDRESS.
+		if emailFrom == "" {
+			errs = append(errs, "EMAIL_API_KEY is set but EMAIL_FROM_ADDRESS is empty — Brevo requires a verified sender address")
 		}
 	}
 
@@ -320,10 +320,10 @@ func validateConfig() {
 	if appEnvFinal == "" {
 		appEnvFinal = "production"
 	}
-	smtpHostFinal := strings.TrimSpace(os.Getenv("SMTP_HOST"))
-	smtpActive := smtpHostFinal != "" && smtpHostFinal != "smtp.placeholder.net"
-	if smtpActive {
-		log.Printf("[AUTH] MFA delivery: SMTP (host=%s)", smtpHostFinal)
+	emailAPIKeyFinal := strings.TrimSpace(os.Getenv("EMAIL_API_KEY"))
+	if emailAPIKeyFinal != "" {
+		// Never log the key itself — log only that it is active.
+		log.Printf("[AUTH] MFA delivery: Brevo HTTPS API (EMAIL_FROM_ADDRESS=%s)", strings.TrimSpace(os.Getenv("EMAIL_FROM_ADDRESS")))
 	} else {
 		// Only reachable when APP_ENV=development (production case was fatal above).
 		log.Printf("[AUTH] MFA delivery: DEV STDOUT FALLBACK (APP_ENV=development only)")

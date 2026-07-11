@@ -44,7 +44,7 @@ pulsater-core (Go HTTP server)
 | `worker` | Async job poll/claim/validate/retry loop |
 | `hub.go` | Operator-scoped SSE fan-out with backpressure |
 | `storage.go` | `StorageBackend` interface (local disk + S3) |
-| `auth.go` | JWT, MFA (SMTP OTP), OAuth (Google/GitHub/Facebook) |
+| `auth.go` | JWT, MFA (Brevo HTTPS API OTP), OAuth (Google/GitHub/Facebook) |
 | `health.go` | `/healthz` and `/readyz` probes |
 
 ---
@@ -70,16 +70,30 @@ All variables are read at startup. Missing **REQUIRED** variables cause an immed
 | `DB_PASSWORD` | — | `postgres` | PostgreSQL password |
 | `DB_NAME` | — | `postgres` | PostgreSQL database name |
 
-### SMTP (MFA Emails)
+### Email (Brevo HTTPS API — MFA OTP delivery)
+
+MFA one-time passwords are dispatched via the Brevo transactional email API over HTTPS (port 443). Direct SMTP is no longer used; Render free tier blocks outbound ports 25/465/587.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `SMTP_HOST` | Warn-only | — | SMTP server hostname. If unset, OTPs are printed to stdout (dev mode). |
-| `SMTP_PORT` | — | `587` | SMTP port |
-| `SMTP_USER` | — | — | SMTP username / from address |
-| `SMTP_PASS` | — | — | SMTP password / app token |
-| `SMTP_FROM` | — | `SMTP_USER` | From header. Falls back to SMTP_USER if empty. |
-| `SMTP_INSECURE` | — | `false` | Set `true` to skip TLS verification (localhost/dev mail catchers only) |
+| `EMAIL_API_PROVIDER` | — | `brevo` | Informational label. Not read by code. |
+| `EMAIL_API_KEY` | **REQUIRED in production** | — | Brevo API key. Get from https://app.brevo.com/settings/keys/api. Never logged. |
+| `EMAIL_FROM_ADDRESS` | **REQUIRED in production** | — | Verified sender address in your Brevo account. |
+
+> In `APP_ENV=development` with `EMAIL_API_KEY` unset, OTPs are printed to stdout as `[DEV_OTP]` instead of being emailed. **Never use this mode on a production host.**
+
+### SMTP (Deprecated)
+
+> **Deprecated** — Render free tier blocks outbound SMTP ports 25/465/587. Use Brevo API vars above instead.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SMTP_HOST` | Deprecated | — | SMTP server hostname. No longer used. |
+| `SMTP_PORT` | Deprecated | `587` | SMTP port. No longer used. |
+| `SMTP_USER` | Deprecated | — | SMTP username. No longer used. |
+| `SMTP_PASS` | Deprecated | — | SMTP password. No longer used. |
+| `SMTP_FROM` | Deprecated | — | SMTP from address. No longer used. |
+| `SMTP_INSECURE` | Deprecated | `false` | Skip TLS verification. No longer used. |
 
 ### OAuth 2.0
 
@@ -155,9 +169,9 @@ go run .
 
 The server starts on `http://localhost:8080`. Database migrations run automatically on startup.
 
-**Dev note on MFA:** If `SMTP_HOST` is not configured, the OTP is printed directly to the server log instead of being emailed:
+**Dev note on MFA:** If `EMAIL_API_KEY` is not set and `APP_ENV=development`, the OTP is printed directly to the server log instead of being emailed:
 ```
-[DEV_OTP] MFA token for user@example.com: 482910 (not emailed — SMTP not configured)
+[DEV_OTP] MFA token for user@example.com: 482910 (DEV STDOUT FALLBACK — APP_ENV=development, email API not configured)
 ```
 
 ---
@@ -331,16 +345,18 @@ For Kubernetes, set `terminationGracePeriodSeconds: 30` (≥ HTTP drain + worker
 ## Security Notes
 
 - **JWT secret**: `JWT_SECRET` must be set. The server refuses to start with an empty or short (<32 char) secret. In production, use `openssl rand -hex 32` and store in your secrets manager.
-- **No credential logging**: DB passwords, SMTP passwords, AWS credentials, and OAuth secrets are never written to logs.
+- **No credential logging**: DB passwords, email API keys, AWS credentials, and OAuth secrets are never written to logs. Brevo error responses are truncated to HTTP status + generic message only — the request body (which contains the OTP) is never logged.
 - **SQL injection**: all queries use parameterized placeholders (`$1`, `$2`, ...) — never string concatenation.
 - **Error responses**: internal details (SQL errors, file paths, stack traces) are logged server-side only. Clients receive generic error codes.
 - **CORS**: only the `ALLOWED_ORIGIN` (and any `*.vercel.app` origin) is reflected. Set this explicitly in production.
 - **Rate limiting**: upload endpoint is rate-limited per operator per minute (`UPLOAD_RATE_LIMIT_PER_MINUTE`).
 - **Idempotency**: upload endpoint supports `Idempotency-Key` header for safe retries.
-- **MFA stdout fallback is fatal-blocked in production**:
-  - The server accepts a `APP_ENV` environment variable (default: `"production"` when unset — fail-safe, not fail-open).
-  - The stdout OTP fallback (`[DEV_OTP]` in logs) is **only permitted** when `APP_ENV=development` AND `SMTP_HOST` is empty/placeholder.
-  - If `APP_ENV` is unset or set to any value other than `"development"`, and `SMTP_HOST` is missing, `validateConfig()` calls `log.Fatalf` and the process exits before accepting any connections.
-  - Startup logs always announce which mode is active: `[AUTH] MFA delivery: SMTP (host=...)` or `[AUTH] MFA delivery: DEV STDOUT FALLBACK (APP_ENV=development only)` — this is never ambiguous from logs alone.
+- **MFA delivery via Brevo HTTPS API**:
+  - All MFA OTPs are dispatched via Brevo's transactional email HTTPS API (port 443). Direct SMTP is no longer used — Render free tier blocks outbound ports 25/465/587.
+  - `EMAIL_API_KEY` and `EMAIL_FROM_ADDRESS` are required in production. Missing either causes a fatal startup error naming the missing variable.
+  - The server accepts an `APP_ENV` environment variable (default: `"production"` when unset — fail-safe, not fail-open).
+  - The stdout OTP fallback (`[DEV_OTP]` in logs) is **only permitted** when `APP_ENV=development` AND `EMAIL_API_KEY` is unset.
+  - If `APP_ENV` is unset or set to any value other than `"development"`, and `EMAIL_API_KEY` is missing, `validateConfig()` calls `log.Fatalf` and the process exits before accepting any connections.
+  - Startup logs always announce which mode is active: `[AUTH] MFA delivery: Brevo HTTPS API (EMAIL_FROM_ADDRESS=...)` or `[AUTH] MFA delivery: DEV STDOUT FALLBACK (APP_ENV=development only)` — this is never ambiguous from logs alone.
   - **Never set `APP_ENV=development` on a production host.** On cloud platforms (Render, Railway, Fly.io), this variable should not be set at all, which causes the server to default to production-safe behaviour.
 

@@ -2,16 +2,16 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,7 +22,6 @@ import (
 	"golang.org/x/oauth2/facebook"
 	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
-	gomail "gopkg.in/gomail.v2"
 )
 
 // ---------------------------------------------------------------------------
@@ -86,46 +85,45 @@ func generateOTP() (string, error) {
 }
 
 // ---------------------------------------------------------------------------
-// SMTP MFA Email Dispatcher — gomail.v2 with emergency backdoor fallback
+// Brevo HTTPS MFA Email Dispatcher
 // ---------------------------------------------------------------------------
 
-// SendMFAEmail dispatches a dark-obsidian HTML container template layout to the user.
-// It reads SMTP configs dynamically from the environment.
-func SendMFAEmail(toEmail, otp string) (retErr error) {
-	defer func() {
-		if r := recover(); r != nil {
-			retErr = fmt.Errorf("SMTP dispatch panicked: %v", r)
-		}
-	}()
+// brevoEmailPayload is the JSON body sent to the Brevo transactional email API.
+type brevoEmailPayload struct {
+	Sender      brevoAddress   `json:"sender"`
+	To          []brevoAddress `json:"to"`
+	Subject     string         `json:"subject"`
+	HTMLContent string         `json:"htmlContent"`
+}
 
-	smtpHost := os.Getenv("SMTP_HOST")
-	smtpPortStr := os.Getenv("SMTP_PORT")
-	smtpUser := os.Getenv("SMTP_USER")
-	smtpPass := os.Getenv("SMTP_PASS")
-	smtpFrom := os.Getenv("SMTP_FROM")
+type brevoAddress struct {
+	Email string `json:"email"`
+}
 
-	if smtpHost == "" || smtpHost == "smtp.placeholder.net" {
-		return fmt.Errorf("SMTP host not configured")
+// SendMFAEmail dispatches the OTP to toEmail via the Brevo transactional
+// email HTTPS API (port 443). No SMTP dialling — works on all hosting tiers.
+//
+// Required env vars (in production):
+//
+//	EMAIL_API_KEY      — Brevo API key (never logged)
+//	EMAIL_FROM_ADDRESS — verified sender address in the Brevo account
+//
+// Returns an error if the API key / from-address are missing, if the HTTP
+// request fails, or if Brevo returns a non-2xx status code.
+func SendMFAEmail(toEmail, otp string) error {
+	apiKey := strings.TrimSpace(os.Getenv("EMAIL_API_KEY"))
+	fromAddr := strings.TrimSpace(os.Getenv("EMAIL_FROM_ADDRESS"))
+
+	if apiKey == "" {
+		return fmt.Errorf("email API not configured (EMAIL_API_KEY is unset)")
 	}
-
-	smtpPort := 587
-	if smtpPortStr != "" {
-		if p, err := strconv.Atoi(smtpPortStr); err == nil {
-			smtpPort = p
-		}
-	}
-
-	if smtpFrom == "" {
-		if smtpUser != "" {
-			smtpFrom = smtpUser
-		} else {
-			smtpFrom = "noreply@pulsater.net"
-		}
+	if fromAddr == "" {
+		return fmt.Errorf("email API not configured (EMAIL_FROM_ADDRESS is unset)")
 	}
 
 	expiry := time.Now().Add(otpTTL).Format("2006-01-02 15:04:05 UTC")
 
-	htmlBody := fmt.Sprintf(`<!DOCTYPE html>
+	htmlContent := fmt.Sprintf(`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -212,26 +210,45 @@ func SendMFAEmail(toEmail, otp string) (retErr error) {
 </body>
 </html>`, otp, expiry)
 
-	m := gomail.NewMessage()
-	m.SetHeader("From", smtpFrom)
-	m.SetHeader("To", toEmail)
-	m.SetHeader("Subject", "HYPERVISOR PULSATER — MFA Verification Token")
-	m.SetBody("text/html", htmlBody)
-
-	d := gomail.NewDialer(smtpHost, smtpPort, smtpUser, smtpPass)
-
-	// Support optional InsecureSkipVerify for localhost or test systems
-	smtpInsecure := os.Getenv("SMTP_INSECURE") == "true" || smtpHost == "localhost" || smtpHost == "127.0.0.1"
-	if smtpInsecure {
-		d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	payload := brevoEmailPayload{
+		Sender:      brevoAddress{Email: fromAddr},
+		To:          []brevoAddress{{Email: toEmail}},
+		Subject:     "HYPERVISOR PULSATER — MFA Verification Token",
+		HTMLContent: htmlContent,
 	}
 
-	if err := d.DialAndSend(m); err != nil {
-		log.Printf("[MFA_SMTP] gomail DialAndSend failed: %v", err)
-		return fmt.Errorf("SMTP send failed: %w", err)
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("email: failed to marshal request payload: %w", err)
 	}
 
-	log.Printf("[MFA_SMTP] Email dispatched successfully to %s", toEmail)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.brevo.com/v3/smtp/email", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("email: failed to build HTTP request: %w", err)
+	}
+	// NOTE: EMAIL_API_KEY is set in the header but never written to logs.
+	req.Header.Set("api-key", apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("email: Brevo API request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// Read up to 512 bytes of the error body for diagnostics.
+		// We deliberately do NOT log the full request body (contains OTP).
+		rawErr, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		log.Printf("[MFA_EMAIL] Brevo API returned non-2xx status %d: %s", resp.StatusCode, string(rawErr))
+		return fmt.Errorf("email: Brevo API returned status %d", resp.StatusCode)
+	}
+
+	log.Printf("[MFA_EMAIL] Brevo accepted email dispatch for %s (status %d)", toEmail, resp.StatusCode)
 	return nil
 }
 
@@ -487,17 +504,16 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MFA email dispatch error for %s: %v", email, err)
 		// Stdout OTP fallback is ONLY permitted when:
 		//   1. APP_ENV == "development"  (explicitly set, never defaulted)
-		//   2. SMTP_HOST is empty or a known placeholder
+		//   2. EMAIL_API_KEY is unset
 		//
 		// validateConfig() guarantees this combination is only reachable in dev.
 		// In production (APP_ENV unset or != "development") this branch returns
-		// 500 regardless of SMTP configuration, because validateConfig() would
-		// have already aborted startup if SMTP was missing in production.
+		// 500 regardless of email config, because validateConfig() would
+		// have already aborted startup if EMAIL_API_KEY was missing in production.
 		appEnv := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
-		smtpHost := strings.TrimSpace(os.Getenv("SMTP_HOST"))
-		smtpUnconfigured := smtpHost == "" || smtpHost == "smtp.placeholder.net"
-		if appEnv == "development" && smtpUnconfigured {
-			log.Printf("[DEV_OTP] MFA token for %s: %s (DEV STDOUT FALLBACK — APP_ENV=development, SMTP not configured)", email, otp)
+		emailAPIKey := strings.TrimSpace(os.Getenv("EMAIL_API_KEY"))
+		if appEnv == "development" && emailAPIKey == "" {
+			log.Printf("[DEV_OTP] MFA token for %s: %s (DEV STDOUT FALLBACK — APP_ENV=development, email API not configured)", email, otp)
 		} else {
 			WriteError(w, http.StatusInternalServerError, "Failed to send MFA email")
 			return
