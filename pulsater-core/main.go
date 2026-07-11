@@ -727,9 +727,129 @@ func runMigrations() error {
 	if err := tx3.Commit(ctx); err != nil {
 		return fmt.Errorf("phase 3 migration — commit failed: %w", err)
 	}
+
 	log.Println("[MIGRATION] Phase 3 schemas verified (operator_signature_keys, node_deployments, index active).")
+
+	// ── Phase 4 — single transaction: new columns, worker telemetry, app config ─
+	//
+	// Ordering contract:
+	//   STEP 1 — ALTER TABLE containers ADD COLUMN origin_region (TEXT)
+	//   STEP 2 — ALTER TABLE container_events ADD COLUMN severity (TEXT+CHECK)
+	//   STEP 3 — CREATE TABLE worker_nodes (heartbeat telemetry)
+	//   STEP 4 — CREATE TABLE app_config (live config k/v)
+	//   STEP 5 — Seed app_config defaults (INSERT ... ON CONFLICT DO NOTHING)
+	//   STEP 6 — CREATE INDEX idx_worker_nodes_heartbeat
+	//   STEP 7 — CREATE INDEX idx_container_events_severity
+
+	tx4, err := DB.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("phase 4 migration: begin transaction: %w", err)
+	}
+	defer func() { _ = tx4.Rollback(ctx) }()
+
+	execStep4 := func(label, sql string) error {
+		log.Printf("[MIGRATION][P4] %s", label)
+		if _, err := tx4.Exec(ctx, sql); err != nil {
+			return fmt.Errorf("phase 4 migration — %s: %w", label, err)
+		}
+		return nil
+	}
+
+	// STEP 1 — origin_region on containers
+	if err := execStep4(
+		"ALTER containers ADD origin_region",
+		`ALTER TABLE containers ADD COLUMN IF NOT EXISTS origin_region TEXT`,
+	); err != nil {
+		return err
+	}
+
+	// STEP 2 — severity on container_events
+	// DEFAULT 'INFO' ensures all existing rows satisfy the constraint immediately.
+	if err := execStep4(
+		"ALTER container_events ADD severity",
+		`ALTER TABLE container_events
+		 ADD COLUMN IF NOT EXISTS severity TEXT NOT NULL DEFAULT 'INFO'
+		 CHECK (severity IN ('INFO','WARNING','ERROR','SYS'))`,
+	); err != nil {
+		return err
+	}
+	log.Println("[MIGRATION][P4] STEP 1-2 complete — origin_region and severity columns added.")
+
+	// STEP 3 — worker_nodes
+	// node_id is hostname-only (not hostname+pid) so process restarts upsert the
+	// same row rather than creating new ones (no unbounded table growth).
+	if err := execStep4(
+		"CREATE TABLE worker_nodes",
+		`CREATE TABLE IF NOT EXISTS worker_nodes (
+			node_id         TEXT PRIMARY KEY,
+			last_heartbeat  TIMESTAMPTZ NOT NULL,
+			goroutine_count INT,
+			mem_alloc_bytes BIGINT,
+			gc_pause_ns     BIGINT,
+			started_at      TIMESTAMPTZ NOT NULL
+		)`,
+	); err != nil {
+		return err
+	}
+	log.Println("[MIGRATION][P4] STEP 3 complete — worker_nodes created.")
+
+	// STEP 4 — app_config
+	// PUT /api/v1/config/{key} is restricted to ADMIN_OPERATOR_ID (see handler).
+	// GET /api/v1/config is readable by all authenticated operators.
+	if err := execStep4(
+		"CREATE TABLE app_config",
+		`CREATE TABLE IF NOT EXISTS app_config (
+			config_key   TEXT PRIMARY KEY,
+			config_value TEXT NOT NULL,
+			updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+			updated_by   UUID REFERENCES users(id)
+		)`,
+	); err != nil {
+		return err
+	}
+	log.Println("[MIGRATION][P4] STEP 4 complete — app_config created.")
+
+	// STEP 5 — Seed defaults (idempotent: ON CONFLICT DO NOTHING)
+	seeds := []struct{ key, value string }{
+		{"goroutine_threshold", "16384"},
+		{"flush_interval_ms", "500"},
+		{"replication_factor", "x3"},
+		{"verbosity_level", "INFO"},
+	}
+	for _, s := range seeds {
+		if err := execStep4(
+			"SEED app_config "+s.key,
+			fmt.Sprintf(`INSERT INTO app_config (config_key, config_value)
+			             VALUES ('%s', '%s') ON CONFLICT DO NOTHING`, s.key, s.value),
+		); err != nil {
+			return err
+		}
+	}
+	log.Println("[MIGRATION][P4] STEP 5 complete — app_config defaults seeded.")
+
+	// STEP 6 — Index on worker_nodes.last_heartbeat
+	if err := execStep4(
+		"CREATE INDEX idx_worker_nodes_heartbeat",
+		`CREATE INDEX IF NOT EXISTS idx_worker_nodes_heartbeat ON worker_nodes (last_heartbeat)`,
+	); err != nil {
+		return err
+	}
+
+	// STEP 7 — Index on container_events.severity
+	if err := execStep4(
+		"CREATE INDEX idx_container_events_severity",
+		`CREATE INDEX IF NOT EXISTS idx_container_events_severity
+		 ON container_events (severity, occurred_at DESC)`,
+	); err != nil {
+		return err
+	}
+	log.Println("[MIGRATION][P4] STEP 6-7 complete — indexes created.")
+
+	if err := tx4.Commit(ctx); err != nil {
+		return fmt.Errorf("phase 4 migration — commit failed: %w", err)
+	}
+	log.Println("[MIGRATION] Phase 4 schemas verified (worker_nodes, app_config, origin_region, severity, indexes active).")
 	return nil
 }
-
 
 
