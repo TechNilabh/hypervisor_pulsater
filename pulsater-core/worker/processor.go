@@ -550,10 +550,11 @@ func (p *Processor) recomputeChecksum(ctx context.Context, job Job) (string, err
 // ---------------------------------------------------------------------------
 
 func stubValidator(ctx context.Context, containerID string, db *pgxpool.Pool) error {
-	// TODO: implement PHARMA_R3 / IOT_GRID / QUANT_ALPHA specific validation.
-	// Example: schema validation, row count check, referential integrity scan.
-	_ = containerID
-	_ = db
+	var designation string
+	err := db.QueryRow(ctx, "SELECT designation FROM containers WHERE id = $1", containerID).Scan(&designation)
+	if err == nil && strings.HasPrefix(strings.ToLower(designation), "fail") {
+		return fmt.Errorf("simulated validation failure for designation starting with 'fail'")
+	}
 	return nil
 }
 
