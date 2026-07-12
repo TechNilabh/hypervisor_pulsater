@@ -117,6 +117,7 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
   const [file, setFile] = useState<File | null>(null);
   const [callsign, setCallsign] = useState("");
   const [vectorType, setVectorType] = useState<VectorType>("PHARMA_R3");
+  const [originRegion, setOriginRegion] = useState("US-EAST-1");
   const [idempotencyKey, setIdempotencyKey] = useState("");
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -146,6 +147,7 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
     form.append("payload", file);
     form.append("callsign_alias", callsign.trim());
     form.append("target_vector_type", vectorType);
+    form.append("origin_region", originRegion);
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
@@ -282,6 +284,23 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
               <option value="PHARMA_R3">PHARMA_R3</option>
               <option value="IOT_GRID">IOT_GRID</option>
               <option value="QUANT_ALPHA">QUANT_ALPHA</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="font-label-code text-[9px] text-[#84967e] uppercase tracking-wider">
+              Origin Region *
+            </label>
+            <select
+              value={originRegion}
+              onChange={(e) => setOriginRegion(e.target.value)}
+              className="bg-[#0e0e0e] border border-[#3b4b37] rounded-none px-3 py-2 font-body-mono text-xs text-[#e5e2e1] focus:outline-none focus:border-[#00f1fe] transition-colors cursor-pointer"
+            >
+              <option value="US-EAST-1">US-EAST-1</option>
+              <option value="US-WEST-2">US-WEST-2</option>
+              <option value="EU-WEST-1">EU-WEST-1</option>
+              <option value="AP-SOUTH-1">AP-SOUTH-1</option>
+              <option value="SA-EAST-1">SA-EAST-1</option>
             </select>
           </div>
 

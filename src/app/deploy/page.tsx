@@ -13,6 +13,7 @@ export default function DeployContainer() {
   const [dbType, setDbType] = useState("PostgreSQL");
   const [vectorType, setVectorType] = useState("PHARMA_R3");
   const [portMapping, setPortMapping] = useState("5432:5432");
+  const [originRegion, setOriginRegion] = useState("US-EAST-1");
   const [operatorKey, setOperatorKey] = useState("");
 
   // ─── Deployment flow state ────────────────────────────────────────────────
@@ -112,6 +113,7 @@ export default function DeployContainer() {
           target_vector_type: vectorType,
           host_port_mapping: portMapping,
           operator_signature_key: operatorKey,
+          origin_region: originRegion,
         }),
       });
 
@@ -270,6 +272,23 @@ export default function DeployContainer() {
                     type="text"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="font-label-code text-[9px] text-[#00f1fe] block">
+                  [ ORIGIN_REGION ]
+                </label>
+                <select
+                  value={originRegion}
+                  onChange={(e) => setOriginRegion(e.target.value)}
+                  className="w-full bg-[#1c1b1b] border border-[#3b4b37] focus:border-[#00ff41] text-white font-body-mono p-3 text-xs focus:ring-0 focus:outline-none transition-all cursor-pointer"
+                >
+                  <option value="US-EAST-1">US-EAST-1 (N. Virginia)</option>
+                  <option value="US-WEST-2">US-WEST-2 (Oregon)</option>
+                  <option value="EU-WEST-1">EU-WEST-1 (Ireland)</option>
+                  <option value="AP-SOUTH-1">AP-SOUTH-1 (Mumbai)</option>
+                  <option value="SA-EAST-1">SA-EAST-1 (São Paulo)</option>
+                </select>
               </div>
 
               <div className="space-y-2">
