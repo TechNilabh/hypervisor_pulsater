@@ -279,10 +279,19 @@ func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 	// ── Extract form fields ────────────────────────────────────────────────
 	callsignAlias := strings.TrimSpace(r.FormValue("callsign_alias"))
 	targetVectorType := strings.TrimSpace(r.FormValue("target_vector_type"))
+	originRegion := strings.TrimSpace(r.FormValue("origin_region"))
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 
 	if callsignAlias == "" || targetVectorType == "" {
 		WriteError(w, http.StatusBadRequest, "callsign_alias and target_vector_type are required")
+		return
+	}
+	if originRegion == "" {
+		WriteError(w, http.StatusBadRequest, "origin_region is required")
+		return
+	}
+	if !ValidRegion(originRegion) {
+		WriteError(w, http.StatusBadRequest, "unknown origin_region: "+originRegion)
 		return
 	}
 
@@ -400,17 +409,17 @@ func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 			id, user_id, designation, ingestion_target_db, host_port_mapping,
 			operator_id, callsign_alias, target_vector_type, status_state,
 			storage_payload_url, storage_backend, file_size_bytes, checksum_sha256,
-			idempotency_key, retry_count, updated_at
+			idempotency_key, retry_count, origin_region, updated_at
 		) VALUES (
 			$1, $2, $3, $4, $5,
 			$6, $7, $8, 'INITIALIZED',
 			$9, $10, $11, $12,
-			$13, 0, now()
+			$13, 0, $14, now()
 		)`,
 		containerID, claims.UserID, callsignAlias, targetVectorType, "N/A",
 		claims.UserID, callsignAlias, targetVectorType,
 		storedURL, storageBackendName, fileHeader.Size, checksumHex,
-		nullableString(idempotencyKey),
+		nullableString(idempotencyKey), originRegion,
 	)
 	if err != nil {
 		slog.Error("containers insert failed", "error", err, "container_id", containerID)
@@ -418,10 +427,10 @@ func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// INSERT container_events row.
+	// INSERT container_events row (severity='INFO' — lifecycle start).
 	_, err = tx.Exec(r.Context(), `
-		INSERT INTO container_events (container_id, from_state, to_state, detail)
-		VALUES ($1, NULL, 'INITIALIZED', '{"source":"upload_handler"}')`,
+		INSERT INTO container_events (container_id, from_state, to_state, detail, severity)
+		VALUES ($1, NULL, 'INITIALIZED', '{"source":"upload_handler"}', 'INFO')`,
 		containerID,
 	)
 	if err != nil {

@@ -129,11 +129,35 @@ func (p *Processor) Run(ctx context.Context) {
 
 // requeueOrphanedJobs resets any RUNNING jobs locked by this worker process
 // back to QUEUED so they can be retried. Called on shutdown via defer in Run().
+// Writes a SYS-severity container_events row for each requeued job so the
+// LIVE_CDC and ALERTS pages reflect worker lifecycle events honestly.
 func (p *Processor) requeueOrphanedJobs() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	wid := workerID()
+
+	// Collect affected container_ids before updating, so we can write events.
+	rows, err := p.DB.Query(ctx, `
+		SELECT pj.job_id, pj.container_id, c.operator_id, c.callsign_alias
+		FROM processing_jobs pj
+		JOIN containers c ON c.id = pj.container_id
+		WHERE pj.job_status = 'RUNNING' AND pj.locked_by = $1
+	`, wid)
+	if err != nil {
+		p.Log.Error("worker: requeueOrphanedJobs pre-select failed", "worker_id", wid, "error", err)
+		return
+	}
+	type orphan struct{ jobID, containerID, operatorID, callsign string }
+	var orphans []orphan
+	for rows.Next() {
+		var o orphan
+		if err := rows.Scan(&o.jobID, &o.containerID, &o.operatorID, &o.callsign); err == nil {
+			orphans = append(orphans, o)
+		}
+	}
+	rows.Close()
+
 	tag, err := p.DB.Exec(ctx, `
 		UPDATE processing_jobs
 		SET
@@ -149,6 +173,18 @@ func (p *Processor) requeueOrphanedJobs() {
 		p.Log.Error("worker: requeueOrphanedJobs failed", "worker_id", wid, "error", err)
 		return
 	}
+
+	// Write SYS-severity lifecycle events for each requeued job.
+	for _, o := range orphans {
+		detail := fmt.Sprintf(`{"source":"worker_shutdown","worker_id":%q}`, wid)
+		if _, err := p.DB.Exec(ctx, `
+			INSERT INTO container_events (container_id, from_state, to_state, detail, severity)
+			VALUES ($1, 'RUNNING', 'QUEUED', $2::jsonb, 'SYS')`,
+			o.containerID, detail); err != nil {
+			p.Log.Error("worker: requeue SYS event insert failed", "container_id", o.containerID, "error", err)
+		}
+	}
+
 	p.Log.Info("worker: orphaned jobs requeued on shutdown",
 		"worker_id", wid,
 		"rows_requeued", tag.RowsAffected(),
@@ -362,6 +398,16 @@ func (p *Processor) handleJobFailure(ctx context.Context, job Job, validationErr
 		return fmt.Errorf("handleJobFailure: update job: %w", err)
 	}
 
+	// Write a WARNING-severity event so ALERTS and LIVE_CDC reflect retry scheduling.
+	retryDetail := fmt.Sprintf(`{"source":"worker","step":"retry_scheduled","attempt":%d,"max":%d,"retry_in_sec":%.0f}`,
+		nextAttempt, p.MaxAttempts, backoffSec)
+	if _, err := p.DB.Exec(ctx, `
+		INSERT INTO container_events (container_id, from_state, to_state, detail, severity)
+		VALUES ($1, 'PROCESSING', 'PROCESSING', $2::jsonb, 'WARNING')`,
+		job.ContainerID, retryDetail); err != nil {
+		p.Log.Error("handleJobFailure: insert WARNING event failed", "error", err)
+	}
+
 	p.Hub.Publish(job.OperatorID, Event{
 		ContainerID:   job.ContainerID,
 		OperatorID:    job.OperatorID,
@@ -393,10 +439,10 @@ func (p *Processor) failJobPermanently(ctx context.Context, job Job, errMsg, det
 		p.Log.Error("failJobPermanently: update container failed", "error", err)
 	}
 
-	// Append event.
+	// Append ERROR-severity event so ALERTS and LIVE_CDC reflect the failure.
 	if _, err := p.DB.Exec(ctx, `
-		INSERT INTO container_events (container_id, from_state, to_state, detail)
-		VALUES ($1, 'PROCESSING', 'FAILED', $2::jsonb)`,
+		INSERT INTO container_events (container_id, from_state, to_state, detail, severity)
+		VALUES ($1, 'PROCESSING', 'FAILED', $2::jsonb, 'ERROR')`,
 		job.ContainerID, detailJSON,
 	); err != nil {
 		p.Log.Error("failJobPermanently: insert event failed", "error", err)
@@ -434,10 +480,15 @@ func (p *Processor) transitionContainer(ctx context.Context, job Job, from, to, 
 		WHERE id = $2`, to, job.ContainerID); err != nil {
 		return err
 	}
+	// severity: 'ERROR' when transitioning to FAILED, 'INFO' otherwise.
+	severity := "INFO"
+	if to == "FAILED" {
+		severity = "ERROR"
+	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO container_events (container_id, from_state, to_state, detail)
-		VALUES ($1, $2, $3, $4::jsonb)`,
-		job.ContainerID, from, to, detailJSON); err != nil {
+		INSERT INTO container_events (container_id, from_state, to_state, detail, severity)
+		VALUES ($1, $2, $3, $4::jsonb, $5)`,
+		job.ContainerID, from, to, detailJSON, severity); err != nil {
 		return err
 	}
 

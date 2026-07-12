@@ -147,6 +147,16 @@ func main() {
 	mux.HandleFunc("/api/v1/operator/signature-key/generate", JWTAuthMiddleware(HandleGenerateSignatureKey))
 	mux.HandleFunc("/api/v1/nodes/deploy", JWTAuthMiddleware(HandleNodeDeploy))
 
+	// Phase 4 — Telemetry, Alerts, Config
+	mux.HandleFunc("/api/v1/routing/topology", JWTAuthMiddleware(HandleRoutingTopology))
+	mux.HandleFunc("/api/v1/cluster/nodes", JWTAuthMiddleware(HandleClusterNodes))
+	mux.HandleFunc("/api/v1/alerts", JWTAuthMiddleware(HandleAlerts))
+	mux.HandleFunc("/api/v1/config", JWTAuthMiddleware(HandleConfig))
+	mux.HandleFunc("/api/v1/config/", JWTAuthMiddleware(HandleConfigKey))
+
+	// Phase 4 — Worker heartbeat (upserts this process's telemetry every 5s)
+	go StartWorkerHeartbeat(context.Background())
+
 	handler := CORSMiddleware(mux)
 
 	port := os.Getenv("PORT")

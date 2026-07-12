@@ -147,6 +147,14 @@ func (h *SSEHub) Publish(operatorID string, event ContainerEvent) {
 	}
 }
 
+// SubscriberCount returns the number of active SSE subscribers for operatorID.
+// Used by HandleRoutingTopology to surface a real connection-pool stat.
+func (h *SSEHub) SubscriberCount(operatorID string) int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.subs[operatorID])
+}
+
 // ---------------------------------------------------------------------------
 // SSE Ticket Store — one-time short-lived tokens (Fix #1)
 // ---------------------------------------------------------------------------

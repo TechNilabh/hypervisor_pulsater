@@ -56,6 +56,7 @@ type NodeDeployRequest struct {
 	TargetVectorType     string `json:"target_vector_type"`
 	HostPortMapping      string `json:"host_port_mapping"`
 	OperatorSignatureKey string `json:"operator_signature_key"`
+	OriginRegion         string `json:"origin_region"`
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -95,6 +96,7 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 	req.IngestionTargetDB = strings.TrimSpace(req.IngestionTargetDB)
 	req.TargetVectorType = strings.TrimSpace(req.TargetVectorType)
 	req.HostPortMapping = strings.TrimSpace(req.HostPortMapping)
+	req.OriginRegion = strings.TrimSpace(req.OriginRegion)
 	// NOTE: req.OperatorSignatureKey is intentionally not trimmed or logged.
 
 	// ── Field validation ─────────────────────────────────────────────────────
@@ -142,6 +144,17 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 	if hostPort < 1 || hostPort > 65535 || containerPort < 1 || containerPort > 65535 {
 		writeFieldError(w, "host_port_mapping",
 			"Both port numbers in host_port_mapping must be between 1 and 65535")
+		return
+	}
+
+	// 5. origin_region — server-side allowlist
+	if req.OriginRegion == "" {
+		writeFieldError(w, "origin_region", "origin_region is required")
+		return
+	}
+	if !ValidRegion(req.OriginRegion) {
+		writeFieldError(w, "origin_region",
+			"origin_region must be one of: US-EAST-1, US-WEST-2, EU-WEST-1, AP-SOUTH-1, SA-EAST-1")
 		return
 	}
 
@@ -212,16 +225,17 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 			operator_id, callsign_alias, target_vector_type, status_state,
 			storage_payload_url, storage_backend,
 			file_size_bytes, checksum_sha256, idempotency_key,
-			retry_count, updated_at
+			retry_count, origin_region, updated_at
 		) VALUES (
 			$1, $2, $3, $4, $5,
 			$6, $7, $8, 'INITIALIZED',
 			NULL, 'none',
 			NULL, NULL, NULL,
-			0, now()
+			0, $9, now()
 		)`,
 		containerID, operatorID, req.ContainerDesignation, req.IngestionTargetDB, req.HostPortMapping,
 		operatorID, req.ContainerDesignation, req.TargetVectorType,
+		req.OriginRegion,
 	); err != nil {
 		slog.Error("node_deploy: containers insert failed",
 			"operator_id", operatorID, "container_id", containerID, "error", err)
@@ -256,10 +270,10 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// INSERT initial container_events row.
+	// INSERT initial container_events row (severity='INFO' — lifecycle start).
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO container_events (container_id, from_state, to_state, detail)
-		VALUES ($1, NULL, 'INITIALIZED', '{"source":"node_deploy_handler"}')`,
+		INSERT INTO container_events (container_id, from_state, to_state, detail, severity)
+		VALUES ($1, NULL, 'INITIALIZED', '{"source":"node_deploy_handler"}', 'INFO')`,
 		containerID,
 	); err != nil {
 		slog.Error("node_deploy: container_events insert failed",
