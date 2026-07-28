@@ -84,7 +84,6 @@ export default function LiveCdc() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
 
-  // Load token
   useEffect(() => {
     const t = localStorage.getItem("session_token");
     if (!t) { router.push("/login"); return; }
@@ -93,7 +92,6 @@ export default function LiveCdc() {
 
   const { containers: liveMap, connected, error: sseError } = useContainerStream(token);
 
-  // Accumulate event rows from the SSE stream
   const [rows, setRows] = useState<CdcRow[]>([]);
   const seenKeys = useRef(new Set<string>());
 
@@ -109,14 +107,12 @@ export default function LiveCdc() {
     return () => window.removeEventListener("containerStatusUpdated", handler);
   }, []);
 
-  // Derived stats
   const totalEvents    = rows.length;
   const activeContainers = [...liveMap.values()].filter(
     s => s.to_state !== "SYNCED" && s.to_state !== "FAILED"
   ).length;
   const failedCount = rows.filter(r => r.severity === "ERROR").length;
 
-  // State breakdown bars
   const byState: Record<string, number> = { INITIALIZED: 0, PROCESSING: 0, SYNCED: 0, FAILED: 0 };
   [...liveMap.values()].forEach(s => { if (byState[s.to_state] !== undefined) byState[s.to_state]++; });
   const total = Math.max(1, [...liveMap.values()].length);
@@ -248,7 +244,6 @@ export default function LiveCdc() {
 
           {/* Right Panel: Side Stats */}
           <div className="flex-[3] flex flex-col gap-4 overflow-y-auto custom-scrollbar">
-            {/* Container state breakdown */}
             <div className="bg-[#201f1f]/80 border border-[#3b4b37] p-4 tactical-bracket relative rounded-sm">
               <div className="font-label-code text-[10px] text-[#00e639] mb-3">CONTAINER_STATES</div>
               <div className="space-y-2">
@@ -271,7 +266,6 @@ export default function LiveCdc() {
               </div>
             </div>
 
-            {/* State count chart */}
             <div className="bg-[#201f1f]/80 border border-[#3b4b37] p-4 tactical-bracket relative rounded-sm flex-1 flex flex-col justify-between">
               <div className="font-label-code text-[10px] text-[#00dbe7] mb-2 uppercase">Event State Breakdown</div>
               <div className="flex items-end gap-2 h-28 pt-4 justify-around">

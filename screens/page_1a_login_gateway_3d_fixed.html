@@ -171,10 +171,8 @@
 <!-- LEFT PANEL: CYBERNETIC AVATAR -->
 <section class="relative hidden md:flex flex-col items-center justify-center overflow-hidden bg-black scanlines">
 <div class="absolute inset-0 z-0" id="threejs-container">
-<!-- Three.js scene will render here -->
 </div>
 <div class="relative z-20 p-margin flex flex-col items-center pointer-events-none w-full h-full justify-center">
-<!-- Brackets surrounding scene container -->
 <div class="relative w-[450px] h-[550px] flex items-center justify-center">
 <div class="tactical-bracket-tl"></div>
 <div class="tactical-bracket-br"></div>
@@ -299,7 +297,6 @@
 </section>
 </main>
 <script>
-    // Three.js Integration
     (function() {
         const container = document.getElementById('threejs-container');
         if (!container) return;
@@ -316,7 +313,6 @@
         renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement);
 
-        // Lights
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
 
@@ -324,7 +320,6 @@
         pointLight.position.set(5, 5, 5);
         scene.add(pointLight);
 
-        // Biometric Sphere Geometry (Abstracted Data Node)
         const geometry = new THREE.SphereGeometry(2, 64, 64);
         const material = new THREE.MeshPhongMaterial({
             color: 0x050505,
@@ -358,7 +353,6 @@
         const particles = new THREE.Points(particlesGeometry, particlesMaterial);
         scene.add(particles);
 
-        // Interaction logic
         let mouseX = 0;
         let mouseY = 0;
         let targetX = 0;
@@ -372,7 +366,6 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            // Smooth rotation based on mouse
             targetX += (mouseX - targetX) * 0.05;
             targetY += (mouseY - targetY) * 0.05;
 
@@ -380,7 +373,6 @@
             sphere.rotation.x = targetY * 0.5;
             sphere.rotation.z = targetX * 0.5;
 
-            // Pulse effect
             const time = Date.now() * 0.002;
             sphere.scale.setScalar(1 + Math.sin(time) * 0.03);
 

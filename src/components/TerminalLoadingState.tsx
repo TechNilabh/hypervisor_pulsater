@@ -16,7 +16,6 @@ export function TerminalLoadingState({
 }: TerminalLoadingStateProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-16 select-none">
-      {/* Spinning bracket ring */}
       <div className="relative w-12 h-12">
         <span
           className="absolute inset-0 rounded-full border-2 border-[#00f1fe]/20"
@@ -36,7 +35,6 @@ export function TerminalLoadingState({
         <span className="absolute inset-[6px] rounded-full border border-[#00e639]/30" />
       </div>
 
-      {/* Label + cursor */}
       <div className="flex items-center gap-1 font-mono text-[11px] tracking-widest text-[#00f1fe]/80 uppercase">
         <span className="animate-pulse">{label}</span>
         <span

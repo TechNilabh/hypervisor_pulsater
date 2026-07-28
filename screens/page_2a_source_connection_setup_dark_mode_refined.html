@@ -153,7 +153,6 @@
     </style>
 </head>
 <body class="scanline">
-<!-- TopNavBar -->
 <header class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant shadow-[0_0_8px_rgba(0,230,57,0.15)] flex justify-between items-center px-gutter h-14 w-full bg-surface-container-lowest">
 <div class="flex items-center gap-4">
 <span class="font-display-tech text-headline-md tracking-tighter text-primary-fixed-dim">HYPERVISOR_PULSATER_v2.0.4</span>
@@ -172,7 +171,6 @@
 </div>
 </div>
 </header>
-<!-- SideNavBar -->
 <aside class="fixed left-0 top-14 h-[calc(100vh-88px)] w-64 z-40 bg-surface-container-lowest/90 backdrop-blur-xl border-r border-outline-variant flex flex-col py-4 space-y-1 bg-black">
 <div class="px-4 mb-6">
 <h3 class="font-headline-md text-primary-fixed">OPERATOR_01</h3>
@@ -218,7 +216,6 @@
 <h2 class="font-headline-lg text-primary-fixed-dim tracking-tight">SOURCE NODE CONFIGURATION</h2>
 </header>
 <form class="space-y-6">
-<!-- DB Config -->
 <div class="grid grid-cols-2 gap-margin">
 <div class="space-y-2">
 <label class="font-label-code text-on-surface-variant flex items-center gap-1">
@@ -358,7 +355,6 @@
 </div>
 </div>
 </div>
-<!-- Action Bar -->
 <div class="glass-module p-4 space-y-3">
 <button class="w-full bg-primary-fixed-dim text-on-primary font-label-code py-3 flex items-center justify-center gap-2 animate-flicker hover:shadow-[0_0_15px_rgba(0,230,57,0.4)] transition-all">
 <span class="material-symbols-outlined">bolt</span>
@@ -398,7 +394,6 @@
 </div>
 </footer>
 <script>
-        // Micro-interaction for logs
         const logContainer = document.getElementById('terminal-logs');
         const phrases = [
             "[08:22:25] POLLING_SOURCE... SUCCESS",
@@ -416,6 +411,5 @@
             if (logContainer.children.length > 20) logContainer.removeChild(logContainer.firstChild);
         }, 3000);
     </script>
-
 
 </body></html>

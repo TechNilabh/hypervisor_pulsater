@@ -179,7 +179,6 @@
     </style>
 </head>
 <body class="bg-[#0A0A0A] text-on-surface font-body-mono selection:bg-primary-container selection:text-on-primary-container overflow-hidden h-screen flex flex-col">
-<!-- TopNavBar -->
 <header class="bg-background/80 backdrop-blur-xl text-primary flex justify-between items-center px-gutter py-unit w-full max-w-full docked full-width top-0 border-b border-outline-variant shadow-[0_0_8px_rgba(0,242,255,0.1)] z-50">
 <div class="flex items-center gap-4">
 <span class="material-symbols-outlined text-primary-fixed-dim">hub</span>
@@ -196,7 +195,6 @@
 </div>
 </header>
 <div class="flex flex-1 overflow-hidden relative">
-<!-- SideNavBar -->
 <aside class="fixed left-0 top-0 h-full z-40 flex flex-col pt-16 bg-surface-container-lowest/90 backdrop-blur-md text-secondary-fixed-dim w-64 border-r border-outline-variant">
 <div class="p-4 border-b border-outline-variant">
 <div class="font-label-code text-primary mb-1">NODE_ACTIVE</div>
@@ -291,7 +289,6 @@
 <line class="topology-line" opacity="0.8" stroke="#00e639" stroke-width="6" x1="450" x2="600" y1="450" y2="550"></line>
 <line class="topology-line" opacity="0.5" stroke="#00f1fe" stroke-width="3" x1="250" x2="350" y1="250" y2="100"></line>
 </svg>
-<!-- The Globe -->
 <div class="relative w-[500px] h-[500px] rounded-full border border-primary/20 shadow-[0_0_150px_rgba(0,230,57,0.15)] overflow-hidden z-10">
 <img alt="Earth projection" class="w-full h-full object-cover opacity-70 mix-blend-screen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0zxEktgiFQ-hxibs4KAmQ79QymqSX_bNZQhU0UJ9rZynHtNFC72AmFJZz7DIYa8NveiWbwdJ5lDRYiqE6DtpB1-H16z6H3SNwExi44BgAgaYY1Ae6fwtN5XYY5gOo1lpOnsW54j2cEAr5g1FSVilWsAtOb2bkXcyYBCnvW5x2p5dBSk8TOkygWLs_czanyTO3OxwOjGngcThrZXInVFNj3EgmeoGQNmNvaVC3dHwAWEGDZcgVKad3u0RLXkmxCiSq6hWUv6XlQR0"/>
 </div>
@@ -306,7 +303,6 @@
 </div>
 <!-- Node 3: ASIA_PACIFIC (Top Right) -->
 <div class="absolute top-[280px] left-[550px] w-8 h-8 bg-tertiary-fixed-dim rounded-full z-30 node-glow-tertiary border-2 border-white/30 translate-x-[-50%] translate-y-[-50%]"></div>
-<!-- Labels -->
 <div class="absolute top-[210px] left-[250px] p-2 bg-surface-container/80 backdrop-blur-md border border-primary-fixed-dim text-body-mono-sm z-40 tactical-bracket translate-x-[-50%]">
 <div class="text-primary font-label-code mb-1">NODE_US_EAST_01</div>
 <div class="flex gap-2 items-center text-[10px]">
@@ -403,14 +399,12 @@
 </div>
 </footer>
 <script>
-        // Populate pixel arrays for nodes
         function populatePixelArray(elementId) {
             const container = document.getElementById(elementId);
             if (!container) return;
             for (let i = 0; i < 64; i++) {
                 const pixel = document.createElement('div');
                 pixel.className = 'pixel-block';
-                // Randomize intensity inspired by binned block data
                 const opacity = Math.random();
                 pixel.style.backgroundColor = `rgba(255, 255, 255, ${opacity * 0.8})`;
                 if (Math.random() > 0.8) pixel.style.backgroundColor = '#00f1fe';
@@ -445,7 +439,6 @@
             }
         }, 2000);
 
-        // Simple segment bar pulse
         setInterval(() => {
             const bars = document.querySelectorAll('.segment-bar span');
             const randomIndex = Math.floor(Math.random() * bars.length);

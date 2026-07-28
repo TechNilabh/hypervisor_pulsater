@@ -10,7 +10,6 @@ const getAudioContext = (): AudioContext | null => {
   return audioCtx;
 };
 
-// Synth 1: Crisp mechanical data packet click
 export const playClick = () => {
   try {
     const ctx = getAudioContext();
@@ -33,11 +32,9 @@ export const playClick = () => {
     osc.start();
     osc.stop(ctx.currentTime + 0.08);
   } catch (e) {
-    // Avoid crashing on browser context constraints
   }
 };
 
-// Synth 2: Ultra-fast electronic tick/blip
 export const playHover = () => {
   try {
     const ctx = getAudioContext();
@@ -60,11 +57,9 @@ export const playHover = () => {
     osc.start();
     osc.stop(ctx.currentTime + 0.02);
   } catch (e) {
-    // Fail silently
   }
 };
 
-// Synth 3: Warning alarm oscillations (sweeps)
 let alarmInterval: any = null;
 export const startAlarm = () => {
   try {
@@ -125,15 +120,12 @@ export const playNotificationSound = () => {
       osc.stop(ctx.currentTime + startDelay + duration);
     };
 
-    // A crisp futuristic double-beep
     playTone(880, 0, 0.08);
     playTone(1320, 0.06, 0.12);
   } catch (e) {
-    // Fail silently
   }
 };
 
-// Custom React hook version wrapper
 export function useTerminalAudio() {
   return {
     playClick,

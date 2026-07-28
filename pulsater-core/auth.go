@@ -28,26 +28,17 @@ import (
 // JWT Configuration
 // ---------------------------------------------------------------------------
 
-// jwtKey holds the HMAC signing key loaded from JWT_SECRET at startup.
-// Never set directly — always loaded via LoadJWTSecret() in main().
-// The fallback value is intentionally weak and will fail validateConfig().
 var jwtKey = []byte("UNSET_REPLACE_WITH_JWT_SECRET")
 
-// LoadJWTSecret reads JWT_SECRET from the environment and populates jwtKey.
-// Must be called after LoadEnv (or equivalent) and after validateConfig confirms
-// the var is present and long enough. This is called exactly once from main().
 func LoadJWTSecret() {
 	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
 	if secret == "" {
-		// validateConfig should have caught this — panic here to make the
-		// programmer error obvious instead of silently using a weak key.
 		panic("LoadJWTSecret: JWT_SECRET is empty — validateConfig must be called first")
 	}
 	jwtKey = []byte(secret)
 	log.Printf("[AUTH] JWT signing key loaded (%d bytes)", len(jwtKey))
 }
 
-// Claims is the JWT payload structure used for all signed session tokens.
 type Claims struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
@@ -59,19 +50,15 @@ type Claims struct {
 // OTP Cache — sync.Map with TTL wrapper
 // ---------------------------------------------------------------------------
 
-// otpEntry holds a one-time password and its creation timestamp for TTL enforcement.
 type otpEntry struct {
 	OTP       string
 	CreatedAt time.Time
 }
 
-// OTPCache is the global thread-safe in-memory store for pending MFA tokens.
-// Key: user email (string), Value: otpEntry
 var OTPCache sync.Map
 
 const otpTTL = 5 * time.Minute
 
-// generateOTP returns a cryptographically secure 6-digit numeric string.
 func generateOTP() (string, error) {
 	digits := ""
 	for i := 0; i < 6; i++ {
@@ -88,7 +75,6 @@ func generateOTP() (string, error) {
 // Brevo HTTPS MFA Email Dispatcher
 // ---------------------------------------------------------------------------
 
-// brevoEmailPayload is the JSON body sent to the Brevo transactional email API.
 type brevoEmailPayload struct {
 	Sender      brevoAddress   `json:"sender"`
 	To          []brevoAddress `json:"to"`
@@ -100,15 +86,6 @@ type brevoAddress struct {
 	Email string `json:"email"`
 }
 
-// SendMFAEmail dispatches the OTP to toEmail via the Brevo transactional
-// email HTTPS API (port 443). No SMTP dialling — works on all hosting tiers.
-//
-// Required env vars (in production):
-//
-//	EMAIL_API_KEY      — Brevo API key (never logged)
-//	EMAIL_FROM_ADDRESS — verified sender address in the Brevo account
-//
-// Returns an error if the API key / from-address are missing, if the HTTP
 // request fails, or if Brevo returns a non-2xx status code.
 func SendMFAEmail(toEmail, otp string) error {
 	apiKey := strings.TrimSpace(os.Getenv("EMAIL_API_KEY"))
@@ -229,7 +206,6 @@ func SendMFAEmail(toEmail, otp string) error {
 	if err != nil {
 		return fmt.Errorf("email: failed to build HTTP request: %w", err)
 	}
-	// NOTE: EMAIL_API_KEY is set in the header but never written to logs.
 	req.Header.Set("api-key", apiKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
@@ -241,7 +217,6 @@ func SendMFAEmail(toEmail, otp string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// Read up to 512 bytes of the error body for diagnostics.
 		// We deliberately do NOT log the full request body (contains OTP).
 		rawErr, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		log.Printf("[MFA_EMAIL] Brevo API returned non-2xx status %d: %s", resp.StatusCode, string(rawErr))
@@ -502,14 +477,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := SendMFAEmail(email, otp); err != nil {
 		log.Printf("MFA email dispatch error for %s: %v", email, err)
-		// Stdout OTP fallback is ONLY permitted when:
 		//   1. APP_ENV == "development"  (explicitly set, never defaulted)
 		//   2. EMAIL_API_KEY is unset
-		//
-		// validateConfig() guarantees this combination is only reachable in dev.
-		// In production (APP_ENV unset or != "development") this branch returns
-		// 500 regardless of email config, because validateConfig() would
-		// have already aborted startup if EMAIL_API_KEY was missing in production.
 		appEnv := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
 		emailAPIKey := strings.TrimSpace(os.Getenv("EMAIL_API_KEY"))
 		if appEnv == "development" && emailAPIKey == "" {
@@ -519,7 +488,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
 
 	log.Printf("MFA initiated for operator %s (%s)", username, email)
 	WriteJSON(w, http.StatusOK, map[string]interface{}{
@@ -710,7 +678,6 @@ func UpdateAvatarHandler(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 var (
-// Decoupled from static boot declarations to prevent empty client ID initialization order bug
 )
 
 // 1. DYNAMIC CONFIGURATION FACTORY
@@ -934,8 +901,6 @@ func FacebookCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	handleOAuthSuccess(w, r, "facebook", userInfo.ID, userInfo.Name, email)
 }
-
-// Unified OAuth success routine (JWT redirect)
 
 func handleOAuthSuccess(w http.ResponseWriter, r *http.Request, provider, providerUserID, name, email string) {
 	ctx := context.Background()

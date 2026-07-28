@@ -1,14 +1,5 @@
 package main
 
-// node_deploy_handler.go — POST /api/v1/nodes/deploy
-//
-// Deploys a CDC ingestion node without an associated file payload.
-// Distinct from the upload path: no storage key, no checksum — just configuration.
-// Authorization is gated by the operator's signature key (bcrypt verify).
-//
-// Security notes:
-//   - The submitted operator_signature_key is NEVER logged at any log level.
-//   - Invalid-key rejections return a specific error code so the wizard can
 //     distinguish them from generic auth failures.
 //   - Field validation is performed server-side regardless of what the form sends.
 
@@ -25,8 +16,6 @@ import (
 
 // ── Allowlists & compiled regexes ────────────────────────────────────────────
 
-// allowedIngestionDBs is the server-side allowlist for the ingestion_target_db
-// field. Must match exactly the values shown in the /deploy wizard dropdown.
 var allowedIngestionDBs = map[string]bool{
 	"PostgreSQL": true,
 	"MySQL":      true,
@@ -34,18 +23,14 @@ var allowedIngestionDBs = map[string]bool{
 	"Cassandra":  true,
 }
 
-// allowedVectorTypes is the server-side allowlist for target_vector_type.
 var allowedVectorTypes = map[string]bool{
 	"PHARMA_R3":   true,
 	"IOT_GRID":    true,
 	"QUANT_ALPHA": true,
 }
 
-// designationRe restricts container_designation to characters that are safe
-// in log lines and downstream file paths.
 var designationRe = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
-// portMappingRe validates "host_port:container_port" before the numeric check.
 var portMappingRe = regexp.MustCompile(`^\d{1,5}:\d{1,5}$`)
 
 // ── Request type ─────────────────────────────────────────────────────────────
@@ -61,8 +46,6 @@ type NodeDeployRequest struct {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
-// HandleNodeDeploy processes POST /api/v1/nodes/deploy.
-// JWT middleware guarantees claims are present before this function runs.
 func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -97,7 +80,6 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 	req.TargetVectorType = strings.TrimSpace(req.TargetVectorType)
 	req.HostPortMapping = strings.TrimSpace(req.HostPortMapping)
 	req.OriginRegion = strings.TrimSpace(req.OriginRegion)
-	// NOTE: req.OperatorSignatureKey is intentionally not trimmed or logged.
 
 	// ── Field validation ─────────────────────────────────────────────────────
 	// Each field returns a specific error so the wizard can highlight the correct input.
@@ -172,7 +154,6 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 	).Scan(&storedHash, &revokedAt)
 
 	if err != nil {
-		// No row → operator has not generated a key yet.
 		if strings.Contains(err.Error(), "no rows") {
 			writeDeployKeyError(w)
 			return
@@ -184,14 +165,12 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if revokedAt != nil {
-		// Key has been revoked — reject immediately.
 		slog.Warn("node_deploy: attempt with revoked key",
 			"operator_id", operatorID)
 		writeDeployKeyError(w)
 		return
 	}
 
-	// bcrypt constant-time compare. req.OperatorSignatureKey is NOT logged.
 	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(req.OperatorSignatureKey)); err != nil {
 		slog.Warn("node_deploy: signature key mismatch",
 			"operator_id", operatorID)
@@ -208,7 +187,6 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// Generate a new container UUID (reuse the same helper as the upload path).
 	containerID, err := generateUUID()
 	if err != nil {
 		slog.Error("node_deploy: UUID generation failed", "operator_id", operatorID, "error", err)
@@ -216,8 +194,6 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// INSERT containers row.
-	// storage_payload_url = NULL (no file for this path).
 	// storage_backend    = 'none' (allowed by the Phase 3 constraint migration).
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO containers (
@@ -243,7 +219,6 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// INSERT node_deployments row.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO node_deployments (
 			container_id, operator_id,
@@ -258,7 +233,6 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// INSERT processing_jobs row.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO processing_jobs (container_id, job_status)
 		VALUES ($1, 'QUEUED')`,
@@ -270,7 +244,6 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// INSERT initial container_events row (severity='INFO' — lifecycle start).
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO container_events (container_id, from_state, to_state, detail, severity)
 		VALUES ($1, NULL, 'INITIALIZED', '{"source":"node_deploy_handler"}', 'INFO')`,
@@ -296,7 +269,6 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 		"target_db", req.IngestionTargetDB,
 		"vector_type", req.TargetVectorType,
 		"port_mapping", req.HostPortMapping,
-		// operator_signature_key intentionally omitted from all log lines
 	)
 
 	// ── Step 7: 202 Accepted ──────────────────────────────────────────────────
@@ -307,9 +279,7 @@ func HandleNodeDeploy(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// writeDeployKeyError writes the specific 401 used for signature key failures.
 // The error code "invalid_deployment_key" is distinct from generic auth failures
-// so the wizard UI can show the correct inline message.
 func writeDeployKeyError(w http.ResponseWriter) {
 	WriteJSON(w, http.StatusUnauthorized, map[string]string{
 		"error":      "invalid_deployment_key",
@@ -317,7 +287,6 @@ func writeDeployKeyError(w http.ResponseWriter) {
 	})
 }
 
-// writeFieldError writes a 400 with a field-level error for inline display.
 func writeFieldError(w http.ResponseWriter, field, message string) {
 	WriteJSON(w, http.StatusBadRequest, map[string]string{
 		"error": message,

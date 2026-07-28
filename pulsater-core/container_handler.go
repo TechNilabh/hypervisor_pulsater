@@ -18,26 +18,20 @@ import (
 	"time"
 )
 
-// ---------------------------------------------------------------------------
 // Constants & configuration
-// ---------------------------------------------------------------------------
 
 // defaultMaxUploadBytes is the hard cap on total request body size (5 GiB).
 const defaultMaxUploadBytes = 5 * 1024 * 1024 * 1024
 
-// defaultUploadRateLimit is uploads per minute per operator.
 const defaultUploadRateLimit = 10
 
-// allowedContentTypes maps target_vector_type to permitted MIME types / extensions.
 var allowedContentTypes = map[string][]string{
 	"PHARMA_R3":   {"application/json", "text/csv", "application/octet-stream", ".json", ".csv", ".parquet"},
 	"IOT_GRID":    {"application/octet-stream", "application/json", ".bin", ".json", ".avro"},
 	"QUANT_ALPHA": {"application/json", "text/csv", "application/parquet", ".json", ".csv", ".parquet"},
 }
 
-// ---------------------------------------------------------------------------
 // Per-operator rate limiter (token bucket, in-memory)
-// ---------------------------------------------------------------------------
 
 type rateBucket struct {
 	tokens   float64
@@ -63,7 +57,6 @@ func parseEnvInt(key string, def int) int {
 	return n
 }
 
-// checkRateLimit returns true if the operator is within their upload quota.
 func checkRateLimit(operatorID string) bool {
 	rateLimiterMu.Lock()
 	bucket, ok := rateLimiters[operatorID]
@@ -95,9 +88,7 @@ func min(a, b float64) float64 {
 	return b
 }
 
-// ---------------------------------------------------------------------------
 // Request types
-// ---------------------------------------------------------------------------
 
 type ContainerListResponse struct {
 	Containers []ContainerRow `json:"containers"`
@@ -138,9 +129,6 @@ type ContainerEventRow struct {
 // POST /api/v1/containers/stream/token — issues a one-time SSE ticket (Fix #1)
 // ---------------------------------------------------------------------------
 
-// HandleIssueSSETicket validates the JWT (via JWTAuthMiddleware wrapper) and
-// issues a short-lived, single-use ticket for the EventSource connection.
-// The long-lived JWT is never placed in a URL.
 func HandleIssueSSETicket(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -167,8 +155,6 @@ func HandleIssueSSETicket(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 // HandleContainerStream opens an SSE connection. Auth is via one-time ticket
-// in ?ticket= query param (Fix #1). The ticket is validated and immediately
-// consumed so the long-lived JWT is never in a URL.
 func HandleContainerStream(w http.ResponseWriter, r *http.Request) {
 	ticket := r.URL.Query().Get("ticket")
 	if ticket == "" {
@@ -183,14 +169,12 @@ func HandleContainerStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify the operator still exists (defence against stale tickets).
 	var exists bool
 	if err := DB.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)`, operatorID).Scan(&exists); err != nil || !exists {
 		WriteError(w, http.StatusUnauthorized, "Operator not found")
 		return
 	}
 
-	// Negotiate SSE.
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		WriteError(w, http.StatusInternalServerError, "Streaming not supported")
@@ -208,7 +192,6 @@ func HandleContainerStream(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("sse: stream opened", "operator_id", operatorID)
 
-	// Send a heartbeat comment every 20s to keep the connection alive through proxies.
 	heartbeat := time.NewTicker(20 * time.Second)
 	defer heartbeat.Stop()
 
@@ -220,7 +203,6 @@ func HandleContainerStream(w http.ResponseWriter, r *http.Request) {
 
 		case event, open := <-ch:
 			if !open {
-				// Hub evicted this subscriber (slow client).
 				fmt.Fprintf(w, "event: disconnect\ndata: {\"reason\":\"slow_client\"}\n\n")
 				flusher.Flush()
 				return
@@ -240,7 +222,6 @@ func HandleContainerStream(w http.ResponseWriter, r *http.Request) {
 // POST /api/v1/containers/upload — multipart upload handler (Task D)
 // ---------------------------------------------------------------------------
 
-// HandleContainerUpload processes multipart CDC payload uploads.
 func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -309,7 +290,6 @@ func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Content-type allowlist check (Fix: enforce per vector type).
 	fileContentType := fileHeader.Header.Get("Content-Type")
 	if !contentTypeAllowed(fileContentType, fileHeader.Filename, allowed) {
 		WriteError(w, http.StatusUnsupportedMediaType,
@@ -317,7 +297,6 @@ func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ── Idempotency check — scoped to (operator_id, idempotency_key) (Fix #3) ──
 	if idempotencyKey != "" {
 		existing, checksumStored, found, qErr := lookupByIdempotencyKey(r.Context(), claims.UserID, idempotencyKey)
 		if qErr != nil {
@@ -326,15 +305,12 @@ func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if found {
-			// We have seen this (operator_id, idempotency_key) before.
-			// Stream-hash the incoming file to compare checksums.
 			incomingChecksum, hashErr := hashReader(file)
 			if hashErr != nil {
 				WriteError(w, http.StatusInternalServerError, "Failed to compute incoming checksum")
 				return
 			}
 			if checksumStored != nil && *checksumStored == incomingChecksum {
-				// Same payload — idempotent success.
 				WriteJSON(w, http.StatusOK, map[string]string{
 					"container_id": existing,
 					"status_state": "INITIALIZED",
@@ -342,7 +318,6 @@ func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 				})
 				return
 			}
-			// Same key, different payload — conflict.
 			WriteError(w, http.StatusConflict,
 				"Idempotency-Key already used for a different payload. Use a new key or the original payload.")
 			return
@@ -355,7 +330,6 @@ func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 	h := sha256.New()
 	tee := io.TeeReader(file, h) // hash while reading
 
-	// Copy tee into the pipe writer in a goroutine.
 	var streamErr error
 	go func() {
 		defer pw.Close()
@@ -403,7 +377,6 @@ func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// INSERT containers row.
 	_, err = tx.Exec(r.Context(), `
 		INSERT INTO containers (
 			id, user_id, designation, ingestion_target_db, host_port_mapping,
@@ -427,7 +400,6 @@ func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// INSERT container_events row (severity='INFO' — lifecycle start).
 	_, err = tx.Exec(r.Context(), `
 		INSERT INTO container_events (container_id, from_state, to_state, detail, severity)
 		VALUES ($1, NULL, 'INITIALIZED', '{"source":"upload_handler"}', 'INFO')`,
@@ -439,7 +411,6 @@ func HandleContainerUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// INSERT processing_jobs row.
 	_, err = tx.Exec(r.Context(), `
 		INSERT INTO processing_jobs (container_id, job_status)
 		VALUES ($1, 'QUEUED')`,
@@ -488,7 +459,6 @@ func HandleListContainers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Pagination params.
 	page := parseQueryInt(r, "page", 1)
 	limit := parseQueryInt(r, "limit", 20)
 	if limit > 100 {
@@ -496,11 +466,9 @@ func HandleListContainers(w http.ResponseWriter, r *http.Request) {
 	}
 	offset := (page - 1) * limit
 
-	// Filters.
 	statusFilter := r.URL.Query().Get("status")
 	vectorFilter := r.URL.Query().Get("target_vector_type")
 
-	// Sorting.
 	sortBy := r.URL.Query().Get("sort_by")
 	if sortBy != "created_at" && sortBy != "updated_at" && sortBy != "status_state" {
 		sortBy = "created_at"
@@ -592,7 +560,6 @@ func HandleGetContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract container ID from path: /api/v1/containers/{id}
 	containerID := strings.TrimPrefix(r.URL.Path, "/api/v1/containers/")
 	containerID = strings.Trim(containerID, "/")
 	if containerID == "" {
@@ -626,7 +593,6 @@ func HandleGetContainer(w http.ResponseWriter, r *http.Request) {
 	c.CreatedAt = createdAt.Format(time.RFC3339)
 	c.UpdatedAt = updatedAt.Format(time.RFC3339)
 
-	// Fetch event history.
 	evtRows, err := DB.Query(r.Context(), `
 		SELECT event_id, from_state, to_state, occurred_at, detail
 		FROM container_events
@@ -661,7 +627,6 @@ func HandleGetContainer(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 func contentTypeAllowed(contentType, filename string, allowed []string) bool {
-	// Normalise content-type (strip params like "; boundary=...").
 	ct := strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
 	ext := strings.ToLower(filepath.Ext(filename))
 
@@ -679,7 +644,6 @@ func contentTypeAllowed(contentType, filename string, allowed []string) bool {
 	return false
 }
 
-// hashReader reads r to EOF and returns the SHA-256 hex digest.
 func hashReader(r io.Reader) (string, error) {
 	h := sha256.New()
 	if _, err := io.Copy(h, r); err != nil {
@@ -688,8 +652,6 @@ func hashReader(r io.Reader) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// lookupByIdempotencyKey returns (containerID, checksum, found, error)
-// scoped strictly to (operatorID, idempotencyKey). (Fix #3)
 func lookupByIdempotencyKey(ctx context.Context, operatorID, key string) (string, *string, bool, error) {
 	var containerID string
 	var checksum *string

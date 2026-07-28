@@ -28,7 +28,6 @@ export default function ClusterHealth() {
   const [loading, setLoading] = useState(true);
   const [repolling, setRepolling] = useState(false);
 
-  // Load token
   useEffect(() => {
     const t = localStorage.getItem("session_token");
     if (!t) {
@@ -38,7 +37,6 @@ export default function ClusterHealth() {
     setToken(t);
   }, [router]);
 
-  // Fetch nodes
   const fetchNodes = useCallback(async (isManual = false) => {
     if (!token) return;
     if (isManual) setRepolling(true);
@@ -58,7 +56,6 @@ export default function ClusterHealth() {
     }
   }, [token]);
 
-  // Fetch alerts for heatmap
   const fetchAlerts = useCallback(async () => {
     if (!token) return;
     try {
@@ -86,7 +83,6 @@ export default function ClusterHealth() {
     }
   }, [token, fetchNodes, fetchAlerts]);
 
-  // 60 columns (minutes) x 20 rows
   const cols = 60;
   const rows = 20;
   const heatmap = Array.from({ length: cols * rows }).map(() => 0);
@@ -97,7 +93,6 @@ export default function ClusterHealth() {
     const diffMin = Math.floor(diffMs / 60000);
     if (diffMin >= 0 && diffMin < cols) {
       const col = cols - 1 - diffMin; // 0 is 59 mins ago, 59 is now
-      // Row by severity: ERROR -> 0..4, WARNING -> 5..9, INFO -> 10..14, SYS -> 15..19
       let rowStart = 15;
       let range = 5;
       if (alert.severity === "ERROR") {
@@ -137,7 +132,6 @@ export default function ClusterHealth() {
     );
   }
 
-  // Display grid of 8 slots
   const totalSlots = 8;
   const filledSlots = nodes.slice(0, totalSlots);
   const emptySlotsCount = totalSlots - filledSlots.length;
@@ -147,7 +141,6 @@ export default function ClusterHealth() {
       <div className="fixed inset-0 scanline-overlay z-50 pointer-events-none opacity-20"></div>
 
       <div className="p-6 min-h-screen bg-[#0A0A0A]">
-        {/* Header */}
         <div className="flex justify-between items-end mb-8">
           <div>
             <h1 className="font-display-tech text-[32px] font-bold uppercase tracking-tighter">Cluster Resource Health</h1>
@@ -169,15 +162,11 @@ export default function ClusterHealth() {
           </div>
         </div>
 
-        {/* 8 Server Nodes Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Real provisioned nodes */}
           {filledSlots.map((node) => {
             const isOnline = node.status === "ONLINE";
             const goroutines = node.goroutine_count ?? 0;
-            // CPU proxy: map goroutine threshold (default 16384) to percentage
             const cpuLoad = Math.min(100, Math.round((goroutines / 16384) * 100));
-            // Mem % proxy: mem_alloc_bytes vs 512MB RAM cap
             const memAllocBytes = node.mem_alloc_bytes ?? 0;
             const memPercent = Math.min(100, Math.round((memAllocBytes / (512 * 1024 * 1024)) * 100));
             const gcLatencyMs = (node.gc_pause_ns ?? 0) / 1000000;
@@ -209,7 +198,6 @@ export default function ClusterHealth() {
 
                 <div className="space-y-6">
                   <div className="space-y-4">
-                    {/* GOROUTINE Load bar */}
                     <div className="border border-[#3b4b37] p-3 relative bg-black/20 rounded-sm">
                       <div className="flex justify-between items-center text-[10px] font-label-code mb-1.5">
                         <span className="opacity-50">GOROUTINE LOAD</span>
@@ -233,7 +221,6 @@ export default function ClusterHealth() {
                       </div>
                     </div>
 
-                    {/* MEM ALLOC bar */}
                     <div className="border border-[#3b4b37] p-3 relative bg-black/20 rounded-sm">
                       <div className="flex justify-between items-center text-[10px] font-label-code mb-1.5">
                         <span className="opacity-50">MEM ALLOC</span>
@@ -275,7 +262,6 @@ export default function ClusterHealth() {
             );
           })}
 
-          {/* Empty slot indicators */}
           {nodes.length === 0 ? (
             Array.from({ length: 8 }).map((_, idx) => (
               <div

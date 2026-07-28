@@ -23,7 +23,6 @@ interface ContainerShort {
   status: string;
 }
 
-// Helper to determine region status color
 function getRegionColor(active: number, total: number): string {
   if (total === 0) return "text-[#84967e]";
   if (active > 0) return "text-[#00f1fe]"; // Processing
@@ -60,7 +59,6 @@ function InteractiveGlobe({ regions }: { regions: RegionStat[] }) {
     let lastMouseX = 0;
     let lastMouseY = 0;
 
-    // Generate globe grid dots
     const sphereDots: { x: number; y: number; z: number }[] = [];
     const latCount = 16;
     const lonCount = 28;
@@ -121,7 +119,6 @@ function InteractiveGlobe({ regions }: { regions: RegionStat[] }) {
       const centerY = height / 2;
       const fov = 350;
 
-      // Project grid dots
       const projectedDots: { px: number; py: number; zVal: number }[] = [];
       for (const d of sphereDots) {
         const cosY = Math.cos(angleY);
@@ -142,7 +139,6 @@ function InteractiveGlobe({ regions }: { regions: RegionStat[] }) {
         });
       }
 
-      // Draw grid dots
       for (const p of projectedDots) {
         const isFront = p.zVal < 0;
         const opacity = isFront
@@ -155,14 +151,12 @@ function InteractiveGlobe({ regions }: { regions: RegionStat[] }) {
         ctx.fill();
       }
 
-      // Draw equator ring outline
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
       ctx.strokeStyle = "rgba(235, 255, 226, 0.07)";
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Project regions on globe
       const projectedNodes = regions.map((node) => {
         const radLat = (node.lat * Math.PI) / 180;
         const radLon = (node.lon * Math.PI) / 180;
@@ -191,7 +185,6 @@ function InteractiveGlobe({ regions }: { regions: RegionStat[] }) {
         };
       });
 
-      // Project core point (0, 0)
       const coreRadLat = 0;
       const coreRadLon = 0;
       const coreNx = radius * Math.cos(coreRadLat) * Math.sin(coreRadLon);
@@ -209,7 +202,6 @@ function InteractiveGlobe({ regions }: { regions: RegionStat[] }) {
       const corePx = centerX + coreX1 * coreScale;
       const corePy = centerY + coreY2 * coreScale;
 
-      // Draw lines: region coordinate → (0, 0) only if active_count > 0 (PROCESSING status)
       for (const n of projectedNodes) {
         if (n.active_count > 0) {
           const bothFront = n.isFront && (coreZ2 < 0);
@@ -227,7 +219,6 @@ function InteractiveGlobe({ regions }: { regions: RegionStat[] }) {
         }
       }
 
-      // Draw nodes and labels
       for (const n of projectedNodes) {
         const color = n.active_count > 0 ? "rgba(0, 241, 254, 1)" : "rgba(0, 255, 65, 1)";
         const textColor = n.active_count > 0 ? "#00f1fe" : "#00ff41";
@@ -311,7 +302,6 @@ export default function GlobalRouting() {
   const [containers, setContainers] = useState<ContainerShort[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load token
   useEffect(() => {
     const t = localStorage.getItem("session_token");
     if (!t) {
@@ -366,7 +356,6 @@ export default function GlobalRouting() {
     }
   }, [token, fetchTopology, fetchContainers]);
 
-  // Real-time SSE stream log
   const { connected } = useContainerStream(token);
   const [consoleMsgs, setConsoleMsgs] = useState<string[]>([]);
   const seenKeys = useRef(new Set<string>());
@@ -381,7 +370,6 @@ export default function GlobalRouting() {
       const msg = `>> ${update.callsign_alias || update.container_id.slice(0, 8)} transition to ${update.to_state}`;
       setConsoleMsgs((prev) => [msg, ...prev].slice(0, 15));
 
-      // Refresh topology and containers on event
       fetchTopology();
       fetchContainers();
     };
@@ -390,7 +378,6 @@ export default function GlobalRouting() {
     return () => window.removeEventListener("containerStatusUpdated", handler);
   }, [fetchTopology, fetchContainers]);
 
-  // Derived metrics
   const totalContainers = regions.reduce((acc, curr) => acc + curr.container_count, 0);
   const activeRegionsCount = regions.filter((r) => r.container_count > 0).length;
 
@@ -521,7 +508,6 @@ export default function GlobalRouting() {
               </div>
             </div>
 
-            {/* Topology radar graphic */}
             <div className="tactical-bracket p-3 bg-[#1c1b1b]/80 border border-[#3b4b37] aspect-square relative overflow-hidden flex flex-col">
               <div className="font-label-code text-[#00e639] text-[10px] mb-2 uppercase">routing_topology_v5</div>
               <div className="flex-1 flex items-center justify-center">
@@ -536,7 +522,6 @@ export default function GlobalRouting() {
               </div>
             </div>
 
-            {/* Real container rows */}
             <div className="tactical-bracket p-3 bg-[#1c1b1b]/80 border border-[#3b4b37] flex-1 overflow-hidden flex flex-col">
               <div className="font-label-code text-[#00e639] text-[10px] mb-2 uppercase">container_routing_flags</div>
               <div className="overflow-y-auto custom-scrollbar flex-1">

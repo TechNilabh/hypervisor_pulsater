@@ -23,7 +23,6 @@ export default function DeployContainer() {
   const [deployError, setDeployError] = useState<string | null>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
-  // Guard: redirect unauthenticated visitors
   useEffect(() => {
     const token = localStorage.getItem("session_token");
     if (!token) {
@@ -44,7 +43,6 @@ export default function DeployContainer() {
     "[SYS_DAEMON] CONTAINER DEPLOYED AND SYNCHRONIZING REALTIME TRANS...",
   ];
 
-  // Drive the cinematic log stream one entry per 700ms while deploying
   useEffect(() => {
     if (deploying && deployStep < simulatedLogs.length) {
       const timer = setTimeout(() => {
@@ -53,7 +51,6 @@ export default function DeployContainer() {
       }, 700);
       return () => clearTimeout(timer);
     } else if (deploying && deployStep === simulatedLogs.length) {
-      // All log lines emitted — animation complete
       setDeploying(false);
       setDeployStep(0);
 
@@ -78,7 +75,6 @@ export default function DeployContainer() {
     }
   }, [deploying, deployStep]);
 
-  // Auto-scroll log container to bottom
   useEffect(() => {
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
@@ -140,7 +136,6 @@ export default function DeployContainer() {
         throw new Error("Deployment failed — try again.");
       }
 
-      // Backend confirmed — kick off the cinematic log animation
       setDeploying(true);
     } catch (err: any) {
       let msg = err.message || "Deployment failed — try again.";
@@ -175,7 +170,6 @@ export default function DeployContainer() {
         <div className="absolute bracket-bl" />
         <div className="absolute bracket-br" />
 
-        {/* Header bar */}
         <div className="bg-[#2a2a2a] px-4 py-2 flex justify-between items-center border-b border-[#3b4b37]">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[#00f1fe] text-sm">hub</span>
@@ -200,7 +194,6 @@ export default function DeployContainer() {
             </p>
           </div>
 
-          {/* Error banner */}
           {deployError && (
             <div className="bg-red-950/40 border border-red-500/50 px-4 py-3 flex items-center gap-2">
               <span className="material-symbols-outlined text-sm text-red-400">warning</span>
@@ -325,7 +318,6 @@ export default function DeployContainer() {
                 </span>
               </div>
 
-              {/* Progress segment bar */}
               <div className="h-2 w-full bg-[#1c1b1b] flex gap-[2px]">
                 {simulatedLogs.map((_, i) => (
                   <div
@@ -339,7 +331,6 @@ export default function DeployContainer() {
                 ))}
               </div>
 
-              {/* Console log outputs */}
               <div
                 ref={logContainerRef}
                 className="bg-[#050505] border border-[#3b4b37]/40 p-4 h-48 overflow-y-auto text-[10px] font-mono text-[#00ff41]/85 space-y-1.5 custom-scrollbar"

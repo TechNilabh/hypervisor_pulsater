@@ -90,8 +90,6 @@ func TestProcessor_HandleJobFailure_SchedulesRetry(t *testing.T) {
 		VectorType:  "PHARMA_R3",
 		Attempts:    2, // 3rd attempt
 	}
-	// handleJobFailure with attempts=2 < maxAttempts=5 should reschedule.
-	// We can't call it directly because it hits DB, so we test the backoff math.
 	nextAttempt := job.Attempts + 1
 	if nextAttempt >= p.MaxAttempts {
 		t.Fatalf("test prerequisite failed: expected attempts < max")
@@ -100,7 +98,6 @@ func TestProcessor_HandleJobFailure_SchedulesRetry(t *testing.T) {
 	if backoffSec > 300 {
 		backoffSec = 300
 	}
-	// For attempt=3, expect 8 seconds backoff.
 	if backoffSec != 8 {
 		t.Errorf("expected 8s backoff for attempt=3, got %.0f", backoffSec)
 	}
@@ -114,8 +111,6 @@ func TestProcessor_HandleJobFailure_MaxAttemptsMarksPermFailed(t *testing.T) {
 	if nextAttempt < p.MaxAttempts {
 		t.Fatal("test prerequisite: nextAttempt should equal maxAttempts")
 	}
-	// At this point handleJobFailure would call failJobPermanently.
-	// We verify the condition logic matches the spec.
 	shouldPermanentFail := nextAttempt >= p.MaxAttempts
 	if !shouldPermanentFail {
 		t.Error("expected permanent failure at max attempts")
@@ -152,7 +147,6 @@ func TestProcessor_Validators_UnknownVectorTypeNotRegistered(t *testing.T) {
 // ─── HubPublisher interface compliance ───────────────────────────────────────
 
 func TestMockHub_SatisfiesHubPublisher(t *testing.T) {
-	// Compile-time check: *mockHub must implement HubPublisher.
 	var _ HubPublisher = (*mockHub)(nil)
 }
 
@@ -180,15 +174,12 @@ func TestEvent_JSONFields(t *testing.T) {
 
 func TestRetryWindow_OnlyPicksJobsAfterBackoff(t *testing.T) {
 	t.Parallel()
-	// Simulate: nextRetry = now + 10s, current time = now.
-	// Job should NOT be claimable yet.
 	nextRetry := time.Now().Add(10 * time.Second)
 	isClaimable := nextRetry.Before(time.Now())
 	if isClaimable {
 		t.Error("job with future next_retry_at should not be claimable")
 	}
 
-	// Simulate: nextRetry = now - 1s → claimable.
 	pastRetry := time.Now().Add(-1 * time.Second)
 	isClaimable = pastRetry.Before(time.Now()) || pastRetry.Equal(time.Now())
 	if !isClaimable {
@@ -218,7 +209,6 @@ func TestStubValidator_ReturnsNil(t *testing.T) {
 func TestProcessor_ValidatorError_CanBeOverridden(t *testing.T) {
 	t.Parallel()
 	p := newTestProcessor(&mockHub{})
-	// Override the validator to return an error.
 	errValidator := func(_ context.Context, _ string, _ *pgxpool.Pool) error {
 		return errors.New("test validation error")
 	}
@@ -234,7 +224,6 @@ func TestProcessor_ValidatorError_CanBeOverridden(t *testing.T) {
 func TestProcessJob_NullPayloadURL_SkipsChecksumGate(t *testing.T) {
 	t.Parallel()
 
-	// A job with empty StoredHash and PayloadURL (simulating DB NULLs)
 	job := Job{
 		JobID:       "job-null",
 		ContainerID: "ctr-null",
@@ -245,7 +234,6 @@ func TestProcessJob_NullPayloadURL_SkipsChecksumGate(t *testing.T) {
 		StoredHash:  "",
 	}
 
-	// Verify that the logic check for checksum gate is false
 	skipsChecksum := (job.StoredHash == "" || job.PayloadURL == "")
 	if !skipsChecksum {
 		t.Error("expected checksum gate to be skipped for job with empty payload URL and stored hash")

@@ -125,7 +125,6 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
   const dropRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Drag-and-drop handlers
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const f = e.dataTransfer.files[0];
@@ -157,7 +156,6 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
     }
 
     try {
-      // Use XHR for real upload progress events.
       const xhr = new XMLHttpRequest();
       xhr.upload.onprogress = (ev) => {
         if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100));
@@ -214,7 +212,6 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 z-10">
-        {/* Drop zone */}
         <div
           ref={dropRef}
           onDragOver={(e) => e.preventDefault()}
@@ -318,7 +315,6 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
           </div>
         </div>
 
-        {/* Upload progress */}
         {uploading && (
           <div className="flex flex-col gap-1">
             <div className="flex justify-between items-center">
@@ -336,7 +332,6 @@ function UploadPanel({ token, onUploaded }: UploadPanelProps) {
           </div>
         )}
 
-        {/* Result message */}
         {result && (
           <div
             className={`p-2.5 border rounded-none font-body-mono text-[11px] ${
@@ -401,7 +396,6 @@ function ContainerGridRow({
         flash ? "bg-[#00f1fe]/10" : ""
       }`}
     >
-      {/* Callsign + ID */}
       <td className="py-2.5 px-4 pr-4">
         <div className="flex flex-col">
           <span className="font-body-mono text-sm text-[#e5e2e1] truncate font-bold">
@@ -413,22 +407,18 @@ function ContainerGridRow({
         </div>
       </td>
 
-      {/* Vector type */}
       <td className="py-2.5 px-4 pr-4 font-label-code text-[10px] text-[#00dbe7] hidden md:table-cell">
         {container.target_vector_type}
       </td>
 
-      {/* Size */}
       <td className="py-2.5 px-4 pr-4 font-body-mono-sm text-[11px] text-[#b9ccb2] hidden lg:table-cell">
         {fmtBytes(container.file_size_bytes)}
       </td>
 
-      {/* Status */}
       <td className="py-2.5 px-4 pr-4 text-center">
         <StatusBadge status={effectiveStatus} />
       </td>
 
-      {/* Date */}
       <td className="py-2.5 px-4 pr-4 font-label-code text-[9px] text-[#84967e] hidden xl:table-cell">
         {fmtDate(container.created_at)}
       </td>
@@ -446,7 +436,6 @@ export default function IngestionPage() {
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterVector, setFilterVector] = useState<string>("");
 
-  // Load token from localStorage.
   useEffect(() => {
     const t = localStorage.getItem("session_token");
     if (!t) {
@@ -461,7 +450,6 @@ export default function IngestionPage() {
 
   const [eventsLog, setEventsLog] = useState<ContainerState[]>([]);
 
-  // Accumulate events in eventsLog as they arrive from the SSE event listener
   useEffect(() => {
     const handleEvent = (e: Event) => {
       const customEvent = e as CustomEvent<ContainerState>;
@@ -482,9 +470,6 @@ export default function IngestionPage() {
     return () => window.removeEventListener("containerStatusUpdated", handleEvent);
   }, []);
 
-
-
-
   // ── Fetch initial container list ──────────────────────────────────────────
   const fetchContainers = useCallback(async () => {
     if (!token) return;
@@ -502,7 +487,6 @@ export default function IngestionPage() {
         setContainers(data.containers ?? []);
       }
     } catch {
-      // ignore
     } finally {
       setLoadingList(false);
     }
@@ -512,15 +496,12 @@ export default function IngestionPage() {
     if (token) fetchContainers();
   }, [fetchContainers, token]);
 
-  // Refresh list when a new upload completes.
   const handleUploaded = useCallback(
     (_id: string) => {
-      // No separate refresh logic needed — handled automatically via the SSE event stream.
     },
     []
   );
 
-  // Synchronize liveMap status updates into the containers list.
   useEffect(() => {
     if (liveMap.size === 0) return;
 
@@ -537,7 +518,6 @@ export default function IngestionPage() {
         return c;
       });
 
-      // Check if there is a new container in the liveMap not present in the list
       for (const id of liveMap.keys()) {
         if (!prev.some((c) => c.container_id === id)) {
           hasNew = true;
@@ -567,7 +547,6 @@ export default function IngestionPage() {
           </h1>
         </div>
 
-        {/* SSE connection indicator */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span
@@ -610,7 +589,6 @@ export default function IngestionPage() {
         <div className="flex-[7] bg-[#1c1b1b]/40 border border-[#3b4b37] relative rounded-sm flex flex-col shadow-2xl min-h-[520px]">
           <div className="scanline-overlay absolute inset-0 z-0 pointer-events-none opacity-10"></div>
           
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#3b4b37] bg-[#2a2a2a]/50 z-10">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-[16px] text-[#00e639]">terminal</span>
@@ -622,7 +600,6 @@ export default function IngestionPage() {
               </span>
             </div>
 
-            {/* Filters */}
             <div className="flex items-center gap-2">
               <select
                 value={filterStatus}
@@ -659,7 +636,6 @@ export default function IngestionPage() {
             </div>
           </div>
 
-          {/* Table Area */}
           <div className="flex-1 overflow-auto z-10 custom-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-[#0e0e0e] border-b border-[#3b4b37]/30 z-20">

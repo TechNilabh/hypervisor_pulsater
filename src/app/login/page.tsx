@@ -23,7 +23,6 @@ export default function Login() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Mouse tilt effect
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!mainRef.current) return;
@@ -36,7 +35,6 @@ export default function Login() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  // 3D wireframe rotating globe canvas with hardened projection logic
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -102,7 +100,6 @@ export default function Login() {
         const z1 = p.x * sinA + p.z * cosA;
         const y1 = p.y * pulse;
         
-        // Safety guard for denominator clipping paths
         const denominator = fov + z1;
         const scale = fov / (denominator <= 0 ? 0.1 : denominator);
         
@@ -258,7 +255,6 @@ export default function Login() {
     setSuccessMsg(null);
     setLoading(true);
 
-    // Redirect to backend OAuth provider endpoint using central API_BASE_URL config
     window.location.href = `${API_BASE_URL}/api/v1/auth/oauth/${provider}`;
   };
 

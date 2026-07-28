@@ -1,6 +1,3 @@
-// Package worker implements the async CDC payload processing pipeline.
-// It polls processing_jobs using SELECT ... FOR UPDATE SKIP LOCKED to safely
-// claim jobs across multiple concurrent worker instances without coordination overhead.
 package worker
 
 import (
@@ -25,7 +22,6 @@ import (
 // package main satisfies this with its concrete *SSEHub (Fix #5).
 // ---------------------------------------------------------------------------
 
-// Event is the minimal event type the worker sends to the hub.
 type Event struct {
 	ContainerID   string `json:"container_id"`
 	OperatorID    string `json:"operator_id"`
@@ -36,8 +32,6 @@ type Event struct {
 	Detail        string `json:"detail,omitempty"`
 }
 
-// HubPublisher is the only hub method the worker needs.
-// Defining it here (not in package main) breaks the circular dependency.
 type HubPublisher interface {
 	Publish(operatorID string, event Event)
 }
@@ -46,8 +40,6 @@ type HubPublisher interface {
 // Validator — pluggable per-vector-type validation function
 // ---------------------------------------------------------------------------
 
-// Validator is called by the processor after integrity verification passes.
-// It receives the container_id so it can load the payload from storage if needed.
 type Validator func(ctx context.Context, containerID string, db *pgxpool.Pool) error
 
 // ---------------------------------------------------------------------------
@@ -69,9 +61,6 @@ type Job struct {
 // Processor — the core worker loop
 // ---------------------------------------------------------------------------
 
-// Processor polls for queued or retry-eligible jobs, claims them with
-// FOR UPDATE SKIP LOCKED (safe for multiple concurrent instances), runs
-// validation, and updates state accordingly.
 type Processor struct {
 	DB         *pgxpool.Pool
 	Hub        HubPublisher
@@ -81,7 +70,6 @@ type Processor struct {
 	PollInterval time.Duration
 }
 
-// NewProcessor constructs a Processor with defaults from environment.
 func NewProcessor(db *pgxpool.Pool, hub HubPublisher, log *slog.Logger) *Processor {
 	maxAttempts := parseEnvInt("WORKER_MAX_ATTEMPTS", 5)
 	pollMs := parseEnvInt("WORKER_POLL_INTERVAL_MS", 5000)
@@ -101,9 +89,6 @@ func NewProcessor(db *pgxpool.Pool, hub HubPublisher, log *slog.Logger) *Process
 	return p
 }
 
-// Run starts the processor loop. It exits when ctx is cancelled.
-// On exit, it requeues any RUNNING jobs it had locked so they can be
-// claimed by another worker instance (or on next restart).
 func (p *Processor) Run(ctx context.Context) {
 	p.Log.Info("worker: processor started",
 		"poll_interval", p.PollInterval,
@@ -127,17 +112,12 @@ func (p *Processor) Run(ctx context.Context) {
 	}
 }
 
-// requeueOrphanedJobs resets any RUNNING jobs locked by this worker process
-// back to QUEUED so they can be retried. Called on shutdown via defer in Run().
-// Writes a SYS-severity container_events row for each requeued job so the
-// LIVE_CDC and ALERTS pages reflect worker lifecycle events honestly.
 func (p *Processor) requeueOrphanedJobs() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	wid := workerID()
 
-	// Collect affected container_ids before updating, so we can write events.
 	rows, err := p.DB.Query(ctx, `
 		SELECT pj.job_id, pj.container_id, c.operator_id, c.callsign_alias
 		FROM processing_jobs pj
@@ -174,7 +154,6 @@ func (p *Processor) requeueOrphanedJobs() {
 		return
 	}
 
-	// Write SYS-severity lifecycle events for each requeued job.
 	for _, o := range orphans {
 		detail := fmt.Sprintf(`{"source":"worker_shutdown","worker_id":%q}`, wid)
 		if _, err := p.DB.Exec(ctx, `
@@ -191,7 +170,6 @@ func (p *Processor) requeueOrphanedJobs() {
 	)
 }
 
-// poll claims and processes up to 10 jobs per tick.
 func (p *Processor) poll(ctx context.Context) error {
 	jobs, err := p.claimJobs(ctx, 10)
 	if err != nil {
@@ -209,9 +187,6 @@ func (p *Processor) poll(ctx context.Context) error {
 	return nil
 }
 
-// claimJobs atomically claims up to n QUEUED or retry-eligible jobs.
-// Uses SELECT ... FOR UPDATE SKIP LOCKED so multiple worker instances can
-// run concurrently without double-claiming.
 func (p *Processor) claimJobs(ctx context.Context, n int) ([]Job, error) {
 	tx, err := p.DB.Begin(ctx)
 	if err != nil {
@@ -261,7 +236,6 @@ func (p *Processor) claimJobs(ctx context.Context, n int) ([]Job, error) {
 		return nil, rows.Err()
 	}
 
-	// Mark all claimed jobs as RUNNING.
 	for _, j := range jobs {
 		if _, err := tx.Exec(ctx, `
 			UPDATE processing_jobs
@@ -279,10 +253,8 @@ func (p *Processor) claimJobs(ctx context.Context, n int) ([]Job, error) {
 	return jobs, nil
 }
 
-// processJob runs the full processing pipeline for a single job.
 // Step 0: checksum re-verify (integrity gate).
 // Step 1: vector-type specific validator.
-// Transitions: RUNNING → DONE/FAILED; container → SYNCED/FAILED.
 func (p *Processor) processJob(ctx context.Context, job Job) error {
 	p.Log.Info("worker: processing job",
 		"job_id", job.JobID,
@@ -301,11 +273,6 @@ func (p *Processor) processJob(ctx context.Context, job Job) error {
 			"container_id", job.ContainerID, "error", err)
 	}
 
-	// Node-deploy-originated containers have no file payload and therefore no
-	// checksum to re-verify. The guard below (StoredHash != "" && PayloadURL != "")
-	// is already correct: both fields are empty strings for file-less containers
-	// (NULLs scanned from DB become "" in the Job struct), so this block is a
-	// no-op for node-deploy jobs. This is intentional — do not remove the guard.
 	if job.StoredHash != "" && job.PayloadURL != "" {
 		recomputedHash, integrityErr := p.recomputeChecksum(ctx, job)
 		if integrityErr != nil {
@@ -340,7 +307,6 @@ func (p *Processor) processJob(ctx context.Context, job Job) error {
 	return p.succeedJob(ctx, job)
 }
 
-// succeedJob marks the job DONE and the container SYNCED.
 func (p *Processor) succeedJob(ctx context.Context, job Job) error {
 	if _, err := p.DB.Exec(ctx, `
 		UPDATE processing_jobs
@@ -365,7 +331,6 @@ func (p *Processor) succeedJob(ctx context.Context, job Job) error {
 	return nil
 }
 
-// handleJobFailure applies exponential backoff retry or permanent failure.
 func (p *Processor) handleJobFailure(ctx context.Context, job Job, validationErr error) error {
 	p.Log.Warn("worker: job validation failed",
 		"job_id", job.JobID,
@@ -381,7 +346,6 @@ func (p *Processor) handleJobFailure(ctx context.Context, job Job, validationErr
 			fmt.Sprintf(`{"error":%q,"attempts":%d}`, validationErr.Error(), nextAttempt))
 	}
 
-	// Exponential backoff: 2^attempt seconds, capped at 5 minutes.
 	backoffSec := math.Pow(2, float64(nextAttempt))
 	if backoffSec > 300 {
 		backoffSec = 300
@@ -398,7 +362,6 @@ func (p *Processor) handleJobFailure(ctx context.Context, job Job, validationErr
 		return fmt.Errorf("handleJobFailure: update job: %w", err)
 	}
 
-	// Write a WARNING-severity event so ALERTS and LIVE_CDC reflect retry scheduling.
 	retryDetail := fmt.Sprintf(`{"source":"worker","step":"retry_scheduled","attempt":%d,"max":%d,"retry_in_sec":%.0f}`,
 		nextAttempt, p.MaxAttempts, backoffSec)
 	if _, err := p.DB.Exec(ctx, `
@@ -420,7 +383,6 @@ func (p *Processor) handleJobFailure(ctx context.Context, job Job, validationErr
 	return nil
 }
 
-// failJobPermanently marks job status=FAILED, container status_state=FAILED (no retry).
 func (p *Processor) failJobPermanently(ctx context.Context, job Job, errMsg, detailJSON string) error {
 	if _, err := p.DB.Exec(ctx, `
 		UPDATE processing_jobs
@@ -429,7 +391,6 @@ func (p *Processor) failJobPermanently(ctx context.Context, job Job, errMsg, det
 		p.Log.Error("failJobPermanently: update job failed", "error", err)
 	}
 
-	// Update container directly.
 	if _, err := p.DB.Exec(ctx, `
 		UPDATE containers
 		SET status_state = 'FAILED', error_message = $1, retry_count = $2, updated_at = now()
@@ -439,7 +400,6 @@ func (p *Processor) failJobPermanently(ctx context.Context, job Job, errMsg, det
 		p.Log.Error("failJobPermanently: update container failed", "error", err)
 	}
 
-	// Append ERROR-severity event so ALERTS and LIVE_CDC reflect the failure.
 	if _, err := p.DB.Exec(ctx, `
 		INSERT INTO container_events (container_id, from_state, to_state, detail, severity)
 		VALUES ($1, 'PROCESSING', 'FAILED', $2::jsonb, 'ERROR')`,
@@ -466,7 +426,6 @@ func (p *Processor) failJobPermanently(ctx context.Context, job Job, errMsg, det
 	return nil
 }
 
-// transitionContainer writes a container_events row and updates status_state.
 func (p *Processor) transitionContainer(ctx context.Context, job Job, from, to, detailJSON string) error {
 	tx, err := p.DB.Begin(ctx)
 	if err != nil {
@@ -480,7 +439,6 @@ func (p *Processor) transitionContainer(ctx context.Context, job Job, from, to, 
 		WHERE id = $2`, to, job.ContainerID); err != nil {
 		return err
 	}
-	// severity: 'ERROR' when transitioning to FAILED, 'INFO' otherwise.
 	severity := "INFO"
 	if to == "FAILED" {
 		severity = "ERROR"
@@ -507,14 +465,9 @@ func (p *Processor) transitionContainer(ctx context.Context, job Job, from, to, 
 	return nil
 }
 
-// recomputeChecksum re-reads the stored payload and returns its SHA-256 hex digest.
-// For S3 URLs it reads a HeadObject metadata entry; for local paths it hashes the file.
 // This is step 0 of every processJob call (Fix #4).
 func (p *Processor) recomputeChecksum(ctx context.Context, job Job) (string, error) {
 	if strings.HasPrefix(job.PayloadURL, "s3://") {
-		// For S3 we read the sha256 metadata tag stored at upload time.
-		// A full re-download is too expensive in the worker; the upload
-		// handler stores the sha256 as metadata so HeadObject is sufficient.
 		var storedMeta string
 		err := p.DB.QueryRow(ctx,
 			`SELECT COALESCE(checksum_sha256, '') FROM containers WHERE id = $1`,
@@ -526,12 +479,9 @@ func (p *Processor) recomputeChecksum(ctx context.Context, job Job) (string, err
 		if storedMeta == "" {
 			return "", fmt.Errorf("s3: no checksum stored for container %s", job.ContainerID)
 		}
-		// For S3 we trust the DB-stored hash computed at upload time.
-		// The job.StoredHash == storedMeta so we return it as equal.
 		return storedMeta, nil
 	}
 
-	// Local file — re-hash from disk.
 	f, err := os.Open(job.PayloadURL)
 	if err != nil {
 		return "", fmt.Errorf("local: open payload %q: %w", job.PayloadURL, err)
@@ -558,7 +508,6 @@ func stubValidator(ctx context.Context, containerID string, db *pgxpool.Pool) er
 	return nil
 }
 
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -580,11 +529,9 @@ func parseEnvInt(key string, def int) int {
 	return n
 }
 
-// jsonDetail builds a simple JSON string for event detail fields.
 func jsonDetail(v interface{}) string {
 	b, _ := json.Marshal(v)
 	return string(b)
 }
 
-// Ensure jsonDetail is referenced.
 var _ = jsonDetail

@@ -67,7 +67,6 @@ export function useContainerStream(token: string | null): UseContainerStreamResu
   const connect = useCallback(async () => {
     if (!token || !mountedRef.current) return;
 
-    // Clean up any previous connection.
     if (esRef.current) {
       esRef.current.close();
       esRef.current = null;
@@ -97,7 +96,6 @@ export function useContainerStream(token: string | null): UseContainerStreamResu
           next.set(update.container_id, update);
           return next;
         });
-        // Also dispatch a custom DOM event for other parts of the UI that may listen.
         window.dispatchEvent(new CustomEvent("containerStatusUpdated", { detail: update }));
       } catch {
         console.warn("[useContainerStream] failed to parse event:", evt.data);

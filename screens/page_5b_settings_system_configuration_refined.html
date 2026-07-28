@@ -132,7 +132,6 @@
         </style></head>
 <body class="bg-background text-on-surface font-body-mono selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
 <div class="scanline"></div>
-<!-- TopNavBar -->
 <header class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant shadow-[0_0_8px_rgba(0,230,57,0.15)] flex justify-between items-center px-gutter h-14">
 <div class="flex items-center gap-4">
 <span class="material-symbols-outlined text-primary-fixed-dim animate-pulse-matrix">terminal</span>
@@ -159,7 +158,6 @@
 </div>
 </div>
 </header>
-<!-- SideNavBar -->
 <aside class="fixed left-0 top-14 h-[calc(100vh-88px)] w-64 z-40 bg-surface-container-lowest/90 backdrop-blur-xl border-r border-outline-variant flex flex-col py-4 space-y-1">
 <div class="px-6 py-2 mb-4 border-b border-outline-variant/30">
 <div class="flex items-center gap-3 mb-1">
@@ -202,7 +200,6 @@
 <!-- Main Canvas -->
 <main class="ml-64 mt-14 p-gutter h-[calc(100vh-88px)] overflow-y-auto">
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter max-w-container-max mx-auto h-full">
-<!-- Card 1: Worker Pool -->
 <section class="bg-surface-container-low/80 backdrop-blur-md border border-outline-variant p-4 relative chamfer-br flex flex-col gap-6 overflow-hidden">
 <div class="flex justify-between items-center border-b border-outline-variant pb-2">
 <h2 class="font-label-code text-label-code text-primary-fixed flex items-center gap-2">
@@ -258,7 +255,6 @@
 </div>
 </div>
 </section>
-<!-- Card 2: Storage & Flush -->
 <section class="bg-surface-container-low/80 backdrop-blur-md border border-outline-variant p-4 relative chamfer-tl flex flex-col gap-6">
 <div class="flex justify-between items-center border-b border-outline-variant pb-2">
 <h2 class="font-label-code text-label-code text-secondary-fixed-dim flex items-center gap-2">
@@ -316,7 +312,6 @@
 </div>
 </div>
 </section>
-<!-- Card 3: Network Controls -->
 <section class="bg-surface-container-low/80 backdrop-blur-md border border-outline-variant p-4 relative chamfer-br flex flex-col gap-6">
 <div class="flex justify-between items-center border-b border-outline-variant pb-2">
 <h2 class="font-label-code text-label-code text-tertiary-fixed-dim flex items-center gap-2">
@@ -411,7 +406,6 @@
 </div>
 </footer>
 <script>
-        // Micro-interactions for the tactical buttons and sliders
         document.querySelectorAll('button').forEach(btn => {
             btn.addEventListener('click', function() {
                 this.classList.add('flicker');
@@ -419,7 +413,6 @@
             });
         });
 
-        // Simple flicker effect style addition via JS to avoid extra CSS block if needed
         const style = document.createElement('style');
         style.textContent = `
             .flicker { animation: flicker-eff 0.1s infinite; }
@@ -434,6 +427,5 @@
         `;
         document.head.appendChild(style);
     </script>
-
 
 </body></html>

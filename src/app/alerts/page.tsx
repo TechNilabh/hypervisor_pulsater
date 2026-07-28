@@ -22,7 +22,6 @@ export default function PipelineAlerts() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
 
-  // Filters state
   const [activeFilters, setActiveFilters] = useState({
     ERROR: true,
     WARNING: true,
@@ -38,7 +37,6 @@ export default function PipelineAlerts() {
   });
   const [loading, setLoading] = useState(true);
 
-  // Load token
   useEffect(() => {
     const t = localStorage.getItem("session_token");
     if (!t) {
@@ -48,11 +46,9 @@ export default function PipelineAlerts() {
     setToken(t);
   }, [router]);
 
-  // Fetch alerts
   const fetchAlerts = useCallback(async () => {
     if (!token) return;
     try {
-      // Build severity parameter based on active state buttons
       const activeSeverities = Object.entries(activeFilters)
         .filter(([_, active]) => active)
         .map(([sev]) => sev);
@@ -84,7 +80,6 @@ export default function PipelineAlerts() {
     }
   }, [token, activeFilters]);
 
-  // Refetch alerts on filter change
   useEffect(() => {
     if (token) {
       fetchAlerts();
@@ -102,7 +97,6 @@ export default function PipelineAlerts() {
       if (seenKeys.current.has(key)) return;
       seenKeys.current.add(key);
 
-      // Append new warning or error events optimistically
       const severityMap: Record<string, "ERROR" | "WARNING" | "INFO" | "SYS"> = {
         FAILED: "ERROR",
         PROCESSING: "INFO",
@@ -121,12 +115,10 @@ export default function PipelineAlerts() {
       };
 
       setAlerts((prev) => {
-        // Double check filters
         if (!activeFilters[newAlert.severity]) return prev;
         return [newAlert, ...prev].slice(0, 100);
       });
 
-      // Increment stats locally
       setStats((prev) => ({
         ...prev,
         telemetryFlux: prev.telemetryFlux + 1,
@@ -269,7 +261,6 @@ export default function PipelineAlerts() {
               <div className="col-span-3">MESSAGE</div>
             </div>
 
-            {/* Table Body */}
             <div className="flex-1 overflow-y-auto custom-scrollbar font-body-mono-sm divide-y divide-[#3b4b37]/20 p-1">
               {alerts.length > 0 ? (
                 alerts.map((row) => (
@@ -323,7 +314,6 @@ export default function PipelineAlerts() {
 
         {/* Right Section: Metric Cards */}
         <aside className="w-80 flex flex-col gap-6 h-full overflow-y-auto custom-scrollbar">
-          {/* Metric Box 1: Anomalies */}
           <div className="flex-1 bg-[#1c1b1b] border border-[#3b4b37] corner-bracket p-4 flex flex-col justify-center relative overflow-hidden group hover:bg-[#353534]/30 transition-all duration-300 min-h-[140px] rounded-sm">
             <div className="scanline absolute inset-0 opacity-10 pointer-events-none"></div>
             <div className="flex justify-between items-center mb-2">
@@ -344,7 +334,6 @@ export default function PipelineAlerts() {
             </div>
           </div>
 
-          {/* Metric Box 2: Node Saturation */}
           <div className="flex-1 bg-[#1c1b1b] border border-[#3b4b37] corner-bracket p-4 flex flex-col justify-center relative overflow-hidden group hover:bg-[#353534]/30 transition-all duration-300 min-h-[140px] rounded-sm">
             <div className="scanline absolute inset-0 opacity-10 pointer-events-none"></div>
             <div className="flex justify-between items-center mb-2">

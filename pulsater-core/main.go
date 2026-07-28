@@ -17,14 +17,8 @@ import (
 	"github.com/nilabh/pulsater-core/worker"
 )
 
-
-// StorageInstance is the process-wide storage backend (local or S3).
-// Initialised in main() before any handler is invoked.
 var StorageInstance StorageBackend
 
-// hubAdapter wraps *SSEHub so it satisfies worker.HubPublisher.
-// worker.Event and ContainerEvent carry identical fields; this adapter
-// converts between them without coupling the two packages (Fix #5).
 type hubAdapter struct{ hub *SSEHub }
 
 func (a *hubAdapter) Publish(operatorID string, e worker.Event) {
@@ -38,7 +32,6 @@ func (a *hubAdapter) Publish(operatorID string, e worker.Event) {
 		Detail:        e.Detail,
 	})
 }
-
 
 func main() {
 	log.Println("Initializing HYPERVISOR_PULSATER core auth backend...")
@@ -116,7 +109,6 @@ func main() {
 	// ── Step 7: Register routes ────────────────────────────────────────────
 	mux := http.NewServeMux()
 
-	// Health / readiness (unauthenticated — used by load balancers)
 	mux.HandleFunc("/healthz", HandleHealthz)
 	mux.HandleFunc("/readyz", HandleReadyz)
 
@@ -204,8 +196,6 @@ func main() {
 		log.Println("[SHUTDOWN] HTTP server stopped cleanly.")
 	}
 
-	// Cancel worker context and wait for the worker goroutine to finish
-	// (the worker's deferred requeueOrphanedJobs will requeue RUNNING rows).
 	log.Println("[SHUTDOWN] Stopping worker...")
 	workerCancel()
 	select {
@@ -220,8 +210,6 @@ func main() {
 	log.Println("[SHUTDOWN] Shutdown complete.")
 }
 
-// validateConfig checks that all required environment variables are present and
-// well-formed. Any failure calls log.Fatalf, naming the specific missing var.
 // Must be called before InitDB, storage init, or any request handling.
 func validateConfig() {
 	var errs []string
@@ -243,9 +231,6 @@ func validateConfig() {
 	// ── Database ───────────────────────────────────────────────────────────
 	// Accept either DATABASE_URL or the individual DB_* vars.
 	if strings.TrimSpace(os.Getenv("DATABASE_URL")) == "" {
-		// Fall back to component vars — at minimum DB_PASSWORD must be set
-		// (host/port/user/name all have defaults in db.go).
-		// We warn rather than hard-fail because local dev uses defaults.
 		if strings.TrimSpace(os.Getenv("DB_PASSWORD")) == "" {
 			log.Println("[CONFIG][WARN] Neither DATABASE_URL nor DB_PASSWORD is set — using default 'postgres' password")
 		}
@@ -253,12 +238,6 @@ func validateConfig() {
 
 	// ── Email delivery (Brevo HTTPS API) — fail-fast in production ───────────
 	// Default to "production" if APP_ENV is unset — fail-safe, not fail-open.
-	// The stdout OTP fallback is only permitted when APP_ENV=="development"
-	// AND EMAIL_API_KEY is not set.  Any other combination is fatal so the
-	// production deploy never silently enables an MFA bypass.
-	//
-	// SMTP vars (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS) are deprecated:
-	// Render free tier blocks outbound ports 25/465/587. Use Brevo API vars instead.
 	appEnv := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
 	if appEnv == "" {
 		appEnv = "production" // conservative default
@@ -267,12 +246,8 @@ func validateConfig() {
 	emailFrom := strings.TrimSpace(os.Getenv("EMAIL_FROM_ADDRESS"))
 	switch {
 	case emailAPIKey == "" && appEnv == "development":
-		// Permitted: explicit dev environment, no email API configured.
-		// LoginHandler will print the OTP to stdout instead of emailing.
 		log.Println("[CONFIG][WARN] EMAIL_API_KEY not configured; OTP fallback to stdout is ENABLED (APP_ENV=development)")
 	case emailAPIKey == "":
-		// APP_ENV is 'production' (or unset — defaults to production).
-		// Missing EMAIL_API_KEY means MFA is broken and users cannot authenticate.
 		errs = append(errs,
 			fmt.Sprintf(
 				"EMAIL_API_KEY is not set (APP_ENV=%q) — "+
@@ -281,7 +256,6 @@ func validateConfig() {
 				appEnv,
 			))
 	default:
-		// EMAIL_API_KEY is set — also require EMAIL_FROM_ADDRESS.
 		if emailFrom == "" {
 			errs = append(errs, "EMAIL_API_KEY is set but EMAIL_FROM_ADDRESS is empty — Brevo requires a verified sender address")
 		}
@@ -295,7 +269,6 @@ func validateConfig() {
 	if storageBackend == "s3" {
 		requireEnv("S3_BUCKET_NAME")
 		requireEnv("AWS_REGION")
-		// AWS credentials come from the SDK chain (env/shared file/instance role) — not validated here.
 	} else if storageBackend != "local" {
 		errs = append(errs, fmt.Sprintf("STORAGE_BACKEND=%q is not valid — must be 'local' or 's3'", storageBackend))
 	}
@@ -325,17 +298,14 @@ func validateConfig() {
 
 	log.Println("[CONFIG] All required environment variables validated.")
 
-	// Announce MFA delivery mode unambiguously in startup logs.
 	appEnvFinal := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
 	if appEnvFinal == "" {
 		appEnvFinal = "production"
 	}
 	emailAPIKeyFinal := strings.TrimSpace(os.Getenv("EMAIL_API_KEY"))
 	if emailAPIKeyFinal != "" {
-		// Never log the key itself — log only that it is active.
 		log.Printf("[AUTH] MFA delivery: Brevo HTTPS API (EMAIL_FROM_ADDRESS=%s)", strings.TrimSpace(os.Getenv("EMAIL_FROM_ADDRESS")))
 	} else {
-		// Only reachable when APP_ENV=development (production case was fatal above).
 		log.Printf("[AUTH] MFA delivery: DEV STDOUT FALLBACK (APP_ENV=development only)")
 	}
 }
@@ -383,15 +353,10 @@ func runMigrations() error {
 
 	// ── Phase 2 — single transaction, strict dependency order ────────────────
 	//
-	// Ordering contract (enforced by code structure, not comments):
 	//   STEP 1 — ALTER TABLE containers ADD COLUMN IF NOT EXISTS  (all columns)
 	//   STEP 2 — CREATE TABLE IF NOT EXISTS container_events / processing_jobs
 	//   STEP 3 — Assertion: verify every column referenced by an index exists
 	//   STEP 4 — CREATE INDEX IF NOT EXISTS  (only after steps 1-3 pass)
-	//
-	// The entire block runs inside one explicit transaction. Any failure rolls
-	// back cleanly, preventing the "different error on every restart" behaviour
-	// caused by partial schema application.
 
 	tx, err := DB.Begin(ctx)
 	if err != nil {
@@ -399,8 +364,6 @@ func runMigrations() error {
 	}
 	defer func() { _ = tx.Rollback(ctx) }() // no-op after Commit
 
-	// execStep logs and executes a single DDL statement via the transaction.
-	// Logging the statement means any future 42703 names the exact failing line.
 	execStep := func(label, sql string) error {
 		log.Printf("[MIGRATION][P2] %s", label)
 		if _, err := tx.Exec(ctx, sql); err != nil {
@@ -412,12 +375,7 @@ func runMigrations() error {
 	// ── STEP 1: ALTER TABLE containers — add every Phase 2 column ─────────────
 	// Columns are added with DEFAULT now() / DEFAULT 0 / DEFAULT 'local' so that
 	// existing Phase-1 rows receive a valid non-NULL value immediately on ALTER,
-	// without requiring a backfill UPDATE. Each ALTER is independently idempotent
-	// via IF NOT EXISTS.
-	//
 	// IMPORTANT — created_at is NOT in the Phase 1 containers DDL (that table
-	// only has provisioned_at). We add it here so that idx_containers_created_desc
-	// has a column to reference. DEFAULT now() ensures existing rows are covered.
 	phase2AlterCols := []struct{ label, sql string }{
 		{
 			"ALTER containers ADD operator_id",
@@ -465,9 +423,6 @@ func runMigrations() error {
 		},
 		{
 			// created_at is absent from the Phase 1 containers DDL — add it now.
-			// idx_containers_created_desc depends on this column; without it the
-			// index CREATE fails with SQLSTATE 42703 (column does not exist).
-			// DEFAULT now() gives existing provisioned rows a valid timestamp.
 			"ALTER containers ADD created_at (missing from Phase 1 containers — required by idx_containers_created_desc)",
 			`ALTER TABLE containers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now()`,
 		},
@@ -490,7 +445,6 @@ func runMigrations() error {
 
 	// ── STEP 2: CREATE TABLE container_events and processing_jobs ─────────────
 	// These must come after the ALTER statements so that the FK reference to
-	// containers(id) sees the complete column set, and so that the index
 	// statements in STEP 4 can reference their columns.
 
 	newTables := []struct{ label, sql string }{
@@ -530,10 +484,6 @@ func runMigrations() error {
 
 	// ── STEP 3: Assertion — verify all index-referenced columns exist ──────────
 	// This runs inside the same transaction, after STEP 1 and STEP 2, so any
-	// column that was successfully added will be visible here.
-	// If a column is still missing at this point (e.g. the ALTER silently no-
-	// op'd against a schema that already has a conflicting definition), we fail
-	// fast with a clear diagnostic instead of getting a raw 42703 from Postgres.
 
 	requiredColumns := []string{
 		"created_at",   // idx_containers_created_desc
@@ -553,7 +503,6 @@ func runMigrations() error {
 				  AND table_name   = 'containers'
 				  AND column_name  = $1
 			)`
-		// Use the transaction so we see our own uncommitted ALTERs.
 		if err := tx.QueryRow(ctx, assertSQL, col).Scan(&found); err != nil {
 			return fmt.Errorf("phase 2 migration — column assertion query failed for %q: %w", col, err)
 		}
@@ -624,15 +573,11 @@ func runMigrations() error {
 
 	// ── Phase 3 — single transaction, same dependency-order discipline ────────
 	//
-	// Ordering contract:
 	//   STEP 0 — ALTER TABLE containers: relax storage_backend CHECK to allow 'none'
 	//   STEP 1 — CREATE TABLE operator_signature_keys (depends only on users.id)
 	//   STEP 2 — CREATE TABLE node_deployments (depends on containers.id + users.id)
 	//   STEP 3 — Assertion: verify node_deployments.operator_id exists
 	//   STEP 4 — CREATE INDEX idx_node_deployments_operator
-	//
-	// NOTE: DROP CONSTRAINT IF EXISTS is the correct Postgres syntax.
-	// "IF NOT EXISTS" is not valid on DROP CONSTRAINT and will fail to parse.
 
 	tx3, err := DB.Begin(ctx)
 	if err != nil {
@@ -650,8 +595,6 @@ func runMigrations() error {
 
 	// ── STEP 0: Relax containers.storage_backend CHECK ────────────────────────
 	// The Phase 2 column definition uses DEFAULT 'local'. Node-deploy rows carry
-	// no file backend, so we need 'none' as a valid value.
-	// Correct Postgres syntax: DROP CONSTRAINT IF EXISTS (not "IF NOT EXISTS").
 	p3Step0 := []struct{ label, sql string }{
 		{
 			"DROP old storage_backend check constraint (IF EXISTS — valid Postgres syntax)",
@@ -686,7 +629,6 @@ func runMigrations() error {
 
 	// ── STEP 2: CREATE TABLE node_deployments ─────────────────────────────────
 	// container_id is one-to-one with containers.id (NOT containers.container_id —
-	// the PK column is named 'id' in the containers table).
 	if err := execStep3("CREATE TABLE node_deployments", `
 		CREATE TABLE IF NOT EXISTS node_deployments (
 			deployment_id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -741,8 +683,6 @@ func runMigrations() error {
 	log.Println("[MIGRATION] Phase 3 schemas verified (operator_signature_keys, node_deployments, index active).")
 
 	// ── Phase 4 — single transaction: new columns, worker telemetry, app config ─
-	//
-	// Ordering contract:
 	//   STEP 1 — ALTER TABLE containers ADD COLUMN origin_region (TEXT)
 	//   STEP 2 — ALTER TABLE container_events ADD COLUMN severity (TEXT+CHECK)
 	//   STEP 3 — CREATE TABLE worker_nodes (heartbeat telemetry)
@@ -774,7 +714,6 @@ func runMigrations() error {
 	}
 
 	// STEP 2 — severity on container_events
-	// DEFAULT 'INFO' ensures all existing rows satisfy the constraint immediately.
 	if err := execStep4(
 		"ALTER container_events ADD severity",
 		`ALTER TABLE container_events
@@ -786,8 +725,6 @@ func runMigrations() error {
 	log.Println("[MIGRATION][P4] STEP 1-2 complete — origin_region and severity columns added.")
 
 	// STEP 3 — worker_nodes
-	// node_id is hostname-only (not hostname+pid) so process restarts upsert the
-	// same row rather than creating new ones (no unbounded table growth).
 	if err := execStep4(
 		"CREATE TABLE worker_nodes",
 		`CREATE TABLE IF NOT EXISTS worker_nodes (
@@ -804,8 +741,6 @@ func runMigrations() error {
 	log.Println("[MIGRATION][P4] STEP 3 complete — worker_nodes created.")
 
 	// STEP 4 — app_config
-	// PUT /api/v1/config/{key} is restricted to ADMIN_OPERATOR_ID (see handler).
-	// GET /api/v1/config is readable by all authenticated operators.
 	if err := execStep4(
 		"CREATE TABLE app_config",
 		`CREATE TABLE IF NOT EXISTS app_config (
@@ -861,5 +796,3 @@ func runMigrations() error {
 	log.Println("[MIGRATION] Phase 4 schemas verified (worker_nodes, app_config, origin_region, severity, indexes active).")
 	return nil
 }
-
-

@@ -145,7 +145,6 @@
     </style>
 </head>
 <body class="bg-background text-on-background font-body-mono min-h-screen overflow-hidden select-none">
-<!-- TopNavBar -->
 <header class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant shadow-[0_0_8px_rgba(0,230,57,0.15)] flex justify-between items-center px-gutter h-14">
 <div class="flex items-center gap-4">
 <span class="font-display-tech text-headline-md tracking-tighter text-primary-fixed-dim">HYPERVISOR_PULSATER_v2.0.4</span>
@@ -167,7 +166,6 @@
 </div>
 </div>
 </header>
-<!-- SideNavBar -->
 <aside class="fixed left-0 top-14 h-[calc(100vh-88px)] w-64 z-40 bg-surface-container-lowest/90 backdrop-blur-xl border-r border-outline-variant flex flex-col py-4 space-y-1">
 <div class="px-4 mb-6">
 <div class="flex items-center gap-3">
@@ -257,9 +255,7 @@
 <div class="col-span-2">EVENT_TYPE</div>
 <div class="col-span-5">MESSAGE</div>
 </div>
-<!-- Table Body -->
 <div class="flex-1 overflow-y-auto custom-scrollbar font-body-mono-sm">
-<!-- Row 1 (Error) -->
 <div class="grid grid-cols-12 gap-2 p-2 border-b border-outline-variant/30 hover:bg-surface-variant/20 transition-colors group">
 <div class="col-span-2 text-on-surface-variant/80">2023-10-24 14:02:11.452</div>
 <div class="col-span-1"><span class="text-error bg-error-container/20 px-1 border border-error/30">ERROR</span></div>
@@ -267,7 +263,6 @@
 <div class="col-span-2 text-on-surface-variant">PACKET_LOSS_CRIT</div>
 <div class="col-span-5 text-on-surface truncate group-hover:whitespace-normal">Buffer overflow detected on eth0 pipeline. Dropping frames &gt; 1500MTU.</div>
 </div>
-<!-- Row 2 (Warning) -->
 <div class="grid grid-cols-12 gap-2 p-2 border-b border-outline-variant/30 hover:bg-surface-variant/20 transition-colors group">
 <div class="col-span-2 text-on-surface-variant/80">2023-10-24 14:02:08.109</div>
 <div class="col-span-1"><span class="text-tertiary-fixed-dim bg-tertiary-container/10 px-1 border border-tertiary-fixed-dim/30">WARN</span></div>
@@ -275,7 +270,6 @@
 <div class="col-span-2 text-on-surface-variant">LATENCY_SPIKE</div>
 <div class="col-span-5 text-on-surface truncate group-hover:whitespace-normal">Routing divergence observed in EU-W2 region. Latency +140ms.</div>
 </div>
-<!-- Row 3 (Info) -->
 <div class="grid grid-cols-12 gap-2 p-2 border-b border-outline-variant/30 hover:bg-surface-variant/20 transition-colors group">
 <div class="col-span-2 text-on-surface-variant/80">2023-10-24 14:01:55.998</div>
 <div class="col-span-1"><span class="text-secondary-fixed-dim bg-secondary-container/10 px-1 border border-secondary-fixed-dim/30">INFO</span></div>
@@ -283,7 +277,6 @@
 <div class="col-span-2 text-on-surface-variant">NODE_REBALANCE</div>
 <div class="col-span-5 text-on-surface truncate group-hover:whitespace-normal">Load distribution complete. 12 shards migrated to ASIA-S1.</div>
 </div>
-<!-- Row 4 (System) -->
 <div class="grid grid-cols-12 gap-2 p-2 border-b border-outline-variant/30 hover:bg-surface-variant/20 transition-colors group">
 <div class="col-span-2 text-on-surface-variant/80">2023-10-24 14:01:30.001</div>
 <div class="col-span-1"><span class="text-on-surface-variant/60 bg-surface-variant/20 px-1 border border-outline-variant/30">SYS</span></div>
@@ -291,7 +284,6 @@
 <div class="col-span-2 text-on-surface-variant">HB_PULSE</div>
 <div class="col-span-5 text-on-surface truncate group-hover:whitespace-normal">Routine heartbeat sync valid. Threads: 1024/1024.</div>
 </div>
-<!-- Repetitive data for density -->
 <div class="grid grid-cols-12 gap-2 p-2 border-b border-outline-variant/30 hover:bg-surface-variant/20 transition-colors">
 <div class="col-span-2 text-on-surface-variant/80">2023-10-24 14:01:12.772</div>
 <div class="col-span-1"><span class="text-error bg-error-container/20 px-1 border border-error/30">ERROR</span></div>
@@ -325,7 +317,6 @@
 </section>
 <!-- Right Section: Critical Anomalies Metric Cluster -->
 <aside class="w-80 flex flex-col gap-gutter h-full">
-<!-- Metric Box 1: Active Anomalies -->
 <div class="flex-1 bg-surface-container-low border border-outline-variant corner-bracket p-4 flex flex-col justify-center relative overflow-hidden group hover:bg-surface-variant/30 transition-all duration-300">
 <div class="scanline absolute inset-0 opacity-10 pointer-events-none"></div>
 <div class="flex items-center justify-between mb-2">
@@ -341,7 +332,6 @@
 </div>
 </div>
 </div>
-<!-- Metric Box 2: Node Saturation -->
 <div class="flex-1 bg-surface-container-low border border-outline-variant corner-bracket p-4 flex flex-col justify-center relative overflow-hidden group hover:bg-surface-variant/30 transition-all duration-300">
 <div class="scanline absolute inset-0 opacity-10 pointer-events-none"></div>
 <div class="flex items-center justify-between mb-2">
@@ -365,7 +355,6 @@
 </div>
 </div>
 </div>
-<!-- Metric Box 3: Data Flux -->
 <div class="flex-1 bg-surface-container-low border border-outline-variant corner-bracket p-4 flex flex-col justify-center relative overflow-hidden group hover:bg-surface-variant/30 transition-all duration-300">
 <div class="scanline absolute inset-0 opacity-10 pointer-events-none"></div>
 <div class="flex items-center justify-between mb-2">
@@ -412,7 +401,6 @@
             }
         }, 3000);
 
-        // Simple interactive filter toggle logic
         const buttons = document.querySelectorAll('button');
         buttons.forEach(btn => {
             btn.addEventListener('click', function() {
@@ -421,6 +409,5 @@
             });
         });
     </script>
-
 
 </body></html>

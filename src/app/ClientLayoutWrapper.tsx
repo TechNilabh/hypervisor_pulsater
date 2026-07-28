@@ -69,13 +69,10 @@ export default function ClientLayoutWrapper({
   useEffect(() => {
     setMounted(true);
 
-    // Eagerly read operator state immediately on client-side mount
     loadOperator();
 
-    // Re-synchronize whenever any component fires "operatorChanged"
     window.addEventListener("operatorChanged", loadOperator);
 
-    // Global audio triggers for interactive elements
     const handleGlobalClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest("button, a, [role='button'], input[type='submit'], input[type='button']")) {
@@ -217,7 +214,6 @@ export default function ClientLayoutWrapper({
                   </div>
                 </div>
 
-                {/* Avatar icon / portrait */}
                 <Link
                   href="/identity"
                   className="w-8 h-8 rounded bg-[#1c1b1b] border border-[#3b4b37] flex items-center justify-center hover:border-[#00f1fe] group overflow-hidden transition-colors"
@@ -237,7 +233,6 @@ export default function ClientLayoutWrapper({
                 </Link>
               </>
             ) : (
-              // Pre-hydration skeleton
               <div className="w-8 h-8 rounded bg-[#1c1b1b] border border-[#3b4b37]/50 flex items-center justify-center animate-pulse" />
             )}
           </div>
@@ -265,7 +260,6 @@ export default function ClientLayoutWrapper({
           isMobileOpen ? "translate-x-0 shadow-[0_0_15px_rgba(0,0,0,0.5)]" : "-translate-x-full"
         } ${isCollapsed ? "md:w-16" : "md:w-64"} w-64`}
       >
-        {/* Collapse toggle — desktop only */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="hidden md:flex absolute -right-3 top-10 w-6 h-6 rounded-full bg-[#131313] border border-[#3b4b37] items-center justify-center text-[#00f1fe] hover:text-[#00ff41] hover:border-[#00ff41] active:scale-95 transition-all shadow-[0_0_8px_rgba(0,241,254,0.2)] z-50"
@@ -276,7 +270,6 @@ export default function ClientLayoutWrapper({
           </span>
         </button>
 
-        {/* Sidebar header */}
         <div className="px-4 border-b border-[#3b4b37]/30 pb-3 mb-3 overflow-hidden flex items-center justify-between">
           {mounted ? (
             !isCollapsed ? (
@@ -304,7 +297,6 @@ export default function ClientLayoutWrapper({
           )}
         </div>
 
-        {/* Sidebar navigation links */}
         <nav className="flex-grow flex flex-col space-y-1">
           {navLinks.map((link) => {
             const isActive = pathname === link.path;

@@ -171,7 +171,6 @@ export default function VerifyOTPPage() {
         throw new Error(data.error || "MFA verification failed");
       }
 
-      // Commit session state
       localStorage.setItem("session_token", data.session_token);
       localStorage.setItem("user_id", data.user_id);
       localStorage.setItem("username", data.username);
@@ -201,7 +200,6 @@ export default function VerifyOTPPage() {
 
   return (
     <div className="font-body-mono text-[#b9ccb2] min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#050505]">
-      {/* Dot-grid texture */}
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.03]"
         style={{
@@ -210,7 +208,6 @@ export default function VerifyOTPPage() {
         }}
       />
 
-      {/* Central radial glow */}
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
@@ -221,14 +218,12 @@ export default function VerifyOTPPage() {
 
       {/* ── Main card ──────────────────────────────────────────────────────── */}
       <div className="w-full max-w-[440px] relative z-10">
-        {/* Corner brackets */}
         <div className="absolute -top-2 -left-2 w-5 h-5 border-t border-l border-[#00f1fe]/40" />
         <div className="absolute -top-2 -right-2 w-5 h-5 border-t border-r border-[#00f1fe]/40" />
         <div className="absolute -bottom-2 -left-2 w-5 h-5 border-b border-l border-[#00f1fe]/40" />
         <div className="absolute -bottom-2 -right-2 w-5 h-5 border-b border-r border-[#00f1fe]/40" />
 
         <div className="glass-card border border-[#3b4b37]/30 bg-[#131313] shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden">
-          {/* Scanning line animation */}
           <div className="absolute inset-x-0 z-10 scanning-line pointer-events-none" />
 
           {/* ── Header bar ──────────────────────────────────────────────── */}
@@ -289,13 +284,11 @@ export default function VerifyOTPPage() {
 
             {/* ── OTP form ─────────────────────────────────────────────── */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-              {/* Token label */}
               <div className="flex flex-col gap-3">
                 <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">
                   [ VERIFICATION_TOKEN ]
                 </span>
 
-                {/* Six segmented inputs */}
                 <div className="flex gap-2 justify-center">
                   {digits.map((digit, i) => (
                     <input
@@ -319,7 +312,6 @@ export default function VerifyOTPPage() {
                 </div>
               </div>
 
-              {/* Countdown */}
               <div className="flex items-center justify-center gap-1.5">
                 <span className="material-symbols-outlined text-xs text-[#84967e]">
                   timer
@@ -335,7 +327,6 @@ export default function VerifyOTPPage() {
                 </span>
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 id="verify-otp-submit"
@@ -359,7 +350,6 @@ export default function VerifyOTPPage() {
                 )}
               </button>
 
-              {/* Resend button */}
               <button
                 type="button"
                 onClick={handleResendOTP}
@@ -376,7 +366,6 @@ export default function VerifyOTPPage() {
                   : "RESEND_VERIFICATION_TOKEN"}
               </button>
 
-              {/* Back link */}
               <button
                 type="button"
                 onClick={() => {

@@ -44,7 +44,6 @@ func TestLocalDiskBackend_Save_WritesAndRenames(t *testing.T) {
 		t.Errorf("got %q want %q", string(data), payload)
 	}
 
-	// Staging directory must be empty (atomic rename succeeded).
 	entries, _ := os.ReadDir(staging)
 	if len(entries) != 0 {
 		t.Errorf("staging dir should be empty after rename, got %d entries", len(entries))
@@ -106,7 +105,6 @@ func TestLocalDiskBackend_Checksum_DetectsTampering(t *testing.T) {
 	}
 
 	original := sha256HexOf([]byte("original"))
-	// Tamper with the file.
 	if err := os.WriteFile(url, []byte("tampered!"), 0o644); err != nil {
 		t.Fatalf("WriteFile (tamper): %v", err)
 	}
@@ -122,7 +120,6 @@ func TestLocalDiskBackend_Checksum_DetectsTampering(t *testing.T) {
 
 // ─── S3Backend — mock client ──────────────────────────────────────────────────
 
-// mockS3Client satisfies the S3Client interface for unit tests with no AWS calls.
 type mockS3Client struct {
 	putObjectCalled int
 	putObjectErr    error
@@ -218,11 +215,9 @@ func TestSSEHub_Backpressure_DoesNotBlockPublisher(t *testing.T) {
 
 	evt := ContainerEvent{OperatorID: "op-bp", ToState: "PROCESSING"}
 
-	// Publish many more events than the buffer. If Publish blocks, this test will timeout.
 	for i := 0; i < sseChannelBuf*3; i++ {
 		hub.Publish("op-bp", evt)
 	}
-	// If we reach here, backpressure worked — publisher was never blocked.
 }
 
 // ─── SSE Tickets ─────────────────────────────────────────────────────────────
@@ -245,7 +240,6 @@ func TestSSETicket_IssueAndConsume(t *testing.T) {
 		t.Errorf("got %q want %q", operatorID, "op-ticket-test")
 	}
 
-	// Second consume must fail — one-time use only.
 	_, err = validateAndConsumeTicket(ticket)
 	if err == nil {
 		t.Error("expected error on second consume of same ticket (one-time use)")
@@ -267,7 +261,6 @@ func TestSSETicket_Uniqueness(t *testing.T) {
 	if t1 == t2 {
 		t.Error("two tickets for same operator should be unique")
 	}
-	// Clean up.
 	_, _ = validateAndConsumeTicket(t1)
 	_, _ = validateAndConsumeTicket(t2)
 }

@@ -17,18 +17,15 @@ export default function SourceConnection() {
   const [flushInterval, setFlushInterval] = useState(2000);
   const [partitionFormat, setPartitionFormat] = useState("YYYY-MM-DD");
   
-  // Whitelist state
   const [whitelist, setWhitelist] = useState({
     public: true,
     analytics: false,
     audit_logs: false
   });
 
-  // Connection status & saturation
   const [connectionState, setConnectionState] = useState<"idle" | "connecting" | "connected">("idle");
   const [saturation, setSaturation] = useState(6); // out of 10 segments
 
-  // Log state
   const [logs, setLogs] = useState<LogMessage[]>([
     { time: "08:22:25", msg: "POLLING_SOURCE... SUCCESS" },
     { time: "08:22:28", msg: "SYNC_BUFFER_CLEARED [0x00FF21]" },
@@ -40,7 +37,6 @@ export default function SourceConnection() {
   ]);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll logs
   useEffect(() => {
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
@@ -68,7 +64,6 @@ export default function SourceConnection() {
         { time: timeStr, msg: randomPhrase }
       ].slice(-25)); // keep last 25 logs
 
-      // Fluctuate saturation slightly
       setSaturation(sat => {
         const diff = Math.random() > 0.5 ? 1 : -1;
         const next = sat + diff;
@@ -83,7 +78,6 @@ export default function SourceConnection() {
     if (connectionState !== "idle") return;
     setConnectionState("connecting");
     
-    // Add starting logs
     setTimeout(() => {
       const now = new Date();
       const t = now.toTimeString().split(" ")[0];
@@ -141,7 +135,6 @@ export default function SourceConnection() {
             </header>
 
             <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-              {/* DB Config */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="font-label-code text-[10px] text-[#b9ccb2] flex items-center gap-1">
@@ -353,7 +346,6 @@ export default function SourceConnection() {
               </div>
             </div>
             
-            {/* Terminal log panel */}
             <div 
               ref={logContainerRef}
               className="flex-grow p-4 font-body-mono text-[11px] overflow-y-auto custom-scrollbar bg-black/40 space-y-1.5"
@@ -365,7 +357,6 @@ export default function SourceConnection() {
               ))}
             </div>
             
-            {/* Saturation progress bar */}
             <div className="p-4 border-t border-[#3b4b37] bg-[#0e0e0e]/60 flex-none">
               <div className="flex items-center justify-between mb-4">
                 <span className="font-label-code text-[#b9ccb2] text-[10px]">WORKER_POOL_SATURATION</span>
@@ -382,7 +373,6 @@ export default function SourceConnection() {
             </div>
           </div>
 
-          {/* Action Bar */}
           <div className="glass-module p-4 space-y-3 bg-[#0e0e0e]/80 border border-[#3b4b37] rounded-sm flex-none">
             <button 
               onClick={handleEstablishConnection}

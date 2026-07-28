@@ -11,14 +11,9 @@ import (
 
 const (
 	heartbeatInterval = 5 * time.Second
-	// staleHeartbeatAge rows older than this are deleted at startup.
-	// Prevents accumulation from previously renamed host entries.
 	staleHeartbeatAge = 24 * time.Hour
 )
 
-// nodeHostname returns the hostname used as worker_nodes.node_id.
-// Uses hostname only (not hostname+pid) so process restarts upsert
-// the same row rather than creating new ones — no unbounded table growth.
 func nodeHostname() string {
 	h, err := os.Hostname()
 	if err != nil {
@@ -28,8 +23,6 @@ func nodeHostname() string {
 }
 
 // StartWorkerHeartbeat runs the background heartbeat loop.
-// Call once from main() after migrations have completed.
-// On startup it deletes rows with last_heartbeat older than staleHeartbeatAge,
 // then upserts this instance's telemetry row every heartbeatInterval.
 func StartWorkerHeartbeat(ctx context.Context) {
 	nodeID := nodeHostname()
@@ -64,13 +57,10 @@ func StartWorkerHeartbeat(ctx context.Context) {
 	}
 }
 
-// upsertHeartbeat writes the current process's runtime metrics into worker_nodes.
-// Uses INSERT ... ON CONFLICT DO UPDATE so restarts never leave orphan rows.
 func upsertHeartbeat(ctx context.Context, nodeID string, startedAt time.Time) {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 
-	// gc_pause_ns: nanoseconds of the most-recent GC stop-the-world pause.
 	var gcPauseNs uint64
 	if ms.NumGC > 0 {
 		gcPauseNs = ms.PauseNs[(ms.NumGC+255)%256]

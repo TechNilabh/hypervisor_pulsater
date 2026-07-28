@@ -85,7 +85,6 @@ export default function IdentityAuth() {
       const queryToken = params.get("token");
       if (queryToken) {
         localStorage.setItem("session_token", queryToken);
-        // Wipe query parameters from the address bar to prevent session token leaks
         const newUrl = window.location.pathname;
         window.history.replaceState({}, document.title, newUrl);
       }
@@ -97,7 +96,6 @@ export default function IdentityAuth() {
       return;
     }
 
-    // Decode JWT payload to extract username & email for display
     try {
       const parts = token.split(".");
       if (parts.length === 3) {
@@ -111,7 +109,6 @@ export default function IdentityAuth() {
       console.error("Failed to decode session token:", err);
     }
 
-    // Hydrate avatar selection from localStorage
     const storedId = localStorage.getItem("selected_operator_id");
     const storedAvatar = localStorage.getItem("selected_operator_avatar");
     const currentAvatarId = storedId ? storedId.split(" // ")[0] : "";
@@ -137,7 +134,6 @@ export default function IdentityAuth() {
       }
     }
 
-    // Hydrate OPERATOR_CONFIGURATION_MATRIX from localStorage
     const storedCallsign = localStorage.getItem("operator_callsign") || localStorage["operator_callsign"] || "";
     const storedRefresh = parseInt(localStorage.getItem("telemetry_refresh_ms") || "1000", 10);
     setCallsign(storedCallsign);
@@ -562,7 +558,6 @@ export default function IdentityAuth() {
               <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-[#00f1fe] opacity-40" />
               <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-[#00f1fe] opacity-40" />
 
-              {/* Panel header */}
               <div className="flex items-center justify-between border-b border-[#00f1fe]/20 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-[3px] items-center">
@@ -622,7 +617,6 @@ export default function IdentityAuth() {
                   </div>
                 </div>
 
-                {/* Slider */}
                 <input
                   id="refresh-speed-slider"
                   type="range"
@@ -673,7 +667,6 @@ export default function IdentityAuth() {
                 </h3>
               </div>
 
-              {/* Track 1 */}
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between text-[10px] font-label-code uppercase text-[#84967e]">
                   <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">[ CORE_HASH_VERIFICATION ]</span>
@@ -686,7 +679,6 @@ export default function IdentityAuth() {
                 </div>
               </div>
 
-              {/* Track 2 */}
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between text-[10px] font-label-code uppercase text-[#84967e]">
                   <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">[ SUB_MILLISECOND_SYNC ]</span>
@@ -699,7 +691,6 @@ export default function IdentityAuth() {
                 </div>
               </div>
 
-              {/* Track 3 — Neural Handshake (animated) */}
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between text-[10px] font-label-code uppercase text-[#84967e]">
                   <span className="font-label-code text-[10px] text-[#00dbe7] uppercase tracking-widest">[ NEURAL_HANDSHAKE ]</span>

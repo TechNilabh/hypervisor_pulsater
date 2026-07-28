@@ -99,7 +99,6 @@ func TestValidateHostPortMapping(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			valid := portMappingRe.MatchString(tc.input)
 			if valid {
-				// Parse and verify range
 				var hostPort, containerPort int
 				_, err := fmtSscanf(tc.input, "%d:%d", &hostPort, &containerPort)
 				if err == nil {
@@ -115,7 +114,6 @@ func TestValidateHostPortMapping(t *testing.T) {
 	}
 }
 
-// Simple scan helper matching fmt.Sscanf to keep tests clean
 func fmtSscanf(str, format string, host, container *int) (int, error) {
 	var h, c int
 	n, err := json.Marshal(str) // dummy mock using basic parsing

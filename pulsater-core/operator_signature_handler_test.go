@@ -9,14 +9,12 @@ import (
 )
 
 func TestGenerateRawKey_IsBase64URLEncoded(t *testing.T) {
-	// Generate key using exact logic from handler
 	rawBytes := make([]byte, 32)
 	if _, err := rand.Read(rawBytes); err != nil {
 		t.Fatalf("rand.Read failed: %v", err)
 	}
 	rawKey := base64.RawURLEncoding.EncodeToString(rawBytes)
 
-	// Validate it can be decoded back
 	decoded, err := base64.RawURLEncoding.DecodeString(rawKey)
 	if err != nil {
 		t.Errorf("rawKey is not valid base64url-encoded: %v", err)
@@ -27,7 +25,6 @@ func TestGenerateRawKey_IsBase64URLEncoded(t *testing.T) {
 }
 
 func TestKeyHint_IsLast4Chars(t *testing.T) {
-	// Let's verify that the last 4 characters match our hint logic
 	rawKey := "ABCDEFGH1234"
 	keyHint := rawKey[len(rawKey)-4:]
 	if keyHint != "1234" {
@@ -52,7 +49,6 @@ func TestBcryptHash_VerifiesCorrectKey(t *testing.T) {
 		t.Fatalf("bcrypt hash generation failed: %v", err)
 	}
 
-	// Verify key matching
 	err = bcrypt.CompareHashAndPassword(hashBytes, []byte(rawKey))
 	if err != nil {
 		t.Errorf("bcrypt verification failed for correct key: %v", err)
@@ -67,7 +63,6 @@ func TestBcryptHash_RejectsWrongKey(t *testing.T) {
 		t.Fatalf("bcrypt hash generation failed: %v", err)
 	}
 
-	// Verify mismatch is rejected
 	err = bcrypt.CompareHashAndPassword(hashBytes, []byte(wrongKey))
 	if err == nil {
 		t.Error("expected bcrypt error for wrong key, got nil")

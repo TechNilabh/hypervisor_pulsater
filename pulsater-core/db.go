@@ -12,11 +12,9 @@ import (
 
 var DB *pgxpool.Pool
 
-// LoadEnv reads a local .env file line by line and populates environment variables
 func LoadEnv(filePath string) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		// If the file doesn't exist, we fallback to OS environment variables
 		return
 	}
 	lines := strings.Split(string(content), "\n")
@@ -29,7 +27,6 @@ func LoadEnv(filePath string) {
 		if len(parts) == 2 {
 			key := strings.TrimSpace(parts[0])
 			val := strings.TrimSpace(parts[1])
-			// Strip quotes if any
 			if len(val) >= 2 && (val[0] == '"' && val[len(val)-1] == '"' || val[0] == '\'' && val[len(val)-1] == '\'') {
 				val = val[1 : len(val)-1]
 			}
@@ -38,7 +35,6 @@ func LoadEnv(filePath string) {
 	}
 }
 
-// InitDB initializes a pgxpool connection pool using environment variables or fallbacks
 func InitDB() error {
 	host := os.Getenv("DB_HOST")
 	if host == "" {
@@ -83,7 +79,6 @@ func InitDB() error {
 		return fmt.Errorf("unable to create connection pool: %w", err)
 	}
 
-	// Ping database to verify connection
 	err = pool.Ping(context.Background())
 	if err != nil {
 		return fmt.Errorf("unable to ping database: %w", err)

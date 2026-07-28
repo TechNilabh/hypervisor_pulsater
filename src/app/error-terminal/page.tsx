@@ -53,7 +53,6 @@ function ErrorTerminalContent() {
         const cols = Math.floor(canvas.width / gridSize);
         const rows = Math.floor(canvas.height / gridSize);
         
-        // Wall collision or self-collision
         if (
           head.x < 0 || 
           head.x >= cols || 
@@ -61,7 +60,6 @@ function ErrorTerminalContent() {
           head.y >= rows || 
           snake.some(s => s.x === head.x && s.y === head.y)
         ) {
-          // Reset Game
           snake = [{ x: 10, y: 10 }];
           dx = 1;
           dy = 0;
@@ -84,7 +82,6 @@ function ErrorTerminalContent() {
       ctx.fillStyle = "#0e0e0e";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Grid lines
       ctx.strokeStyle = "#1c1b1b";
       ctx.lineWidth = 1;
       for (let x = 0; x < canvas.width; x += gridSize) {
@@ -100,13 +97,11 @@ function ErrorTerminalContent() {
         ctx.stroke();
       }
 
-      // Draw Food (Transaction Block)
       ctx.fillStyle = "#00ff41";
       ctx.shadowBlur = 10;
       ctx.shadowColor = "#00ff41";
       ctx.fillRect(food.x * gridSize + 2, food.y * gridSize + 2, gridSize - 4, gridSize - 4);
       
-      // Draw Snake (Data Stream)
       ctx.fillStyle = "#00f2ff";
       ctx.shadowColor = "#00f2ff";
       snake.forEach((s, i) => {
@@ -155,7 +150,6 @@ function ErrorTerminalContent() {
     };
   }, []);
 
-  // Modulate warning chip flicker speed
   useEffect(() => {
     const interval = setInterval(() => {
       setFlickerSpeed(Math.random() * 0.4 + 0.1);
@@ -163,7 +157,6 @@ function ErrorTerminalContent() {
     return () => clearInterval(interval);
   }, []);
 
-  // Warning alarm control
   useEffect(() => {
     startAlarm();
     return () => {
@@ -221,7 +214,6 @@ function ErrorTerminalContent() {
               CRITICAL_INGESTION_FAILURE // SYSTEM HALTED
             </div>
 
-            {/* Diagnostic system fault display */}
             {faultLogs && (
               <div className="w-full max-w-[640px] text-left bg-black border border-[#93000a]/50 p-4 font-body-mono text-[10px] text-error overflow-x-auto whitespace-pre-wrap max-h-48 custom-scrollbar relative rounded-sm">
                 <div className="absolute top-2 right-4 font-label-code text-[8px] text-error/60 uppercase tracking-widest">[ DIAGNOSTIC FAULT TRACE ]</div>

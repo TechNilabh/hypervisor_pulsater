@@ -8,34 +8,22 @@ import (
 	"strings"
 )
 
-// ---------------------------------------------------------------------------
 // Container Provisioning — Request / Response Types
-// ---------------------------------------------------------------------------
 
-// ProvisionRequest is the expected JSON body for the container provision endpoint.
 type ProvisionRequest struct {
 	ContainerDesignation string `json:"container_designation"`
 	IngestionTargetDB    string `json:"ingestion_target_db"`
 	HostPortMapping      string `json:"host_port_mapping"`
 }
 
-// ---------------------------------------------------------------------------
 // ProvisionContainerHandler — POST /api/v1/containers/provision
-// ---------------------------------------------------------------------------
 
-// ProvisionContainerHandler decodes a container configuration payload,
-// inserts a metadata record into the containers PostgreSQL table, and returns
-// a JSON confirmation containing the generated container ID.
-//
-// This handler is mounted behind JWTAuthMiddleware, so r.Context() will
-// always carry a valid *Claims when this function executes.
 func ProvisionContainerHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
-	// Extract authenticated operator identity from middleware-injected context
 	claims := ClaimsFromContext(r.Context())
 	if claims == nil {
 		WriteError(w, http.StatusUnauthorized, "Unauthenticated request — claims missing from context")
@@ -57,8 +45,6 @@ func ProvisionContainerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// INSERT container record. The primary key uses uuid_generate_v4() as a
-	// server-side default (enabled by the uuid-ossp extension in migrations).
 	insertQuery := `
 	INSERT INTO containers (user_id, designation, ingestion_target_db, host_port_mapping, status)
 	VALUES ($1, $2, $3, $4, 'PROVISIONED')

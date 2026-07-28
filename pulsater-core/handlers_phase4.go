@@ -1,11 +1,6 @@
 package main
 
 // handlers_phase4.go — Phase 4 API handlers:
-//   GET  /api/v1/routing/topology  — per-operator region container summary + SSE count
-//   GET  /api/v1/cluster/nodes     — worker_nodes rows with ONLINE/OFFLINE status
-//   GET  /api/v1/alerts            — container_events filtered by severity, operator-scoped
-//   GET  /api/v1/config            — all app_config rows (readable by any operator)
-//   PUT  /api/v1/config/{key}      — update one writable key (ADMIN_OPERATOR_ID only)
 
 import (
 	"encoding/json"
@@ -46,7 +41,6 @@ func HandleRoutingTopology(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Aggregate containers per region, scoped to this operator.
 	rows, err := DB.Query(r.Context(), `
 		SELECT
 			c.origin_region,
@@ -120,11 +114,8 @@ type clusterNodesResponse struct {
 	Nodes []workerNodeRow `json:"nodes"`
 }
 
-// onlineThreshold: a node is ONLINE if its last heartbeat is within this window.
 const onlineThreshold = 15 * time.Second
 
-// queryWindowForNodes: rows older than this are excluded (4× onlineThreshold).
-// Prevents permanently-dead host rows from polluting the slot count.
 const queryWindowForNodes = 60 * time.Second
 
 func HandleClusterNodes(w http.ResponseWriter, r *http.Request) {
@@ -217,7 +208,6 @@ func HandleAlerts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Severity filter (comma-separated, e.g. "ERROR,WARNING")
 	severityParam := strings.TrimSpace(r.URL.Query().Get("severity"))
 	var severityFilter []string
 	if severityParam != "" {
@@ -235,7 +225,6 @@ func HandleAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 	offset := parseQueryInt(r, "offset", 0)
 
-	// Build WHERE clause — always scoped to the authenticated operator.
 	where := "WHERE c.operator_id = $1 AND c.deleted_at IS NULL"
 	args := []interface{}{claims.UserID}
 	argIdx := 2
@@ -304,8 +293,6 @@ func HandleAlerts(w http.ResponseWriter, r *http.Request) {
 		  AND e.occurred_at > now() - interval '24 hours'
 	`, claims.UserID).Scan(&critCount)
 
-	// NODE_SATURATION: % of ONLINE worker_nodes rows out of 8 provisioned slots.
-	// A node is ONLINE if last_heartbeat is within onlineThreshold.
 	var onlineCount int
 	DB.QueryRow(r.Context(), `
 		SELECT COUNT(*) FROM worker_nodes
@@ -314,7 +301,6 @@ func HandleAlerts(w http.ResponseWriter, r *http.Request) {
 	const totalProvisionedSlots = 8
 	nodeSat := float64(onlineCount) / float64(totalProvisionedSlots) * 100
 
-	// TELEMETRY_FLUX: total container_events recorded last 24h for this operator.
 	var fluxCount int
 	DB.QueryRow(r.Context(), `
 		SELECT COUNT(*)
@@ -349,8 +335,6 @@ type configResponse struct {
 	Config []configRow `json:"config"`
 }
 
-// writableKeys enumerates which app_config keys can be mutated via PUT.
-// goroutine_threshold is stored but display-only (Go scheduler manages goroutines).
 var writableKeys = map[string]struct{}{
 	"flush_interval_ms":   {},
 	"replication_factor":  {},
@@ -358,7 +342,6 @@ var writableKeys = map[string]struct{}{
 	"goroutine_threshold": {}, // writable but takes no runtime effect — documented
 }
 
-// keyNotes explains runtime-effect constraints to the frontend.
 var keyNotes = map[string]string{
 	"goroutine_threshold": "Display-only: stored for reference, Go scheduler manages goroutine count at runtime.",
 	"flush_interval_ms":   "Effective at next worker poll tick (≤5s latency).",
@@ -406,7 +389,6 @@ func HandleConfig(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Append env-backed read-only values (not stored in DB).
 	configs = append(configs,
 		configRow{
 			Key:      "storage_backend",
@@ -450,10 +432,6 @@ func storageRawDir() string {
 // PUT /api/v1/config/{key}
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Authorization: restricted to ADMIN_OPERATOR_ID env var.
-// Rationale: app_config is a global table shared by all operators. Allowing any
-// authenticated user to mutate it would let one operator alter worker behavior
-// for every other operator. See implementation_plan.md Resolution 2.
 
 func HandleConfigKey(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
@@ -479,7 +457,6 @@ func HandleConfigKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract key from URL path: /api/v1/config/{key}
 	key := strings.TrimPrefix(r.URL.Path, "/api/v1/config/")
 	key = strings.TrimSpace(key)
 	if key == "" {

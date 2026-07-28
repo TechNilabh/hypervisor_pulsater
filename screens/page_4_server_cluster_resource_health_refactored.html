@@ -225,9 +225,7 @@
             </button>
 </div>
 </div>
-<!-- 8 Server Nodes Grid -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-<!-- Node Alpha -->
 <div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
 <div class="flex justify-between items-start mb-4">
 <div>
@@ -264,7 +262,6 @@
 </div>
 </div>
 </div>
-<!-- Node Bravo -->
 <div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
 <div class="flex justify-between items-start mb-4">
 <div>
@@ -338,7 +335,6 @@
 </div>
 </div>
 </div>
-<!-- Node Delta -->
 <div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
 <div class="flex justify-between items-start mb-4">
 <div>
@@ -375,7 +371,6 @@
 </div>
 </div>
 </div>
-<!-- Node Echo -->
 <div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
 <div class="flex justify-between items-start mb-4">
 <div>
@@ -433,7 +428,6 @@
 </div>
 </div>
 </div>
-<!-- Node Golf -->
 <div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
 <div class="flex justify-between items-start mb-4">
 <div>
@@ -462,7 +456,6 @@
 </div>
 </div>
 </div>
-<!-- Node Hotel -->
 <div class="node-card bg-surface-container/60 backdrop-blur-md border border-outline-variant p-4 relative group">
 <div class="flex justify-between items-start mb-4">
 <div>
@@ -524,7 +517,6 @@
 </div>
 <!-- Matrix Container -->
 <div class="heatmap-grid border-l border-b border-outline-variant/30 pb-2 pl-2" id="packet-heatmap">
-<!-- Javascript will populate 1200+ pixels -->
 </div>
 <!-- X-Axis Labels -->
 <div class="flex justify-between mt-2 ml-2 font-label-code text-[8px] opacity-40">
@@ -552,7 +544,6 @@
     for (let i = 0; i < totalPixels; i++) {
         const bin = document.createElement('div');
         bin.className = 'heat-bin';
-        // Initial random distribution modeled after a scatter plot pattern (Image 4)
         updatePixel(bin, i);
         heatmap.appendChild(bin);
     }
@@ -561,7 +552,6 @@
         const x = index % cols;
         const y = Math.floor(index / cols);
         
-        // Create a basic "cluster" pattern similar to Image 4
         // Higher density in the center-right upward diagonal
         const distFromPath = Math.abs(y - (rows - (x / cols * rows) * 0.8));
         let level = 0;

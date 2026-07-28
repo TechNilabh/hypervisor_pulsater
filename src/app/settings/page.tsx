@@ -19,25 +19,21 @@ export default function SystemConfiguration() {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Key generator states
   const [generatingKey, setGeneratingKey] = useState(false);
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [keyHint, setKeyHint] = useState<string | null>(null);
   const [keyGenError, setKeyGenError] = useState<string | null>(null);
   const [keyRotated, setKeyRotated] = useState(false);
 
-  // DB config values
   const [goroutineThreshold, setGoroutineThreshold] = useState(16384);
   const [flushInterval, setFlushInterval] = useState(500);
   const [replicationFactor, setReplicationFactor] = useState("x3");
   const [verbosityLevel, setVerbosityLevel] = useState("INFO");
   const [verbosity, setVerbosity] = useState({ err: 0, info: 100, debug: 0 });
 
-  // Env-backed read-only values
   const [storageBackend, setStorageBackend] = useState("local");
   const [storageRawDir, setStorageRawDir] = useState("./uploads");
 
-  // Region usage tracking
   const [activeRegions, setActiveRegions] = useState<Record<string, boolean>>({
     "US-EAST-1": false,
     "US-WEST-2": false,
@@ -48,7 +44,6 @@ export default function SystemConfiguration() {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Load token
   useEffect(() => {
     const t = localStorage.getItem("session_token");
     if (!t) {
@@ -58,7 +53,6 @@ export default function SystemConfiguration() {
     setToken(t);
   }, [router]);
 
-  // Fetch configs
   const fetchConfigs = useCallback(async () => {
     if (!token) return;
     try {
@@ -94,7 +88,6 @@ export default function SystemConfiguration() {
     }
   }, [token]);
 
-  // Fetch active containers to populate active regions
   const fetchActiveRegions = useCallback(async () => {
     if (!token) return;
     try {
@@ -130,7 +123,6 @@ export default function SystemConfiguration() {
     }
   }, [token, fetchConfigs, fetchActiveRegions]);
 
-  // Save config helper
   const saveConfig = async (key: string, value: string) => {
     if (!token) return;
     try {
@@ -207,12 +199,10 @@ export default function SystemConfiguration() {
     }
   };
 
-  // Slider change for verbosity
   const handleVerbositySlider = (level: "err" | "info" | "debug", val: number) => {
     const nextVerbosity = { err: 0, info: 0, debug: 0, [level]: val };
     setVerbosity(nextVerbosity);
 
-    // Map to dominant level
     let target = "INFO";
     if (level === "err" && val > 50) target = "ERROR";
     else if (level === "debug" && val > 50) target = "DEBUG";
@@ -221,7 +211,6 @@ export default function SystemConfiguration() {
     saveConfig("verbosity_level", target);
   };
 
-  // 3D Cluster Map Animation (Canvas)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -266,12 +255,10 @@ export default function SystemConfiguration() {
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
 
-      // Project and rotate nodes
       const projected = nodes.map((node) => {
         let p = rotateY(node, angle);
         p = rotateX(p, angle * 0.5);
 
-        // Perspective projection
         const scale = 250 / (250 + p.z);
         return {
           x: cx + p.x * scale,
@@ -283,7 +270,6 @@ export default function SystemConfiguration() {
         };
       });
 
-      // Draw lines between SYS_ROOT and child nodes
       ctx.lineWidth = 1;
       projected.forEach((node, i) => {
         if (i === 0) return; // Skip SYS_ROOT
@@ -294,7 +280,6 @@ export default function SystemConfiguration() {
         ctx.stroke();
       });
 
-      // Draw nodes
       projected.forEach((node) => {
         ctx.fillStyle = node.color;
         ctx.shadowBlur = 8;
@@ -306,7 +291,6 @@ export default function SystemConfiguration() {
 
         ctx.shadowBlur = 0;
 
-        // Draw labels
         ctx.fillStyle = "rgba(185, 204, 178, 0.6)";
         ctx.font = "8px 'JetBrains Mono', monospace";
         ctx.fillText(node.label, node.x + 6, node.y + 3);
@@ -338,7 +322,6 @@ export default function SystemConfiguration() {
       {/* Main Content Area */}
       <div className="p-6 min-h-screen overflow-y-auto bg-[#0A0A0A]">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-container-max mx-auto">
-          {/* Card 1: Worker Pool Orchestrator */}
           <section className="bg-[#1c1b1b]/80 backdrop-blur-md border border-[#3b4b37] p-4 relative chamfer-br flex flex-col gap-6 overflow-hidden min-h-[460px] rounded-sm">
             <div className="flex justify-between items-center border-b border-[#3b4b37] pb-2">
               <h2 className="font-label-code text-[10px] text-[#00e639] flex items-center gap-2 font-bold uppercase">
@@ -372,7 +355,6 @@ export default function SystemConfiguration() {
                 </div>
               </div>
 
-              {/* Channel Depths — DECORATIVE / DIMMED */}
               <div className="grid grid-cols-2 gap-4 opacity-40 select-none">
                 <div className="p-3 border border-[#3b4b37]/30 bg-[#0e0e0e] relative" title="No live telemetry for queue buffer sizes.">
                   <p className="font-label-code text-[8px] text-[#00dbe7] uppercase">INGEST_CHAN_BUFF</p>
@@ -469,7 +451,6 @@ export default function SystemConfiguration() {
             </div>
           </section>
 
-          {/* Card 2: Persistence Layer */}
           <section className="bg-[#1c1b1b]/80 backdrop-blur-md border border-[#3b4b37] p-4 relative chamfer-tl flex flex-col gap-6 min-h-[460px] rounded-sm">
             <div className="flex justify-between items-center border-b border-[#3b4b37] pb-2">
               <h2 className="font-label-code text-[10px] text-[#00dbe7] flex items-center gap-2 font-bold uppercase">
@@ -553,7 +534,6 @@ export default function SystemConfiguration() {
             </div>
           </section>
 
-          {/* Card 3: Network Controls */}
           <section className="bg-[#1c1b1b]/80 backdrop-blur-md border border-[#3b4b37] p-4 relative chamfer-br flex flex-col gap-6 min-h-[460px] rounded-sm">
             <div className="flex justify-between items-center border-b border-[#3b4b37] pb-2">
               <h2 className="font-label-code text-[10px] text-[#ffb4ab] flex items-center gap-2 font-bold uppercase">
@@ -563,7 +543,6 @@ export default function SystemConfiguration() {
             </div>
 
             <div className="space-y-6">
-              {/* Node Regions — DISPLAY ONLY (Driven by active regions query) */}
               <div>
                 <p className="font-label-code text-[10px] text-[#b9ccb2] mb-2 opacity-60">
                   ACTIVE_REPLICATION_REGIONS (DISPLAY-ONLY)

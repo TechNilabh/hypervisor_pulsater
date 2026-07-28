@@ -13,7 +13,6 @@ import (
 // ContainerEvent — the payload broadcast to SSE subscribers
 // ---------------------------------------------------------------------------
 
-// ContainerEvent is sent to every SSE subscriber when a container's state changes.
 type ContainerEvent struct {
 	ContainerID  string `json:"container_id"`
 	OperatorID   string `json:"operator_id"`
@@ -33,11 +32,6 @@ const (
 	sseMaxConsecDrops  = 16 // consecutive drop threshold before disconnecting slow client
 )
 
-// SSEHub is the in-process publish/subscribe hub for container status events.
-// Each operator's subscribers receive only their own events.
-// Backpressure strategy: each subscriber channel is buffered(32). Publish is
-// non-blocking: if the buffer is full the oldest event is drained first, then
-// the new event is sent. Subscribers that exceed sseMaxConsecDrops are evicted.
 type SSEHub struct {
 	mu   sync.RWMutex
 	subs map[string][]sseSubscriber // keyed by operatorID
@@ -49,7 +43,6 @@ type sseSubscriber struct {
 	drops int // consecutive drop count
 }
 
-// NewSSEHub constructs a ready SSEHub.
 func NewSSEHub(log *slog.Logger) *SSEHub {
 	return &SSEHub{
 		subs: make(map[string][]sseSubscriber),
@@ -57,11 +50,8 @@ func NewSSEHub(log *slog.Logger) *SSEHub {
 	}
 }
 
-// GlobalHub is the process-wide SSE hub instance. Initialised in main().
 var GlobalHub *SSEHub
 
-// Subscribe registers a new subscriber for operatorID.
-// Returns a buffered channel the caller reads from in its SSE loop.
 func (h *SSEHub) Subscribe(operatorID string) chan ContainerEvent {
 	ch := make(chan ContainerEvent, sseChannelBuf)
 	h.mu.Lock()
@@ -71,7 +61,6 @@ func (h *SSEHub) Subscribe(operatorID string) chan ContainerEvent {
 	return ch
 }
 
-// Unsubscribe removes the channel from the operator's subscriber list and closes it.
 func (h *SSEHub) Unsubscribe(operatorID string, ch chan ContainerEvent) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -92,9 +81,6 @@ func (h *SSEHub) Unsubscribe(operatorID string, ch chan ContainerEvent) {
 	}
 }
 
-// Publish sends event to all subscribers for event.OperatorID.
-// Non-blocking: if a subscriber's buffer is full, the oldest event is drained
-// and the new one sent. Subscribers that hit sseMaxConsecDrops are evicted.
 func (h *SSEHub) Publish(operatorID string, event ContainerEvent) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -112,7 +98,6 @@ func (h *SSEHub) Publish(operatorID string, event ContainerEvent) {
 			s.drops = 0 // successful send — reset drop counter
 			surviving = append(surviving, *s)
 		default:
-			// Buffer full — drain oldest, then try again.
 			select {
 			case <-s.ch: // drain oldest
 			default:
@@ -135,7 +120,6 @@ func (h *SSEHub) Publish(operatorID string, event ContainerEvent) {
 					close(s.ch) // signal SSE handler to close the connection
 				}
 			default:
-				// Still can't send — evict immediately.
 				h.log.Warn("sse: evicting unresponsive subscriber", "operator_id", operatorID)
 				close(s.ch)
 			}
@@ -147,8 +131,6 @@ func (h *SSEHub) Publish(operatorID string, event ContainerEvent) {
 	}
 }
 
-// SubscriberCount returns the number of active SSE subscribers for operatorID.
-// Used by HandleRoutingTopology to surface a real connection-pool stat.
 func (h *SSEHub) SubscriberCount(operatorID string) int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -171,7 +153,6 @@ var (
 	sseTicketStore = make(map[string]sseTicketEntry)
 )
 
-// issueSSETicket generates a 32-byte random hex ticket bound to operatorID.
 func issueSSETicket(operatorID string) (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
@@ -186,8 +167,6 @@ func issueSSETicket(operatorID string) (string, error) {
 	return ticket, nil
 }
 
-// validateAndConsumeTicket checks the ticket, returns the operatorID, and immediately
-// invalidates the ticket so it cannot be reused (Fix #1).
 func validateAndConsumeTicket(ticket string) (string, error) {
 	sseTicketMu.Lock()
 	entry, ok := sseTicketStore[ticket]

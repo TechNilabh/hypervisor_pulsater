@@ -18,7 +18,6 @@ export default function NotFound() {
       <div className="fixed inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: "radial-gradient(#00f1fe 1px, transparent 1px)", backgroundSize: "32px 32px" }}></div>
 
       <div className="w-full max-w-2xl bg-[#0e0e0e] border border-[#3b4b37] p-8 relative overflow-hidden flex flex-col rounded-sm shadow-[0_0_50px_rgba(0,0,0,0.85)]">
-        {/* Brackets */}
         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#00f1fe] z-30"></div>
         <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#00f1fe] z-30"></div>
         <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#00f1fe] z-30"></div>

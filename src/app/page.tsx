@@ -29,7 +29,6 @@ function WireframeSphere() {
     const numLat = 10;
     const numLon = 18;
 
-    // Generate sphere points
     for (let i = 1; i < numLat; i++) {
       const lat = (Math.PI * i) / numLat - Math.PI / 2;
       for (let j = 0; j < numLon; j++) {
@@ -42,7 +41,6 @@ function WireframeSphere() {
       }
     }
 
-    // Generate sphere lines
     const lines: [number, number][] = [];
     for (let i = 1; i < numLat; i++) {
       const startIdx = (i - 1) * numLon;
@@ -545,7 +543,6 @@ export default function Home() {
       {/* Metrics Section */}
       <section className="py-32 px-6 bg-[#131313]">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Col 1 */}
           <div className="p-8 border border-[#3b4b37] bg-[#201f1f] rounded-lg tactical-bracket relative group hover:border-[#72ff70] transition-colors flex flex-col justify-between">
             <div>
               <div className="mb-8">
@@ -567,7 +564,6 @@ export default function Home() {
               />
             </div>
           </div>
-          {/* Col 2 */}
           <div className="p-8 border border-[#3b4b37] bg-[#201f1f] rounded-lg tactical-bracket relative group hover:border-[#74f5ff] transition-colors flex flex-col justify-between">
             <div>
               <div className="mb-8">
@@ -586,7 +582,6 @@ export default function Home() {
               <div className="flex-1 bg-[#74f5ff]/20 h-[50%] rounded-t group-hover:h-[70%] transition-all duration-700 delay-300"></div>
             </div>
           </div>
-          {/* Col 3 */}
           <div className="p-8 border border-[#3b4b37] bg-[#201f1f] rounded-lg tactical-bracket relative group hover:border-[#00e639] transition-colors flex flex-col justify-between">
             <div>
               <div className="mb-8">
